@@ -5,7 +5,7 @@
 -compile(export_all).
 -author("Jesse Gumm (gumm@sigma-star.com)").
 
-main() -> #template{file="./site/templates/mobile.html"}.
+main() -> #template{file="./templates/mobile.html"}.
 
 title() -> "Nitrogen Web Framework - Mobile Sample".
 
