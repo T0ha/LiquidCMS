@@ -2,10 +2,26 @@
 -module (index).
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
+-include("db.hrl").
 
-main() -> #template { file="./templates/bare.html" }.
+main() -> #template { file="./templates/blank.html" }.
 
-title() -> "Welcome to Nitrogen".
+parallel_block(Page, Block) ->
+    Functions = db:get_mfa(Page, Block),
+    [ apply(M, F, A) || #cms_mfa{mfa={M, F, A}} <- Functions].
+
+css(Path) ->
+  "<link href='" ++ wf:to_list(Path) ++ "' rel='stylesheet'>".
+    
+script(Path) ->
+    "<script src='" ++ wf:to_list(Path) ++ "' type='text/javascript' charset='utf-8'></script>".
+
+scripts() -> 
+    [parallel_block("admin", "css"),
+    parallel_block("admin", "script")].
+    %#template { file="./templates/scripts.html" }.
+
+title() -> "LiquidCMS".
 
 body() ->
     #container_12 { body=[
