@@ -4,20 +4,21 @@
 -record(cms_mfa, {
           id :: {string(), string()},
           sort :: non_neg_integer(),
-          mfa :: {module(), fun(), [any()]},
+          mfa :: {module(), fun(), [any()]} | fun(),
           settings :: map()
          }).
 
 -record(cms_template, {
-          id :: binary(),
-          path :: iodata(),
-          page :: string(), 
-          settings = #{}
+          id :: {string(), string()},
+          file :: iodata(),
+          bindings=[] :: [proplists:property()],
+          settings=#{} :: map()
          }).
 
 -record(cms_page, {
           id :: string(),
-          path :: iodata(),
+          module = index :: module(),
+          accepted_role :: atom(),
           settings = #{}
          }).
 

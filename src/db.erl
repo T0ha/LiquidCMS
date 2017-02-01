@@ -20,27 +20,56 @@
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])->
     ?CREATE_TABLE(cms_mfa, bag, []),
-    mnesia:transaction(fun() ->
-                               lists:foreach(fun(R) ->
-                                                     mnesia:write(R)
-                                             end,
-                                             maps:get(cms_mfa, admin:default_data()))
-                       end),
-    %?CREATE_TABLE(cms_template, bag, []),
-    %?CREATE_TABLE(cms_page, bag, []),
+    ?CREATE_TABLE(cms_template, bag, []),
+    ?CREATE_TABLE(cms_page, set, []),
     %?CREATE_TABLE(cms_user, bag, []),
     %?CREATE_TABLE(cms_account, bag, []),
-    ok.
+    mnesia:transaction(
+      fun() ->
+              maps:map(
+                fun(_K, V) ->
+                        lists:foreach(
+                          fun(R) ->
+                                  mnesia:write(R)
+                          end,
+                          V)
+                end,
+                admin:default_data())
+      end).
 
 %% Don't remove! This is is used to update your Mnesia DB backend  from CLI tool
 update([]) ->
     ok.
                         
 get_mfa(Page, Block) ->
+    Funs = transaction(fun() ->
+                        G = mnesia:read(cms_mfa, {"*", Block}),
+                        T = mnesia:read(cms_mfa, {Page, Block}),
+                        lists:filter(fun(#cms_mfa{sort=S}) -> 
+                                             not lists:keymember(S, #cms_mfa.sort, T)
+                                             end, G) ++ T
+                end),
+    lists:keysort(#cms_mfa.sort, Funs).
+
+get_template(Page, Block) ->
     transaction(fun() ->
-                        mnesia:read(cms_mfa, {Page, Block})
+                        mnesia:read(cms_template, {Page, Block})
                 end).
 
+get_page(PID) ->
+    transaction(fun() ->
+                        mnesia:read(cms_page, PID)
+                end).
+
+save([]) ->
+    ok;
+save([Record|T]) ->
+    save(Record),
+    save(T);
+save(Record) ->
+    transaction(fun() ->
+                        mnesia:write(Record)
+                end).
 %% For convenience in install and update process
 verify_create_table({atomic, ok}) -> ok;
 verify_create_table({aborted, {already_exists, _Table}}) -> ok.

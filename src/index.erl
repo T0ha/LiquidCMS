@@ -4,52 +4,57 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
 
-main() -> #template { file="./templates/blank.html" }.
+main() -> 
+    PID = case wf:q(page) of
+              undefined -> "index";
+              A -> A
+          end,
+    [Page] = db:get_page(PID),
 
-parallel_block(Page, Block) ->
-    Functions = db:get_mfa(Page, Block),
-    [ apply(M, F, A) || #cms_mfa{mfa={M, F, A}} <- Functions].
+    try common:waterfall(PID, "page", Page)
+    catch
+        error:unauthorized -> 
+            wf:redirect_to_login("/auth?page=login")
+    end.
 
-css(Path) ->
-  "<link href='" ++ wf:to_list(Path) ++ "' rel='stylesheet'>".
-    
-script(Path) ->
-    "<script src='" ++ wf:to_list(Path) ++ "' type='text/javascript' charset='utf-8'></script>".
+
+block(Page, Block) ->
+    common:waterfall(Page, Block).
 
 scripts() -> 
-    [parallel_block("admin", "css"),
-    parallel_block("admin", "script")].
-    %#template { file="./templates/scripts.html" }.
+    [
+     common:parallel_block("admin", "css"),
+     common:parallel_block("admin", "script")
+    ].
+
 
 title() -> "LiquidCMS".
-
-body() ->
-    #container_12 { body=[
-        #grid_8 { alpha=true, prefix=2, suffix=2, omega=true, body=inner_body() }
-    ]}.
-
-inner_body() -> 
-    [
-        #h1 { text="Welcome to Nitrogen" },
-        #p{},
-        "
-        If you can see this page, then your Nitrogen server is up and
-        running. Click the button below to test postbacks.
-        ",
-        #p{}, 	
-        #button { id=button, text="Click me!", postback=click },
-		#p{},
-        "
-        Run <b>./bin/dev help</b> to see some useful developer commands.
-        ",
-		#p{},
-		"
-		<b>Want to see the ",#link{text="Sample Nitrogen jQuery Mobile Page",url="/mobile"},"?</b>
-		"
-    ].
 	
 event(click) ->
     wf:replace(button, #panel { 
         body="You clicked the button!", 
         actions=#effect { effect=highlight }
     }).
+
+maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) ->
+    wf:info("Redirect to login: ~p", [Page]),
+    Page;
+maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) ->
+    wf:info("Redirect to login: ~p", [Page]),
+    case wf:role(Role) of 
+        true ->
+            Page;
+        false ->
+            error(unauthorized)
+    end.
+
+maybe_change_module(#cms_page{module=Module} = Page) ->
+    wf:info("Change module: ~p", [Page]),
+    case wf:page_module() of 
+        Module ->
+            Page;
+        _Other ->
+            URI = wf:uri(),
+            [_, QS] = string:tokens(URI, "?"),
+            wf:redirect(wf:f("/~s?~s", [Module, QS]))
+    end.
