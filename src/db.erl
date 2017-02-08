@@ -20,7 +20,10 @@
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])->
     ?CREATE_TABLE(cms_mfa, bag, []),
-    ?CREATE_TABLE(cms_template, bag, []),
+    ?CREATE_TABLE(cms_template, set, []),
+    %?CREATE_TABLE(cms_block_template, bag, [template_id]),
+    ?CREATE_TABLE(cms_asset, bag, [type, name]),
+    %?CREATE_TABLE(cms_block_asset, bag, [asset_id]),
     ?CREATE_TABLE(cms_page, set, []),
     %?CREATE_TABLE(cms_user, bag, []),
     %?CREATE_TABLE(cms_account, bag, []),
@@ -51,11 +54,23 @@ get_mfa(Page, Block) ->
                 end),
     lists:keysort(#cms_mfa.sort, Funs).
 
-get_template(Page, Block) ->
+get_template(TID) ->
     transaction(fun() ->
-                        mnesia:read(cms_template, {Page, Block})
+                        mnesia:read(cms_template, TID)
                 end).
 
+get_template(PID, Block) ->
+    transaction(fun() ->
+                        [#cms_block_template{template_id=TID}] = mnesia:read(cms_block_template, {PID, Block}),
+                        mnesia:read(cms_template, TID)
+                end).
+
+get_assets(Page, Block) ->
+    transaction(fun() ->
+                        AIDs = mnesia:read(cms_block_asset, {Page, Block}),
+                        [mnesia:read(cms_asset, AID) || 
+                         #cms_block_asset{asset_id=AID} <- AIDs]
+                end).
 get_page(PID) ->
     transaction(fun() ->
                         mnesia:read(cms_page, PID)
@@ -64,8 +79,7 @@ get_page(PID) ->
 save([]) ->
     ok;
 save([Record|T]) ->
-    save(Record),
-    save(T);
+    [save(Record) | save(T)];
 save(Record) ->
     transaction(fun() ->
                         mnesia:write(Record)
