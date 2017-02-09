@@ -90,38 +90,6 @@ install() -> % {{{2
     add_asset_to_block("admin", "script", ["js", "sb-admin-2"], 8),
     ok.
 
-file_to_asset(File, Path) -> % {{{2
-        [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
-        case {Ext, Min} of
-            {"js", "min"} ->
-                #cms_asset{
-                   id=[Ext | Id],
-                   file=filename:join([Path, File]),
-                   minified=true,
-                   type=script};
-            {"js", _} ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   file=filename:join([Path, File]),
-                   type=script};
-            {"css", "min"} ->
-                #cms_asset{
-                   id=[Ext | Id],
-                   file=filename:join([Path, File]),
-                   minified=true,
-                   type=css};
-            {"css", _} ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   file=filename:join([Path, File]),
-                   type=css};
-            {Any, _} ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   file=filename:join([Path, File]),
-                   type=binary}
-        end.
-
 %% Different components adding to pages  {{{1
 add_page(PID, TemplatePath) -> % {{{2
    add_page(PID, TemplatePath, undefined, index).
@@ -176,21 +144,26 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                                 list_item,
                                 [ItemBlock]},
                            sort=1},
+                  #cms_mfa{id={PID, "body"},
+                           mfa=fun(_Page) -> 
+                                             wf:wire(#script{script=wf:f("$('#~s').metisMenu();", [MenuBlock])})
+                               end,
+                           sort=20},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 link_url,
-                                [ItemLinkBlock, "#"]},
+                                [ItemLinkBlock, ""]},
                            sort=1},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 nav_items,
-                                [SubMenuBlock, []]},
+                                [SubMenuBlock, ["nav-second-level", "collapse"]]},
                            sort=2}
                  ],
     LinkMFAs = [
                 #cms_mfa{
                    id={PID, ItemLinkBlock},
-                   mfa={common, icon, ["fa", "carret-right", []]},
+                   mfa={common, icon, ["fa", "", ["arrow"]]},
                    sort=3}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
     db:save(ButtonMFAs ++ LinkMFAs);
@@ -263,3 +236,35 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
         true -> []
      end
     ].
+file_to_asset(File, Path) -> % {{{2
+        [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
+        case {Ext, Min} of
+            {"js", "min"} ->
+                #cms_asset{
+                   id=[Ext | Id],
+                   file=filename:join([Path, File]),
+                   minified=true,
+                   type=script};
+            {"js", _} ->
+                #cms_asset{
+                   id=[Ext, Min | Id],
+                   file=filename:join([Path, File]),
+                   type=script};
+            {"css", "min"} ->
+                #cms_asset{
+                   id=[Ext | Id],
+                   file=filename:join([Path, File]),
+                   minified=true,
+                   type=css};
+            {"css", _} ->
+                #cms_asset{
+                   id=[Ext, Min | Id],
+                   file=filename:join([Path, File]),
+                   type=css};
+            {Any, _} ->
+                #cms_asset{
+                   id=[Ext, Min | Id],
+                   file=filename:join([Path, File]),
+                   type=binary}
+        end.
+
