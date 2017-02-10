@@ -9,7 +9,11 @@ main() ->
               undefined -> "index";
               A -> A
           end,
-    [Page] = db:get_page(PID),
+    Page = case db:get_page(PID) of
+               [P] -> P;
+               [] -> #cms_page{id="404"}
+           end, 
+            
 
     try common:waterfall(Page, "page")
     catch
