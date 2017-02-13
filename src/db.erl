@@ -70,6 +70,10 @@ get_asset(AID) -> % {{{1
                         mnesia:read(cms_asset, AID)
                 end).
 
+get_assets(Type) -> % {{{1
+    transaction(fun() ->
+                        mnesia:select(cms_asset, [{#cms_asset{type=Type, _='_'}, [], ['$_']}])
+                end).
 get_assets(Page, Block) -> % {{{1
     transaction(fun() ->
                         AIDs = mnesia:read(cms_block_asset, {Page, Block}),
@@ -77,6 +81,15 @@ get_assets(Page, Block) -> % {{{1
                          #cms_block_asset{asset_id=AID} <- AIDs]
                 end).
 
+update(Record, Field, Value) -> % {{{1
+    transaction(fun() ->
+                        mnesia:delete_object(Record),
+                        R1 = update_record_field(Record, Field, Value),
+                        mnesia:write(R1),
+                        Value
+                end).
+
+                        
 get_page(PID) -> % {{{1
     transaction(fun() ->
                         mnesia:read(cms_page, PID)
@@ -101,4 +114,10 @@ transaction(F) -> % {{{1
         _ -> []
     end.
                               
-
+update_record_field(Record, Field, Value) -> % {{{1
+    [Rec|RecList] = tuple_to_list(Record),
+    Fields = mnesia:table_info(Rec, attributes),
+    Map = maps:from_list(lists:zip(Fields, RecList)),
+    NewMap = maps:update(Field, Value, Map),
+    NewList = [maps:get(K, NewMap, undefined) || K <- Fields],
+    list_to_tuple([Rec|NewList]).

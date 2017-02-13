@@ -1,4 +1,13 @@
 -define(DB_PREFIX(), liquid_cms_).
+-define(POSTBACK(P), #event{
+                        type=click,
+                        postback=P
+                       }).
+-define(POSTBACK(P, Delegate), #event{
+                        type=click,
+                        postback=P,
+                        delegate=Delegate
+                       }).
 -type role() :: 'admin' | 'editor' | undefined.
 -type asset_type() :: 'image' | 'script' | 'css' | 'less' | binary.
 

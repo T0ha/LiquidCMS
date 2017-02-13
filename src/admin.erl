@@ -15,9 +15,6 @@ title() -> "Liquid CMS - Admin".
 body(Page) ->
     index:body(Page).
 
-event(click) -> % {{{2
-    wf:insert_top(placeholder, "<p>You clicked the button!").
-
 %% Module install routines {{{1
 default_data() -> % {{{2
     #{cms_mfa => [
@@ -82,12 +79,20 @@ install() -> % {{{2
     lists:foreach(fun(F) -> add_template("templates/" ++ F, []) end, TemplateFiles),
     add_page("index", "templates/index.html"),
     add_page("admin", "templates/blank.html", admin, admin),
-    add_asset_to_block("admin", "css", ["css", "font-awesome"], 3),
-    add_asset_to_block("admin", "css", ["css", "metisMenu"], 4),
-    add_asset_to_block("admin", "css", ["css", "sb-admin-2"], 6),
-    add_asset_to_block("admin", "script", ["js", "bootstrap"], 6),
-    add_asset_to_block("admin", "script", ["js", "metisMenu"], 7),
-    add_asset_to_block("admin", "script", ["js", "sb-admin-2"], 8),
+    add_to_block("admin", "css", {asset, ["css", "font-awesome"]}, 3),
+    add_to_block("admin", "css", {asset, ["css", "metisMenu"]}, 4),
+    add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}, 6),
+    add_to_block("admin", "css", {asset, ["css", "admin"]}, 7),
+
+    add_to_block("admin", "script", {asset, ["js", "bootstrap"]}, 6),
+    add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
+    add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
+    add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
+    add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css, 1, 10})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script, 1, 10})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, images, 1, 10})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary, 1, 10})}),
+    add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
 
 %% Different components adding to pages  {{{1
@@ -126,13 +131,13 @@ add_template(TemplatePath, Bindings) -> % {{{2
            {error, no_template}
     end.
 
-add_asset_to_block(PID, Block, AID)  -> % {{{2
-    add_asset_to_block(PID, Block, AID, 1).
+add_to_block(PID, Block, Mater)  -> % {{{2
+    add_to_block(PID, Block, Mater, 1).
 
-add_asset_to_block(PID, Block, AID, Sort) -> % {{{2
+add_to_block(PID, Block, {Type, ID}, Sort) -> % {{{2
     db:save(#cms_mfa{
                id={PID, Block},
-               mfa={common, asset, [AID]},
+               mfa={common, Type, [ID]},
                sort=Sort}).
 
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock}) -> % {{{2
@@ -231,40 +236,117 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
      end,
      if Text /= undefined ->
             #cms_mfa{id={PID, LinkBlock},
-                     mfa=fun(_Page) -> Text end,
+                     mfa=fun(_Page) -> " " ++ Text end,
                      sort=2};
         true -> []
      end
     ].
+
 file_to_asset(File, Path) -> % {{{2
         [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
         case {Ext, Min} of
             {"js", "min"} ->
                 #cms_asset{
                    id=[Ext | Id],
+                   name=string:join(lists:reverse(Id), "."),
+                   description=string:join(lists:reverse(Id), "."),
                    file=filename:join([Path, File]),
                    minified=true,
                    type=script};
             {"js", _} ->
                 #cms_asset{
                    id=[Ext, Min | Id],
+                   name=string:join(lists:reverse([Min|Id]), "."),
+                   description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=script};
             {"css", "min"} ->
                 #cms_asset{
                    id=[Ext | Id],
+                   name=string:join(lists:reverse(Id), "."),
+                   description=string:join(lists:reverse(Id), "."),
                    file=filename:join([Path, File]),
                    minified=true,
                    type=css};
             {"css", _} ->
                 #cms_asset{
                    id=[Ext, Min | Id],
+                   name=string:join(lists:reverse([Min|Id]), "."),
+                   description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=css};
             {Any, _} ->
                 #cms_asset{
                    id=[Ext, Min | Id],
+                   name=string:join(lists:reverse([Min|Id]), "."),
+                   description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=binary}
         end.
 
+assets_table_rows(Assets) -> % {{{2
+    [assets_table_row(A) || A <- Assets].
+
+assets_table_row(#cms_asset{ % {{{2
+                    id=Id,
+                    name=Name,
+                    description=Description,
+                    file=Path,
+                    minified=Minified,
+                    type=Type
+                   }=Asset) ->
+    #tablerow{
+       cells=[
+              #tablecell{text=""},
+              #tablecell{body=#inplace_textbox{tag={asset, Asset, name}, text=Name}},
+              #tablecell{body=#inplace_textbox{tag={asset, Asset, description},text=Description}},
+              #tablecell{text=Path},
+              #tablecell{text=Minified},
+              #tablecell{text=Type}
+             ]}.
+
+
+%% Event handlers {{{1
+event({asset, show, Type, Start, Count}) -> % {{{2
+    Assets = case db:get_assets(Type) of
+                 A when length(A) =< Count -> A;
+                 A when length(A) - Start >= Count ->
+                     lists:sublist(A, Start, Count);
+                 A ->
+                     C = length(A) - Start,
+                     wf:f("~p", [C]),
+                     lists:sublist(A, Start, C)
+             end,
+    Table = #table{id=assets,
+                   class=["table-striped", "table-bordered", "table-hover"],
+                   rows=[
+                         #tablerow{
+                            cells=[
+                                   #tableheader{text="N"},
+                                   #tableheader{text="Name"},
+                                   #tableheader{text="Description"},
+                                   #tableheader{text="Path"},
+                                   #tableheader{text="Minified"},
+                                   #tableheader{text="Type"}
+                                  ]}| assets_table_rows(Assets)]
+                  },
+    wf:update(container, [
+                           #h1{text=wf:f("Static Assets: ~s", [Type])},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=Table
+                                     }
+                             }]);
+event(Ev) -> % {{{2
+    wf:info("~p event ~p", [?MODULE, Ev]).
+
+inplace_textbox_event({asset, Record, Field}, Value) ->
+    Val = db:update(Record, Field, Value),
+    Val;
+inplace_textbox_event(Tag, Value) ->
+    wf:info("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+    Value.
+
+api_event(Name, Tag, Args) -> % {{{2
+    wf:info("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
