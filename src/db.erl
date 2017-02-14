@@ -71,8 +71,10 @@ get_asset(AID) -> % {{{1
                 end).
 
 get_assets(Type) -> % {{{1
+    Fields = record_info(fields, cms_asset),
     transaction(fun() ->
-                        mnesia:select(cms_asset, [{#cms_asset{type=Type, _='_'}, [], ['$_']}])
+                        Assets = mnesia:select(cms_asset, [{#cms_asset{type=Type, _='_'}, [], ['$_']}]),
+                        [record_to_map(A, Fields) || A <- Assets]
                 end).
 get_assets(Page, Block) -> % {{{1
     transaction(fun() ->
@@ -121,3 +123,13 @@ update_record_field(Record, Field, Value) -> % {{{1
     NewMap = maps:update(Field, Value, Map),
     NewList = [maps:get(K, NewMap, undefined) || K <- Fields],
     list_to_tuple([Rec|NewList]).
+
+record_to_map(Record, Fields) -> % {{{1
+    RecList = tuple_to_list(Record),
+    RFields = [record | Fields],
+    maps:from_list(lists:zip(RFields, RecList)).
+
+map_to_record(Map, Fields) -> % {{{1
+    RFields = [record | Fields],
+    NewList = [maps:get(K, Map, undefined) || K <- RFields],
+    list_to_tuple(NewList).

@@ -305,18 +305,43 @@ assets_table_row(#cms_asset{ % {{{2
               #tablecell{text=Type}
              ]}.
 
+pagination(Body, Type, Start, Count) -> % {{{2
+    #link{
+       class=["btn", "btn-default"],
+       body=Body,
+       actions=?POSTBACK({asset, show, Type, Start, Count})}.
 
 %% Event handlers {{{1
 event({asset, show, Type, Start, Count}) -> % {{{2
-    Assets = case db:get_assets(Type) of
-                 A when length(A) =< Count -> A;
-                 A when length(A) - Start >= Count ->
-                     lists:sublist(A, Start, Count);
-                 A ->
-                     C = length(A) - Start,
-                     wf:f("~p", [C]),
-                     lists:sublist(A, Start, C)
-             end,
+    wf:update(container, #crud{
+       button_class=["btn", "btn-default"],
+       table_class=["table-striped", "table-bordered", "table-hover"],
+       start=0,
+       count=10,
+       cols=[
+             {name, "Name", tb},
+             {description, "Description", ta},
+             {file, "Path", none},
+             {minified, "Minified", none},
+             {type, "Type", none}
+            ],
+       funs=#{list => fun() -> db:get_assets(Type) end}
+
+      });
+event({1, asset, show, Type, Start, Count}) -> % {{{2
+    {Assets, Pagination} = case db:get_assets(Type) of
+                               A when length(A) =< Count -> {A, []};
+                               A when length(A) - Start >= Count ->
+                                   {lists:sublist(A, Start, Count),
+                                    [pagination("<", Type, Start - Count, Count),
+                                     pagination(">", Type, Start + Count, Count)]
+                                   };
+                               A ->
+                                   C = length(A) - Start,
+                                   wf:f("~p", [C]),
+                                   {lists:sublist(A, Start, C),
+                                    pagination("<", Type, Start - Count, Count)}
+                           end,
     Table = #table{id=assets,
                    class=["table-striped", "table-bordered", "table-hover"],
                    rows=[
@@ -335,7 +360,7 @@ event({asset, show, Type, Start, Count}) -> % {{{2
                            #bs_row{
                               body=#bs_col{
                                       cols={lg, 12},
-                                      body=Table
+                                      body=[Table, Pagination]
                                      }
                              }]);
 event(Ev) -> % {{{2
