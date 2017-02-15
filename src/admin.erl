@@ -90,7 +90,7 @@ install() -> % {{{2
     add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
     add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css, 1, 10})}),
     add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script, 1, 10})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, images, 1, 10})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image, 1, 10})}),
     add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary, 1, 10})}),
     add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
@@ -314,7 +314,8 @@ pagination(Body, Type, Start, Count) -> % {{{2
 %% Event handlers {{{1
 event({asset, show, Type, Start, Count}) -> % {{{2
     wf:update(container, #crud{
-       button_class=["btn", "btn-default"],
+       pagination_class=["btn", "btn-default"],
+       button_class=["btn", "btn-link"],
        table_class=["table-striped", "table-bordered", "table-hover"],
        start=0,
        count=10,
@@ -323,9 +324,16 @@ event({asset, show, Type, Start, Count}) -> % {{{2
              {description, "Description", ta},
              {file, "Path", none},
              {minified, "Minified", none},
-             {type, "Type", none}
+             {type, "Type", {select, [{css, "CSS"},
+                                      {script, "Script"},
+                                      {image, "Image"},
+                                      {binary, "Other"}]}}
             ],
-       funs=#{list => fun() -> db:get_assets(Type) end}
+       funs=#{
+         list => fun() -> db:get_assets(Type) end,
+         update => fun db:update_asset/1, 
+         delete => fun db:delete/1
+        }
 
       });
 event({1, asset, show, Type, Start, Count}) -> % {{{2

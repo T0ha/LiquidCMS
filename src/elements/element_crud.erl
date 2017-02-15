@@ -5,7 +5,10 @@
 -include("records.hrl").
 -export([
     reflect/0,
-    render_element/1
+    render_element/1,
+    event/1,
+    inplace_textbox_event/2,
+    inplace_textarea_event/2
 ]).
 
 -define(POSTBACK(P), #event{
@@ -30,13 +33,12 @@ render_element(Record = #crud{
                            count=Count,
                            start=Start
                           }) ->
-    TableID = wf:temp_id(),
     List = maps:get(list, Funs, fun() -> [] end),
 
     Data = List(),
     Length = length(Data),
-    Pagination = pagination(Funs, Length, Start, Count, ButtonClass),
-    Table = table(Data, Start, Count, TableClass, Cols, TableID, Funs),
+    Pagination = pagination(Record, Length),
+    Table = table(Record, Data),
     #panel{
        id=CRUDID,
        class=Class,
@@ -47,7 +49,12 @@ render_element(Record = #crud{
             ]
       }.
 
-pagination(Funs, Num, Start, Count, Class) -> % {{{1
+pagination(#crud{ % {{{1
+              start=Start, 
+              count=Count,
+              pagination_class=Class
+             } = Rec,
+           Num) ->
     case Num div Count of
         0 -> [];
         N ->
@@ -60,41 +67,55 @@ pagination(Funs, Num, Start, Count, Class) -> % {{{1
                       #link{
                          class=[Active | Class],
                          text=P,
-                         actions=?POSTBACK({show, Funs, Start, Count})}
+                         actions=?POSTBACK({show, Rec})}
               end,
               lists:seq(1, N + 1))
     end.
 
-table(Data, Start, Count, TableClass, Cols, TableID, Funs) when is_list(Data), % {{{1
-                                                                is_list(Cols),
-                                                                length(Cols) > 0 ->
+table(#crud{ % {{{1
+         start=Start,
+         count=Count,
+         table_class=TableClass,
+         cols=Cols,
+         funs=Funs
+        } = Rec,
+      Data) when is_list(Data), 
+                 is_list(Cols),
+                 length(Cols) > 0 ->
     NumberedData = lists:zip(lists:seq(1, length(Data)), Data),
-    #table{id=TableID,
-           class=TableClass,
-           rows=[
-                 #tablerow{
-                    cells=[
-                           #tableheader{text="N"} |
-                           [#tableheader{text=H} || {_, H, _} <- Cols]
-                          ]} |
-                 [table_row(A, Cols, Funs) || {N, _}=A <- NumberedData,
-                                              N >= Start,
-                                              N < Start + Count]
-                ]}.
+    #table{
+       class=TableClass,
+       rows=[
+             #tablerow{
+                cells=[
+                       #tableheader{text="N"} |
+                       [#tableheader{text=H} || {_, H, _} <- Cols]
+                       ++ [#tableheader{text="",
+                                        show_if=maps:is_key(delete, Funs)}]
+                      ]} |
+             [table_row(Rec, A) || {N, _}=A <- NumberedData,
+                                   N >= Start,
+                                   N < Start + Count]
+            ]}.
 
 
-table_row({N, Data}, Cols, Funs) -> % {{{1
-    Delete = maps:get(delete, Funs, undefined),
+table_row(#crud{ % {{{1
+             cols=Cols,
+             funs=Funs
+            } = Rec,
+           {N, Data}) ->
     #tablerow{
        cells=[
               #tablecell{text=N} |
               [#tablecell{
                   body=case Type of
                            tb ->
-                               #inplace_textbox{tag={update, Data, Field},
+                               #inplace_textbox{tag={update, Rec, Data, Field},
+                                                delegate=?MODULE,
                                                 text=maps:get(Field, Data, " ")};
                            ta ->
-                               #inplace_textarea{tag={update, Data, Field},
+                               #inplace_textarea{tag={update, Rec, Data, Field},
+                                                 delegate=?MODULE,
                                                  text=maps:get(Field, Data, " ")};
                            none ->
                                #span{text=maps:get(Field, Data, " ")};
@@ -104,15 +125,68 @@ table_row({N, Data}, Cols, Funs) -> % {{{1
                                   id=Id,
                                   value=maps:get(Field, Data),
                                   options=Values,
-                                  postback=?POSTBACK({update, Data, Field, Id})
+                                  delegate=?MODULE,
+                                  postback={update, Rec, Data, Field, Id}
                                  }
                        end
                  } || {Field, _, Type} <- Cols] ++ 
               [#tablecell{
-                  show_if=(Delete /= undefined),
+                  show_if=maps:is_key(delete, Funs),
                   body=#button{
                           text="X",
-                          postback=?POSTBACK({Delete, Data})
+                          class=Rec#crud.button_class,
+                          actions=?POSTBACK({delete, Rec, Data})
                          }}]
                           
              ]}.
+
+
+inplace_textbox_event({update=Fun, Rec, Data, Field}, Value) ->
+    update(Fun, Rec, Data, Field, Value);
+inplace_textbox_event(Tag, Value) ->
+    wf:info("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+    Value.
+
+inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) ->
+    update(Fun, Rec, Data, Field, Value);
+inplace_textarea_event(Tag, Value) ->
+    wf:info("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
+    Value.
+
+event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1
+    Val = wf:q(ElementId),
+    update(Fun, Rec, Data, Field, Val),
+    wf:replace(Rec#crud.id, Rec);
+event({Fun, Rec, Data}=E) -> % {{{1
+    io:format("Event: ~p~n", [E]),
+    call(Fun, Rec, Data),
+    wf:replace(Rec#crud.id, Rec);
+event(Ev) -> % {{{1
+    wf:waring("Event ~p in ~p", [Ev, ?MODULE]).
+    
+update(Fun, Rec, Data, Field, Value) -> % {{{1
+    Bag = maps:get(table_type, Data, set),
+    ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
+           {true, true} ->
+               call(delete, Rec, Data);
+           _ -> ok
+       end,
+    NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
+    call(Fun, Rec, NewData),
+    Value.
+
+call(Fun, #crud{funs=Funs}=Rec, Data) -> % {{{1
+    F = maps:get(Fun, Funs, fun(D) -> D end),
+    F(Data).
+
+cast(Value, Old) when is_atom(Old) -> % {{{1
+    wf:to_atom(Value);
+cast(Value, Old) when is_list(Old) -> % {{{1
+    wf:to_list(Value);
+cast(Value, Old) when is_binary(Old) -> % {{{1
+    wf:to_binary(Value);
+cast(Value, Old) when is_integer(Old) -> % {{{1
+    wf:to_integer(Value);
+cast(Value, Type) -> % {{{1
+    wf:warning("Can't cast ~p to ~p", [Value, Type]),
+    Value.

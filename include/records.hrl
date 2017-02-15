@@ -5,6 +5,7 @@
 -record(crud, {?ELEMENT_BASE(element_crud),
                table_class=[],
                button_class=[],
+               pagination_class=[],
                cols=[] ::  [{atom(), string(), tb | ta | {select, [{string(), string()}]}}],
                funs=#{},
                start=0,

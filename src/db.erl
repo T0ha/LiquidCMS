@@ -71,10 +71,9 @@ get_asset(AID) -> % {{{1
                 end).
 
 get_assets(Type) -> % {{{1
-    Fields = record_info(fields, cms_asset),
     transaction(fun() ->
                         Assets = mnesia:select(cms_asset, [{#cms_asset{type=Type, _='_'}, [], ['$_']}]),
-                        [record_to_map(A, Fields) || A <- Assets]
+                        [record_to_map(A) || A <- Assets]
                 end).
 get_assets(Page, Block) -> % {{{1
     transaction(fun() ->
@@ -91,6 +90,10 @@ update(Record, Field, Value) -> % {{{1
                         Value
                 end).
 
+update_asset(Map) -> % {{{1
+    save(map_to_record(Map)).
+
+
                         
 get_page(PID) -> % {{{1
     transaction(fun() ->
@@ -104,6 +107,15 @@ save([Record|T]) -> % {{{1
 save(Record) -> % {{{1
     transaction(fun() ->
                         mnesia:write(Record)
+                end).
+
+delete(#{}=Map) -> % {{{1
+    io:format("Delete map: ~p~n", [Map]),
+    delete(map_to_record(Map));
+delete(Record) -> % {{{1
+    io:format("Delete: ~p~n", [Record]),
+    transaction(fun() ->
+                        mnesia:delete_object(Record)
                 end).
 %% For convenience in install and update process
 verify_create_table({atomic, ok}) -> ok; % {{{1
@@ -124,12 +136,25 @@ update_record_field(Record, Field, Value) -> % {{{1
     NewList = [maps:get(K, NewMap, undefined) || K <- Fields],
     list_to_tuple([Rec|NewList]).
 
-record_to_map(Record, Fields) -> % {{{1
+record_to_map(Record) -> % {{{1
     RecList = tuple_to_list(Record),
+    Fields = fields(hd(RecList)),
     RFields = [record | Fields],
-    maps:from_list(lists:zip(RFields, RecList)).
+    Map = maps:from_list(lists:zip(RFields, RecList)),
+    Type = mnesia:table_info(maps:get(record, Map), type),
+    Map#{table_type => Type}.
 
-map_to_record(Map, Fields) -> % {{{1
+map_to_record(#{record := Rec}=Map) -> % {{{1
+    Fields = fields(Rec),
     RFields = [record | Fields],
     NewList = [maps:get(K, Map, undefined) || K <- RFields],
     list_to_tuple(NewList).
+
+fields(cms_asset) -> % {{{1
+    record_info(fields, cms_asset);
+fields(cms_page) -> % {{{1
+    record_info(fields, cms_page);
+fields(cms_mfa) -> % {{{1
+    record_info(fields, cms_mfa);
+fields(cms_template) -> % {{{1
+    record_info(fields, cms_template).
