@@ -66,10 +66,10 @@ pagination(#crud{ % {{{1
                                end,
                       #link{
                          class=[Active | Class],
-                         text=P,
-                         actions=?POSTBACK({show, Rec})}
+                         text=(P + 1),
+                         actions=?POSTBACK({show, Rec#crud{start=P * Count}})}
               end,
-              lists:seq(1, N + 1))
+              lists:seq(0, N))
     end.
 
 table(#crud{ % {{{1
@@ -94,8 +94,8 @@ table(#crud{ % {{{1
                                         show_if=maps:is_key(delete, Funs)}]
                       ]} |
              [table_row(Rec, A) || {N, _}=A <- NumberedData,
-                                   N >= Start,
-                                   N < Start + Count]
+                                   N > Start,
+                                   N =< Start + Count]
             ]}.
 
 
@@ -157,12 +157,14 @@ event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1
     Val = wf:q(ElementId),
     update(Fun, Rec, Data, Field, Val),
     wf:replace(Rec#crud.id, Rec);
+event({show, Rec}=E) -> % {{{1
+    wf:replace(Rec#crud.id, Rec);
 event({Fun, Rec, Data}=E) -> % {{{1
     io:format("Event: ~p~n", [E]),
     call(Fun, Rec, Data),
     wf:replace(Rec#crud.id, Rec);
 event(Ev) -> % {{{1
-    wf:waring("Event ~p in ~p", [Ev, ?MODULE]).
+    wf:warning("Event ~p in ~p", [Ev, ?MODULE]).
     
 update(Fun, Rec, Data, Field, Value) -> % {{{1
     Bag = maps:get(table_type, Data, set),

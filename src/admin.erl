@@ -88,10 +88,10 @@ install() -> % {{{2
     add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
     add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
     add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
-    add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css, 1, 10})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script, 1, 10})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image, 1, 10})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary, 1, 10})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image})}),
+    add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary})}),
     add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
 
@@ -284,36 +284,78 @@ file_to_asset(File, Path) -> % {{{2
                    type=binary}
         end.
 
-assets_table_rows(Assets) -> % {{{2
-    [assets_table_row(A) || A <- Assets].
+asset_types() -> % {{{2
+    [{css, "CSS"},
+     {script, "Script"},
+     {image, "Image"},
+     {binary, "Other"}].
 
-assets_table_row(#cms_asset{ % {{{2
-                    id=Id,
-                    name=Name,
-                    description=Description,
-                    file=Path,
-                    minified=Minified,
-                    type=Type
-                   }=Asset) ->
-    #tablerow{
-       cells=[
-              #tablecell{text=""},
-              #tablecell{body=#inplace_textbox{tag={asset, Asset, name}, text=Name}},
-              #tablecell{body=#inplace_textbox{tag={asset, Asset, description},text=Description}},
-              #tablecell{text=Path},
-              #tablecell{text=Minified},
-              #tablecell{text=Type}
-             ]}.
+maybe_set(Id, Val) -> % {{{2
+    case wf:q(Id) of
+        undefined ->
+            wf:set(Id, Val);
+        "" ->
+            wf:set(Id, Val);
+        A ->
+            wf:info("~s vaue is ~p", [Id, A])
+    end.
 
-pagination(Body, Type, Start, Count) -> % {{{2
-    #link{
-       class=["btn", "btn-default"],
-       body=Body,
-       actions=?POSTBACK({asset, show, Type, Start, Count})}.
 
 %% Event handlers {{{1
-event({asset, show, Type, Start, Count}) -> % {{{2
-    wf:update(container, #crud{
+event({asset, new, Type}) -> % {{{2
+    Bottom = #btn{
+                type=success,
+                size=md,
+                text="Save",
+                postback={asset, save}
+               },
+    Body = #bs_row{
+              body=[
+                    #bs_col{
+                       cols={lg, 6},
+                       body=#upload{
+                               tag=asset,
+                               droppable=true,
+                               show_button=false,
+                               overall_progress=true
+                              }},
+                    #bs_col{
+                       cols={lg, 6},
+                       body=[
+                             #span{text="Name"},
+                             #txtbx{id=name,
+                                    placeholder="Asset name"},
+
+                             #span{text="Description"},
+                             #txtarea{id=description,
+                                      placeholder="Description here..."},
+
+                             #hidden{id=path},
+
+                             #span{text="Type"},
+                             #dd{
+                                id=type,
+                                value=binary,
+                                options=asset_types()
+                               }
+                            ]}
+                   ]},
+    coldstrap:modal("Upload Static Asset", Body, Bottom, [{has_x_button, true}]);
+event({asset, save}) -> % {{{2
+    Type = wf:to_atom(wf:q(type)),
+    Path = wf:q(path),
+    Fname = filename:basename(Path),
+    Dir = filename:dirname(Path),
+    Asset = file_to_asset(Fname, Dir),
+    db:save(Asset#cms_asset{
+              name=wf:q(name),
+              description=wf:q(description),
+              type=Type
+             }),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={asset, show, Type}});
+event({asset, show, Type}) -> % {{{2
+    CRUD = #crud{
        pagination_class=["btn", "btn-default"],
        button_class=["btn", "btn-link"],
        table_class=["table-striped", "table-bordered", "table-hover"],
@@ -324,62 +366,53 @@ event({asset, show, Type, Start, Count}) -> % {{{2
              {description, "Description", ta},
              {file, "Path", none},
              {minified, "Minified", none},
-             {type, "Type", {select, [{css, "CSS"},
-                                      {script, "Script"},
-                                      {image, "Image"},
-                                      {binary, "Other"}]}}
+             {type, "Type", {select, asset_types()}}
             ],
        funs=#{
          list => fun() -> db:get_assets(Type) end,
          update => fun db:update_asset/1, 
          delete => fun db:delete/1
         }
-
-      });
-event({1, asset, show, Type, Start, Count}) -> % {{{2
-    {Assets, Pagination} = case db:get_assets(Type) of
-                               A when length(A) =< Count -> {A, []};
-                               A when length(A) - Start >= Count ->
-                                   {lists:sublist(A, Start, Count),
-                                    [pagination("<", Type, Start - Count, Count),
-                                     pagination(">", Type, Start + Count, Count)]
-                                   };
-                               A ->
-                                   C = length(A) - Start,
-                                   wf:f("~p", [C]),
-                                   {lists:sublist(A, Start, C),
-                                    pagination("<", Type, Start - Count, Count)}
-                           end,
-    Table = #table{id=assets,
-                   class=["table-striped", "table-bordered", "table-hover"],
-                   rows=[
-                         #tablerow{
-                            cells=[
-                                   #tableheader{text="N"},
-                                   #tableheader{text="Name"},
-                                   #tableheader{text="Description"},
-                                   #tableheader{text="Path"},
-                                   #tableheader{text="Minified"},
-                                   #tableheader{text="Type"}
-                                  ]}| assets_table_rows(Assets)]
-                  },
+      },
     wf:update(container, [
-                           #h1{text=wf:f("Static Assets: ~s", [Type])},
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text=wf:f("Static Assets: ~s", [Type])}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Upload Asset",
+                                              class=["btn", "btn-success", "btn-block"],
+                                              actions=?POSTBACK({asset, new, Type})
+                                             }}
+                                   ]},
                            #bs_row{
                               body=#bs_col{
                                       cols={lg, 12},
-                                      body=[Table, Pagination]
+                                      body=CRUD
                                      }
                              }]);
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
-inplace_textbox_event({asset, Record, Field}, Value) ->
+inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
     Val = db:update(Record, Field, Value),
     Val;
-inplace_textbox_event(Tag, Value) ->
+inplace_textbox_event(Tag, Value) -> % {{{2
     wf:info("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
+start_upload_event(_Tag) -> % {{{2
+    ok.
+finish_upload_event(_Tag, Fname, Path, _Node) -> % {{{2
+    #cms_asset{type=Type} = file_to_asset(Fname, ""),
+    NewPath = wf:f("static/~s/~s", [Type, Fname]),
+    file:rename(Path, NewPath),
+    maybe_set(name, Fname),
+    wf:set(type, Type),
+    wf:set(path, NewPath).
 
 api_event(Name, Tag, Args) -> % {{{2
     wf:info("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).

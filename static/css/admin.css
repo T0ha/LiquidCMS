@@ -6,3 +6,14 @@
 .inplace_textbox>.view>.instructions {
     font-size:75%;
 }
+.upload-content {
+    display: none;
+}
+
+.upload_drop {
+    border: 1px #e5e5e5 dashed;
+    height: 200px;
+    width: 200px;
+    padding: 80px 25px;
+    font-size: 20px;
+}
