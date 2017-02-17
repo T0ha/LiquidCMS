@@ -6,6 +6,11 @@
 .inplace_textbox>.view>.instructions {
     font-size:75%;
 }
+
+.btn-upload {
+    margin-top: 20px;
+}
+
 .upload-content {
     display: none;
 }

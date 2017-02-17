@@ -85,3 +85,6 @@ icon(Font, Name, Classes) -> % {{{1
     Cls = [Font, wf:f("~s-~s", [Font, Name]) | Classes],
     Class = string:join(Cls, " "),
     wf:f("<i class='~s'></i>", [Class]).
+
+script(_Page, Script) -> % {{{1
+    wf:wire(#script{script=Script}).

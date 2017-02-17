@@ -102,8 +102,8 @@ add_page(PID, TemplatePath) -> % {{{2
 add_page(PID, TemplatePath, Role, Module) -> % {{{2
     Funs = [
             %fun index:maybe_redirect_to_login/1,
-            fun index:maybe_change_module/1,
-            fun(Page) -> common:template(Page, "templates/main.html") end
+            {index, maybe_change_module, []},
+            {common, template, ["templates/main.html"]}
            ],
     NFuns = lists:zip(lists:seq(1, length(Funs)), Funs),
     PageMFAs = [#cms_mfa{
@@ -150,9 +150,7 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                                 [ItemBlock]},
                            sort=1},
                   #cms_mfa{id={PID, "body"},
-                           mfa=fun(_Page) -> 
-                                             wf:wire(#script{script=wf:f("$('#~s').metisMenu();", [MenuBlock])})
-                               end,
+                           mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]},
                            sort=20},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
@@ -385,7 +383,10 @@ event({asset, show, Type}) -> % {{{2
                                       cols={lg, 2},
                                       body=#button{
                                               text="Upload Asset",
-                                              class=["btn", "btn-success", "btn-block"],
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
                                               actions=?POSTBACK({asset, new, Type})
                                              }}
                                    ]},
