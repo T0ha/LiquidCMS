@@ -87,11 +87,17 @@ install() -> % {{{2
     add_to_block("admin", "script", {asset, ["js", "bootstrap"]}, 6),
     add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
     add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
+
     add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
     add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css})}),
     add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script})}),
     add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image})}),
     add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary})}),
+
+    add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({templates, show})}),
+
+    add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
+
     add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
 
@@ -234,7 +240,7 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
      end,
      if Text /= undefined ->
             #cms_mfa{id={PID, LinkBlock},
-                     mfa=fun(_Page) -> " " ++ Text end,
+                     mfa={common, text, [" " ++ Text]},
                      sort=2};
         true -> []
      end
@@ -368,7 +374,7 @@ event({asset, show, Type}) -> % {{{2
             ],
        funs=#{
          list => fun() -> db:get_assets(Type) end,
-         update => fun db:update_asset/1, 
+         update => fun db:update_map/1, 
          delete => fun db:delete/1
         }
       },
@@ -388,6 +394,47 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-block",
                                                      "btn-upload"],
                                               actions=?POSTBACK({asset, new, Type})
+                                             }}
+                                   ]},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=CRUD
+                                     }
+                             }]);
+event({templates, show}) -> % {{{2
+    CRUD = #crud{
+       pagination_class=["btn", "btn-default"],
+       button_class=["btn", "btn-link"],
+       table_class=["table-striped", "table-bordered", "table-hover"],
+       start=0,
+       count=10,
+       cols=[
+             {file, "Name", none}
+             %{bindings, "Bindings", none}
+            ],
+       funs=#{
+         list => fun db:get_templates/0,
+         update => fun db:update_map/1, 
+         delete => fun db:delete/1
+        }
+      },
+    wf:update(container, [
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text="Templates"}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Upload Template",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({template, new})
                                              }}
                                    ]},
                            #bs_row{

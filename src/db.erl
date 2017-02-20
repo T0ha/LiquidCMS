@@ -54,6 +54,12 @@ get_mfa(Page, Block) -> % {{{1
                 end),
     lists:keysort(#cms_mfa.sort, Funs).
 
+get_templates() -> % {{{1
+    transaction(fun() ->
+                        Templates = mnesia:match_object(#cms_template{_='_'}),
+                        [record_to_map(A) || A <- Templates]
+                end).
+
 get_template(TID) -> % {{{1
     transaction(fun() ->
                         mnesia:read(cms_template, TID)
@@ -90,7 +96,7 @@ update(Record, Field, Value) -> % {{{1
                         Value
                 end).
 
-update_asset(Map) -> % {{{1
+update_map(Map) -> % {{{1
     save(map_to_record(Map)).
 
 

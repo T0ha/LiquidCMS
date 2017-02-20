@@ -118,7 +118,8 @@ table_row(#crud{ % {{{1
                                                  delegate=?MODULE,
                                                  text=maps:get(Field, Data, " ")};
                            none ->
-                               #span{text=maps:get(Field, Data, " ")};
+                               V = 
+                               #span{text=wf:f("~p", [maps:get(Field, Data, " ")])};
                            {select, Values} ->
                                Id = wf:temp_id(),
                                #dropdown{

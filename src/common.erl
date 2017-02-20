@@ -88,3 +88,6 @@ icon(Font, Name, Classes) -> % {{{1
 
 script(_Page, Script) -> % {{{1
     wf:wire(#script{script=Script}).
+
+text(_Page, Text) -> % {{{1
+    Text.
