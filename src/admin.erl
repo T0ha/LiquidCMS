@@ -94,7 +94,7 @@ install() -> % {{{2
     add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image})}),
     add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary})}),
 
-    add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({templates, show})}),
+    add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({template, show})}),
 
     add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
 
@@ -128,10 +128,15 @@ add_page(PID, TemplatePath, Role, Module) -> % {{{2
     db:save([Page | MFAs]).
 
 add_template(TemplatePath, Bindings) -> % {{{2
+    add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
+
+add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
+                      name = Name,
+                      description = Description,
                       bindings = Bindings});
        true ->
            {error, no_template}
@@ -402,7 +407,44 @@ event({asset, show, Type}) -> % {{{2
                                       body=CRUD
                                      }
                              }]);
-event({templates, show}) -> % {{{2
+event({template, new}) -> % {{{2
+    Bottom = #btn{
+                type=success,
+                size=md,
+                text="Save",
+                postback={template, save}
+               },
+    Body = #bs_row{
+              body=[
+                    #bs_col{
+                       cols={lg, 6},
+                       body=#upload{
+                               tag=template,
+                               droppable=true,
+                               show_button=false,
+                               overall_progress=true
+                              }},
+                    #bs_col{
+                       cols={lg, 6},
+                       body=[
+                             #span{text="Name"},
+                             #txtbx{id=name,
+                                    placeholder="Template name"},
+
+                             #span{text="Description"},
+                             #txtarea{id=description,
+                                      placeholder="Description here..."},
+
+                             #hidden{id=path}
+                            ]}
+                   ]},
+    coldstrap:modal("Upload Template", Body, Bottom, [{has_x_button, true}]);
+event({template, save}) -> % {{{2
+    Path = wf:q(path),
+    add_template(wf:q(name), wf:q(description), Path, []),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={template, show}});
+event({template, show}) -> % {{{2
     CRUD = #crud{
        pagination_class=["btn", "btn-default"],
        button_class=["btn", "btn-link"],
@@ -410,7 +452,9 @@ event({templates, show}) -> % {{{2
        start=0,
        count=10,
        cols=[
-             {file, "Name", none}
+             {name, "Name", tb},
+             {description, "Description", ta},
+             {file, "Path", none}
              %{bindings, "Bindings", none}
             ],
        funs=#{
@@ -454,7 +498,13 @@ inplace_textbox_event(Tag, Value) -> % {{{2
     Value.
 start_upload_event(_Tag) -> % {{{2
     ok.
-finish_upload_event(_Tag, Fname, Path, _Node) -> % {{{2
+finish_upload_event(template, Fname, Path, _Node) -> % {{{2
+    NewPath = wf:f("templates/~s", [Fname]),
+    file:rename(Path, NewPath),
+    maybe_set(name, Fname),
+    wf:set(path, NewPath);
+
+finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     #cms_asset{type=Type} = file_to_asset(Fname, ""),
     NewPath = wf:f("static/~s/~s", [Type, Fname]),
     file:rename(Path, NewPath),

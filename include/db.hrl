@@ -23,6 +23,8 @@
           %id :: binary(),
           file :: iodata(), % Path
           bindings=[] :: [proplists:property()],
+          name="" :: string(),
+          description="" :: string(),
           settings=#{} :: map()
          }).
 
