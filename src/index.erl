@@ -4,7 +4,7 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
 
-main() -> 
+main() ->  % {{{1
     PID = case wf:q(page) of
               undefined -> "index";
               A -> A
@@ -26,37 +26,37 @@ main() ->
     end.
 
 
-block(Page, Block) ->
+block(Page, Block) -> % {{{1
     common:parallel_block(Page, Block).
 
-author(_Page) -> 
+author(_Page) ->  % {{{1
     "".
 
-description(_Page) -> 
+description(_Page) ->  % {{{1
     "".
 
-body_attrs(_Page) -> 
+body_attrs(_Page) ->  % {{{1
     "".
 
-head(_Page) -> 
+head(_Page) ->  % {{{1
     "".
 
-title(_Page) -> 
-    "LiquidCMS".
+title(#cms_page{title=Title}) ->  % {{{1
+    Title.
 
-body(Page) ->
+body(Page) -> % {{{1
     common:parallel_block(Page, "body").
 	
-event(click) ->
+event(click) -> % {{{1
     wf:replace(button, #panel { 
         body="You clicked the button!", 
         actions=#effect { effect=highlight }
     }).
 
-maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) ->
+maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{1
     wf:info("Redirect to login: ~p", [Page]),
     Page;
-maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) ->
+maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{1
     wf:info("Redirect to login: ~p", [Page]),
     case wf:role(Role) of 
         true ->
@@ -65,7 +65,7 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) ->
             error(unauthorized)
     end.
 
-maybe_change_module(#cms_page{module=Module} = Page) ->
+maybe_change_module(#cms_page{module=Module} = Page) -> % {{{1
     wf:info("Change module: ~p", [Page]),
     case wf:page_module() of 
         Module ->

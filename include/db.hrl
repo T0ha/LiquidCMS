@@ -54,6 +54,7 @@
 
 -record(cms_page, {
           id :: string(),
+          description = <<>> :: binary(),
           module = index :: module(),
           accepted_role :: atom(),
           title = <<"LiquidCMS">> :: binary(),

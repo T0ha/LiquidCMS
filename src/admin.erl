@@ -97,6 +97,7 @@ install() -> % {{{2
     add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({template, show})}),
 
     add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
+    add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
 
     add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
@@ -106,22 +107,25 @@ add_page(PID, TemplatePath) -> % {{{2
    add_page(PID, TemplatePath, undefined, index).
 
 add_page(PID, TemplatePath, Role, Module) -> % {{{2
+    add_page(PID, <<"LiquidCMS">>, "LiquidCMS", Role, Module),
+    add_to_block(PID, "body", {template, TemplatePath}).
+
+add_page(PID, Title, Description, Role, Module) -> % {{{2
+
     Funs = [
             %fun index:maybe_redirect_to_login/1,
             {index, maybe_change_module, []},
             {common, template, ["templates/main.html"]}
            ],
     NFuns = lists:zip(lists:seq(1, length(Funs)), Funs),
-    PageMFAs = [#cms_mfa{
+    MFAs = [#cms_mfa{
                id = {PID, "page"},
                mfa=F,
                sort=N} || {N, F} <- NFuns],
-    MFAs = [#cms_mfa{
-               id = {PID, "body"},
-               mfa= {common, template, [TemplatePath]},
-               sort=1} | PageMFAs],
     Page = #cms_page{
               id=PID,
+              title=Title,
+              description=Description,
               accepted_role=Role,
               module=Module
              },
@@ -298,6 +302,18 @@ asset_types() -> % {{{2
      {script, "Script"},
      {image, "Image"},
      {binary, "Other"}].
+
+cms_modules() -> % {{{2
+    [{index, "Main"},
+     {admin, "Admin"},
+     {blog, "Blog"},
+     {galery, "Galery"}].
+
+cms_roles() -> % {{{2
+    [{"undefined", "Nobody"},
+     {admin, "Admin"},
+     {root, "Root"},
+     {editor, "Editor"}].
 
 maybe_set(Id, Val) -> % {{{2
     case wf:q(Id) of
@@ -487,6 +503,99 @@ event({template, show}) -> % {{{2
                                       body=CRUD
                                      }
                              }]);
+event({page, show}) -> % {{{2
+    CRUD = #crud{
+       pagination_class=["btn", "btn-default"],
+       button_class=["btn", "btn-link"],
+       table_class=["table-striped", "table-bordered", "table-hover"],
+       start=0,
+       count=10,
+       cols=[
+             {id, "Name", tb},
+             {title, "Title", ta},
+             {description, "Description", ta},
+             {module, "Module", {select, cms_modules()}},
+             {accepted_role, "Assess role", {select, cms_roles()}}
+            ],
+       funs=#{
+         list => fun db:get_pages/0,
+         update => fun db:update_map/1, 
+         delete => fun db:delete/1
+        }
+      },
+    wf:update(container, [
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text="All Pages"}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Add Page",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({page, new})
+                                             }}
+                                   ]},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=CRUD
+                                     }
+                             }]);
+event({page, new}) -> % {{{3
+    Bottom = #btn{
+                type=success,
+                size=md,
+                text="Save",
+                postback={page, save}
+               },
+    Body = #bs_row{
+              body=[
+                    #bs_col{
+                       cols={lg, 6},
+                       body=[
+                             #span{text="Name (ID)"},
+                             #txtbx{id=name,
+                                    placeholder="page_name"},
+
+                             #span{text="Page Title"},
+                             #txtbx{id=title,
+                                    placeholder="Page title here..."},
+
+                             #span{text="Description"},
+                             #txtarea{id=description,
+                                      placeholder="Description here..."},
+
+                             #span{text="Page Main Module"},
+                             #dd{
+                                id=module,
+                                value=index,
+                                options=cms_modules()
+                               },
+
+                             #span{text="Who Have Access"},
+                             #dd{
+                                id=role,
+                                value=undefined,
+                                options=cms_roles()
+                               }
+                            ]}
+                   ]},
+    coldstrap:modal("Create Page", Body, Bottom, [{has_x_button, true}]);
+event({page, save}) -> % {{{2
+    PID = wf:q(name),
+    Title = wf:q(title),
+    Description = wf:q(description),
+    Module = wf:to_atom(wf:q(module)),
+    Role = wf:to_atom(wf:q(role)),
+    add_page(PID, Title, Description, Role, Module),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={page, show}});
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
