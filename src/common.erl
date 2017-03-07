@@ -2,6 +2,7 @@
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
+-include("records.hrl").
 
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{1
     Functions = db:get_mfa(PID, Block),
@@ -91,3 +92,16 @@ script(_Page, Script) -> % {{{1
 
 text(_Page, Text) -> % {{{1
     Text.
+
+full_block(_Page, Body) -> % {{{1
+    #bs_row{
+       body=#bs_col{
+               cols={lg, 12},
+               body=Body}}.
+
+q(Id, Default) -> % {{{1
+    case wf:q(Id) of
+        "" ->
+           Default;
+        A -> A
+    end.

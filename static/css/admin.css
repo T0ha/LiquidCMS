@@ -22,3 +22,11 @@
     padding: 80px 25px;
     font-size: 20px;
 }
+
+.page-block-sort {
+    min-height: 50px;
+    border: #e5e5e5 1px solid;
+    background-color: #f5f5f5;
+}
+
+

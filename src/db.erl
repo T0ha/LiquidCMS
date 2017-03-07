@@ -53,7 +53,12 @@ get_mfa(Page, Block) -> % {{{1
                                              end, G) ++ T
                 end),
     lists:keysort(#cms_mfa.sort, Funs).
-
+get_all_blocks(PID) -> % {{{1
+    Blocks = transaction(fun() ->
+                                 mnesia:select(cms_mfa, [{#cms_mfa{id={'$1', '$2'}, _='_'}, [{'or', {'==', '$1', PID}, {'==', '$1', "*"}}], ['$2']}])
+                         end),
+    sets:to_list(sets:from_list(Blocks)).
+                                 
 get_templates() -> % {{{1
     transaction(fun() ->
                         Templates = mnesia:match_object(#cms_template{_='_'}),
@@ -86,6 +91,12 @@ get_assets(Page, Block) -> % {{{1
                         AIDs = mnesia:read(cms_block_asset, {Page, Block}),
                         [mnesia:read(cms_asset, AID) || 
                          #cms_block_asset{asset_id=AID} <- AIDs]
+                end).
+
+update(OldRecord, NewRecord) -> % {{{1
+    transaction(fun() ->
+                        mnesia:delete_object(OldRecord),
+                        mnesia:write(NewRecord)
                 end).
 
 update(Record, Field, Value) -> % {{{1

@@ -98,6 +98,7 @@ install() -> % {{{2
 
     add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
     add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
+    add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
 
     add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
@@ -325,6 +326,76 @@ maybe_set(Id, Val) -> % {{{2
             wf:info("~s vaue is ~p", [Id, A])
     end.
 
+update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
+    wf:update(container, [
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text=Header}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text=ButtonText,
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK(ButtonPostBack)
+                                             }}
+                                   ]},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=Body
+                                     }
+                             }]).
+
+format_block(#cms_mfa{ % {{{2$
+                id={PID, _},
+                mfa={index, maybe_redirect_to_login, []}
+               }=B) ->
+    [#cms_page{accepted_role=Name}] = db:get_page(PID),
+    #sortitem{
+       tag={block, PID, B},
+       class="well",
+       body=wf:f("Grant access to  '~s' page for '~s' only", [PID, Name])};
+format_block(#cms_mfa{ % {{{2$
+                id={PID, _},
+                mfa={index, maybe_change_module, []}
+               }=B) ->
+    [#cms_page{module=Name}] = db:get_page(PID),
+    #sortitem{
+       tag={block, PID, B},
+       class="well",
+       body=wf:f("Use '~s' module for '~s' page", [Name, PID])};
+format_block(#cms_mfa{ % {{{2$
+                id={PID, _},
+                mfa={common, asset, [AID]}
+               }=B) ->
+    [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
+    #sortitem{
+       tag={block, PID, B},
+       class="well",
+       body=wf:f("Asset ~s: ~s(~p)", [Type, Name, File])};
+format_block(#cms_mfa{ % {{{2$
+                id={PID, _},
+                mfa={common, template, [TID]}
+               }=B) ->
+    [#cms_template{name=Name}] = db:get_template(TID),
+    #sortitem{
+       tag={block, PID, B},
+       class="well",
+       body=wf:f("Template: ~s(~p)", [Name, TID])};
+format_block(#cms_mfa{ % {{{2$
+                id={PID, Name},
+                mfa={M, F, A}
+               }=B) ->
+    #sortitem{
+       tag={block, PID, B},
+       class="well",
+       body=wf:f("~p, ~p(~p)", [Name, F, A])}.
 
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
@@ -587,6 +658,51 @@ event({page, new}) -> % {{{3
                             ]}
                    ]},
     coldstrap:modal("Create Page", Body, Bottom, [{has_x_button, true}]);
+event({page, construct}) -> % {{{2
+    Pages = db:get_pages(),
+    [#{id := P} | _] = Pages,
+    PID = common:q(page_select, P),
+    Block = common:q(block_select, "page"),
+    wf:wire(#event{postback={page, construct, PID, [Block]}});
+    
+event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+    Pages = db:get_pages(),
+    Blocks = [format_block(B#cms_mfa{id={PID, BID}})
+              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
+    AllBlocks = db:get_all_blocks(PID),
+    PageSelect = [
+                  #dropdown{
+                     id=page_select,
+                     options=[{N, N} || #{id := N} <- Pages],
+                     value=PID,
+                     postback={page, construct}
+                    },
+                  #span{text=" / "},
+                  #dropdown{
+                     id=block_select,
+                     options=[{N, N} ||  N <- AllBlocks],
+                     value=Block,
+                     postback={page, construct}
+                    }
+                 ],
+    Sort = #sortblock{
+                  tag={PID, Block},
+                  class="panel-body", %"page-block-sort",
+                  items=Blocks,
+                  group=blocks},
+
+    Body  = #panel{
+               class=["panel", "panel-default"],
+               body=[
+                     #panel{
+                        class=["panel-heading"],
+                        body=PageSelect
+                       },
+                     Sort
+                    ]},
+
+    update_container("Construct Page", "Add Block", {block, add}, Body);
+
 event({page, save}) -> % {{{2
     PID = wf:q(name),
     Title = wf:q(title),
@@ -623,3 +739,13 @@ finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
 
 api_event(Name, Tag, Args) -> % {{{2
     wf:info("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
+
+sort_event({PID, Block}, Blocks) -> % {{{2
+    wf:info("Blocks: ~p", [Blocks]),
+    lists:foreach(fun({N, {block, PID, B}}) ->
+                     db:update(B, B#cms_mfa{sort=N})
+             end,
+             lists:zip(lists:seq(1, length(Blocks)), Blocks)),
+    wf:wire(#event{postback={page, construct, PID, [Block]}});
+sort_event(SortTag, Blocks) -> % {{{2
+    wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
