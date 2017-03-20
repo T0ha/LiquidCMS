@@ -45,12 +45,21 @@ update([]) -> % {{{1
     ok.
                         
 get_mfa(Page, Block) -> % {{{1
+    get_mfa(Page, Block, false).
+get_mfa(Page, Block, Replaced) -> % {{{1
     Funs = transaction(fun() ->
                         G = mnesia:read(cms_mfa, {"*", Block}),
                         T = mnesia:read(cms_mfa, {Page, Block}),
                         lists:filter(fun(#cms_mfa{sort=S}) -> 
                                              not lists:keymember(S, #cms_mfa.sort, T)
-                                             end, G) ++ T
+                                             end, G) ++ 
+                        case Replaced of
+                            true ->
+                                T;
+                            _ ->
+                                [TE || #cms_mfa{mfa=MFA}=TE <- T, MFA /= undefined]
+                        end
+                            
                 end),
     lists:keysort(#cms_mfa.sort, Funs).
 get_all_blocks(PID) -> % {{{1
@@ -93,6 +102,15 @@ get_assets(Page, Block) -> % {{{1
                          #cms_block_asset{asset_id=AID} <- AIDs]
                 end).
 
+fix_sort(#cms_mfa{id={PID, Block}}=Rec) -> % {{{1
+    Sort = case get_mfa(PID, Block) of
+               [] -> 1;
+               MFAs ->
+                   #cms_mfa{sort=S} = lists:last(MFAs),
+                   S
+           end,
+    Rec#cms_mfa{sort=Sort+1}.
+
 update(OldRecord, NewRecord) -> % {{{1
     transaction(fun() ->
                         mnesia:delete_object(OldRecord),
@@ -130,6 +148,16 @@ save([Record|T]) -> % {{{1
 save(Record) -> % {{{1
     transaction(fun() ->
                         mnesia:write(Record)
+                end).
+
+maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
+    transaction(fun() ->
+                        case mnesia:wread({cms_mfa, {PID, Block}}) of
+                            [] ->
+                                mnesia:write(empty_mfa(PID, Block, Sort));
+                            L when is_list(L) -> 
+                                mnesia:delete_object(B)
+                        end
                 end).
 
 delete(#{}=Map) -> % {{{1
@@ -181,3 +209,11 @@ fields(cms_mfa) -> % {{{1
     record_info(fields, cms_mfa);
 fields(cms_template) -> % {{{1
     record_info(fields, cms_template).
+
+empty_mfa(PID, Block, Sort) -> % {{{1
+    #cms_mfa{
+       id={PID, Block},
+       sort=Sort,
+       mfa=udefined}.
+
+

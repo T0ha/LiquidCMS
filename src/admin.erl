@@ -298,24 +298,6 @@ file_to_asset(File, Path) -> % {{{2
                    type=binary}
         end.
 
-asset_types() -> % {{{2
-    [{css, "CSS"},
-     {script, "Script"},
-     {image, "Image"},
-     {binary, "Other"}].
-
-cms_modules() -> % {{{2
-    [{index, "Main"},
-     {admin, "Admin"},
-     {blog, "Blog"},
-     {galery, "Galery"}].
-
-cms_roles() -> % {{{2
-    [{"undefined", "Nobody"},
-     {admin, "Admin"},
-     {root, "Root"},
-     {editor, "Editor"}].
-
 maybe_set(Id, Val) -> % {{{2
     case wf:q(Id) of
         undefined ->
@@ -352,6 +334,30 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      }
                              }]).
 
+new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
+    Bottom = #btn{
+                type=success,
+                size=md,
+                text="Save",
+                postback=SavePoctback
+               },
+    Body = #bs_row{
+              body=[
+                    #bs_col{
+                       show_if=(UploadTag /= undefined),
+                       cols={lg, 6},
+                       body=#upload{
+                               tag=UploadTag,
+                               droppable=true,
+                               show_button=false,
+                               overall_progress=true
+                              }},
+                    #bs_col{
+                       cols={lg, 6},
+                       body=Form}
+                   ]},
+    coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]).
+
 format_block(#cms_mfa{ % {{{2$
                 id={PID, _},
                 mfa={index, maybe_redirect_to_login, []}
@@ -370,73 +376,60 @@ format_block(#cms_mfa{ % {{{2$
        tag={block, PID, B},
        class="well",
        body=wf:f("Use '~s' module for '~s' page", [Name, PID])};
-format_block(#cms_mfa{ % {{{2$
-                id={PID, _},
-                mfa={common, asset, [AID]}
-               }=B) ->
-    [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
-    #sortitem{
-       tag={block, PID, B},
-       class="well",
-       body=wf:f("Asset ~s: ~s(~p)", [Type, Name, File])};
-format_block(#cms_mfa{ % {{{2$
-                id={PID, _},
-                mfa={common, template, [TID]}
-               }=B) ->
-    [#cms_template{name=Name}] = db:get_template(TID),
-    #sortitem{
-       tag={block, PID, B},
-       class="well",
-       body=wf:f("Template: ~s(~p)", [Name, TID])};
+
 format_block(#cms_mfa{ % {{{2$
                 id={PID, Name},
                 mfa={M, F, A}
                }=B) ->
+    Body = try apply(M, format_block, [F, A])
+           catch
+              _ -> wf:f("~p, ~p(~p)", [Name, F, A])
+           end,
+
     #sortitem{
        tag={block, PID, B},
        class="well",
-       body=wf:f("~p, ~p(~p)", [Name, F, A])}.
+       body=[
+             Body,
+             #span{
+                class="pull-right",
+                body=[
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "pencil", []),
+                         actions=?POSTBACK({block, edit, B})
+                        },
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "remove", []),
+                         actions=?POSTBACK({block, remove, B})
+                        }
+                     ]}
+            ]}.
 
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
-    Bottom = #btn{
-                type=success,
-                size=md,
-                text="Save",
-                postback={asset, save}
-               },
-    Body = #bs_row{
-              body=[
-                    #bs_col{
-                       cols={lg, 6},
-                       body=#upload{
-                               tag=asset,
-                               droppable=true,
-                               show_button=false,
-                               overall_progress=true
-                              }},
-                    #bs_col{
-                       cols={lg, 6},
-                       body=[
-                             #span{text="Name"},
-                             #txtbx{id=name,
-                                    placeholder="Asset name"},
+    new_modal("Upload Static Asset",
+              {asset, save},
+              asset, 
+              [
+               #span{text="Name"},
+               #txtbx{id=name,
+                      placeholder="Asset name"},
 
-                             #span{text="Description"},
-                             #txtarea{id=description,
-                                      placeholder="Description here..."},
+               #span{text="Description"},
+               #txtarea{id=description,
+                        placeholder="Description here..."},
 
-                             #hidden{id=path},
+               #hidden{id=path},
 
-                             #span{text="Type"},
-                             #dd{
-                                id=type,
-                                value=binary,
-                                options=asset_types()
-                               }
-                            ]}
-                   ]},
-    coldstrap:modal("Upload Static Asset", Body, Bottom, [{has_x_button, true}]);
+               #span{text="Type"},
+               #dd{
+                  id=type,
+                  value=binary,
+                  options=asset_types()
+                 }
+              ]);
 event({asset, save}) -> % {{{2
     Type = wf:to_atom(wf:q(type)),
     Path = wf:q(path),
@@ -495,37 +488,21 @@ event({asset, show, Type}) -> % {{{2
                                      }
                              }]);
 event({template, new}) -> % {{{2
-    Bottom = #btn{
-                type=success,
-                size=md,
-                text="Save",
-                postback={template, save}
-               },
-    Body = #bs_row{
-              body=[
-                    #bs_col{
-                       cols={lg, 6},
-                       body=#upload{
-                               tag=template,
-                               droppable=true,
-                               show_button=false,
-                               overall_progress=true
-                              }},
-                    #bs_col{
-                       cols={lg, 6},
-                       body=[
-                             #span{text="Name"},
-                             #txtbx{id=name,
-                                    placeholder="Template name"},
+    new_modal("Upload Template",
+              {template, save},
+              template,
+              [
+               #span{text="Name"},
+               #txtbx{id=name,
+                      placeholder="Template name"},
 
-                             #span{text="Description"},
-                             #txtarea{id=description,
-                                      placeholder="Description here..."},
+               #span{text="Description"},
+               #txtarea{id=description,
+                        placeholder="Description here..."},
 
-                             #hidden{id=path}
-                            ]}
-                   ]},
-    coldstrap:modal("Upload Template", Body, Bottom, [{has_x_button, true}]);
+               #hidden{id=path}
+              ]);
+
 event({template, save}) -> % {{{2
     Path = wf:q(path),
     add_template(wf:q(name), wf:q(description), Path, []),
@@ -618,46 +595,38 @@ event({page, show}) -> % {{{2
                                       body=CRUD
                                      }
                              }]);
-event({page, new}) -> % {{{3
-    Bottom = #btn{
-                type=success,
-                size=md,
-                text="Save",
-                postback={page, save}
-               },
-    Body = #bs_row{
-              body=[
-                    #bs_col{
-                       cols={lg, 6},
-                       body=[
-                             #span{text="Name (ID)"},
-                             #txtbx{id=name,
-                                    placeholder="page_name"},
+event({page, new}) -> % {{{2
+    new_modal("Create Page", 
+              {page, save},
+              undefined,
+              [
+               #span{text="Name (ID)"},
+               #txtbx{id=name,
+                      placeholder="page_name"},
 
-                             #span{text="Page Title"},
-                             #txtbx{id=title,
-                                    placeholder="Page title here..."},
+               #span{text="Page Title"},
+               #txtbx{id=title,
+                      placeholder="Page title here..."},
 
-                             #span{text="Description"},
-                             #txtarea{id=description,
-                                      placeholder="Description here..."},
+               #span{text="Description"},
+               #txtarea{id=description,
+                        placeholder="Description here..."},
 
-                             #span{text="Page Main Module"},
-                             #dd{
-                                id=module,
-                                value=index,
-                                options=cms_modules()
-                               },
+               #span{text="Page Main Module"},
+               #dd{
+                  id=module,
+                  value=index,
+                  options=cms_modules()
+                 },
 
-                             #span{text="Who Have Access"},
-                             #dd{
-                                id=role,
-                                value=undefined,
-                                options=cms_roles()
-                               }
-                            ]}
-                   ]},
-    coldstrap:modal("Create Page", Body, Bottom, [{has_x_button, true}]);
+               #span{text="Who Have Access"},
+               #dd{
+                  id=role,
+                  value=undefined,
+                  options=cms_roles()
+                 }
+              ]);
+
 event({page, construct}) -> % {{{2
     Pages = db:get_pages(),
     [#{id := P} | _] = Pages,
@@ -712,6 +681,78 @@ event({page, save}) -> % {{{2
     add_page(PID, Title, Description, Role, Module),
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, show}});
+event({block, change, module}) -> % {{{2
+    M = wf:to_atom(common:q(module, common)),
+    wf:replace(function, 
+               #dd{
+                  id=function,
+                  value=template,
+                  postback={block, change, function},
+                  options=apply(M, functions, [])
+                 });
+event({block, change, function}) -> % {{{2
+    M = wf:to_atom(common:q(module, common)),
+    F = wf:to_atom(common:q(function, common)),
+    wf:update(block_data,
+               apply(M, form_data, [F]));
+event({block, add}) -> % {{{2
+    Pages = db:get_pages(),
+    [#{id := P} | _] = Pages,
+    PID = common:q(page_select, P),
+    Block = common:q(block_select, "page"),
+    Header = [
+              "Add new block to page: ",
+                  #dropdown{
+                     id=add_page_select,
+                     options=[{N, N} || #{id := N} <- Pages],
+                     value=PID,
+                     postback={page, construct}
+                    },
+                  " to block: ",
+                  #textbox{
+                     id=add_block,
+                     text=Block
+                     }
+             ],
+    new_modal(Header,
+              {block, save},
+              undefined, 
+              [
+               #span{text="Module"},
+               #dd{id=module,
+                  value=common,
+                  postback={block, change, module},
+                  options=modules()},
+
+               #span{text="Block Type"},
+               #dd{
+                  id=function,
+                  value=template,
+                  postback={block, change, function},
+                  options=module_functions(common)
+                 },
+               #panel{
+                  id=block_data,
+                  body=apply(common, form_data, [template])
+                 }
+              ]);
+
+event({block, save}) -> % {{{2
+    M = wf:to_atom(common:q(module, "common")),
+    F = wf:to_atom(common:q(function, "template")),
+    PID = common:q(add_page_select, "index"),
+    Block = common:q(add_block, "body"),
+    
+    Rec = db:fix_sort(#cms_mfa{id={PID, Block}, 
+                               mfa={M, F, []}}),
+    NewRec = apply(M, save_block, [Rec]),
+    db:save(NewRec),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={page, construct, PID, [Block]}});
+event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2
+    db:maybe_delete(B),
+    wf:wire(#event{postback={page, construct, PID, [Block]}});
+    
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
@@ -749,3 +790,43 @@ sort_event({PID, Block}, Blocks) -> % {{{2
     wf:wire(#event{postback={page, construct, PID, [Block]}});
 sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
+
+%% Dropdown formatters {{{1
+asset_types() -> % {{{2
+    [{css, "CSS"},
+     {script, "Script"},
+     {image, "Image"},
+     {binary, "Other"}].
+
+cms_modules() -> % {{{2
+    [{index, "Main"},
+     {admin, "Admin"},
+     {blog, "Blog"},
+     {galery, "Galery"}].
+
+cms_roles() -> % {{{2
+    [{"undefined", "Nobody"},
+     {admin, "Admin"},
+     {root, "Root"},
+     {editor, "Editor"}].
+
+modules() -> % {{{2
+    [
+     {admin, "Admin"},
+     {common, "Common"},
+     {index, "Main"}].
+
+module_functions(common) -> % {{{2
+    [
+     {template, "Template"},
+     {text, "Text"},
+     {asset, "Static Asset"},
+     {link, "Link"},
+     {icon, "Icon"}
+    ];
+module_functions(Any) -> % {{{2
+    [
+     {undefined, "Unknown module"}
+    ].
+
+
