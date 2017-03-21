@@ -427,7 +427,7 @@ event({asset, new, Type}) -> % {{{2
                #dd{
                   id=type,
                   value=binary,
-                  options=asset_types()
+                  options=common:asset_types()
                  }
               ]);
 event({asset, save}) -> % {{{2
@@ -455,7 +455,7 @@ event({asset, show, Type}) -> % {{{2
              {description, "Description", ta},
              {file, "Path", none},
              {minified, "Minified", none},
-             {type, "Type", {select, asset_types()}}
+             {type, "Type", {select, common:asset_types()}}
             ],
        funs=#{
          list => fun() -> db:get_assets(Type) end,
@@ -729,7 +729,7 @@ event({block, add}) -> % {{{2
                   id=function,
                   value=template,
                   postback={block, change, function},
-                  options=module_functions(common)
+                  options=common:functions()
                  },
                #panel{
                   id=block_data,
@@ -772,11 +772,12 @@ finish_upload_event(template, Fname, Path, _Node) -> % {{{2
 
 finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     #cms_asset{type=Type} = file_to_asset(Fname, ""),
-    NewPath = wf:f("static/~s/~s", [Type, Fname]),
+    URLPath = wf:f("~s/~s", [Type, Fname]),
+    NewPath = wf:f("static/~s", [URLPath]),
     file:rename(Path, NewPath),
     maybe_set(name, Fname),
     wf:set(type, Type),
-    wf:set(path, NewPath).
+    wf:set(path, URLPath).
 
 api_event(Name, Tag, Args) -> % {{{2
     wf:info("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
@@ -792,12 +793,6 @@ sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
 
 %% Dropdown formatters {{{1
-asset_types() -> % {{{2
-    [{css, "CSS"},
-     {script, "Script"},
-     {image, "Image"},
-     {binary, "Other"}].
-
 cms_modules() -> % {{{2
     [{index, "Main"},
      {admin, "Admin"},
@@ -815,18 +810,4 @@ modules() -> % {{{2
      {admin, "Admin"},
      {common, "Common"},
      {index, "Main"}].
-
-module_functions(common) -> % {{{2
-    [
-     {template, "Template"},
-     {text, "Text"},
-     {asset, "Static Asset"},
-     {link, "Link"},
-     {icon, "Icon"}
-    ];
-module_functions(Any) -> % {{{2
-    [
-     {undefined, "Unknown module"}
-    ].
-
 
