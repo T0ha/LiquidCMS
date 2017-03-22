@@ -87,6 +87,8 @@ install() -> % {{{2
     add_to_block("admin", "script", {asset, ["js", "bootstrap"]}, 6),
     add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
     add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
+    add_to_block("admin", "script", {asset, ["js", "hotkeys", "jquery"]}, 9),
+    add_to_block("admin", "script", {asset, ["js", "bootsyrap-wysiwyg"]}, 10),
 
     add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
     add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css})}),
