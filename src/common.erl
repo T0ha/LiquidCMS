@@ -7,19 +7,21 @@
 %% CMS Module interface {{{1
 functions() -> % {{{2
     [
-     {parallel_block, "Parallell Group of Blocks"},
-     {waterfall, "Waterfall Block"},
+     %{parallel_block, "Parallell Group of Blocks"},
+     %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
      {template, "Template"},
-     {nav_items, "Navigation Menu Items List"},
-     {list_item, "List Item"},
-     {link_url, "Link"},
-     {icon, "Icon"},
-     {script, "Inline Script"},
-     {text, "Text with HTML"},
-     {full_block, "One Column Row"}
+     %{nav_items, "Navigation Menu Items List"},
+     %{list_item, "List Item"},
+     %{link_url, "Link"},
+     %{icon, "Icon"},
+     %{script, "Inline Script"},
+     {text, "Text with HTML"}
+     %{full_block, "One Column Row"}
      ].
 
+format_block(text, [Text]) -> % {{{2
+    #panel{body=Text};
 format_block(template, [TID]) -> % {{{2
     [#cms_template{name=Name}] = db:get_template(TID),
     wf:f("Template: ~s(~p)", [Name, TID]);
@@ -29,6 +31,16 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("common:~s(~p)", [F, A]).
 
+form_data(text) -> % {{{2
+    [
+     #wysiwyg{class=["form-control"],
+              id=text,
+              buttons=[
+                       #wysiwyg_button{body="Italic",
+                                       func="italic",
+                                       class=["btn", "btn-default"]}
+                      ]}
+    ];
 form_data(template) -> % {{{2
     Templates = db:get_templates(),
     DropdDown = [ {Path, Name} || #{file := Path, name := Name} <- Templates],
@@ -40,9 +52,30 @@ form_data(template) -> % {{{2
         options=DropdDown
        }
     ];
+form_data(asset) -> % {{{2
+    [
+     #span{text="Asset Type"},
+     #dd{
+        id=asset_type,
+        value=image,
+        postback={asset, type, change},
+        delegate=?MODULE,
+        options=asset_types()
+       },
+
+     #span{text="Asset"},
+     assets_dropdown(image)
+    ];
 form_data(F) -> % {{{2
     [].
 
+save_block(#cms_mfa{mfa={common, text, []}}=Rec) -> % {{{2
+    HTML = q(text, ""),
+    Rec#cms_mfa{mfa={common, text, [HTML]}};
+save_block(#cms_mfa{mfa={common, asset, []}}=Rec) -> % {{{2
+    StringId = q(asset_id, "gif.spinner"),
+    Id = string:tokens(StringId, "."),
+    Rec#cms_mfa{mfa={common, asset, [Id]}};
 save_block(#cms_mfa{mfa={common, template, []}}=Rec) -> % {{{2
     File = q(template, "templates/index.html"),
     Rec#cms_mfa{mfa={common, template, [File]}}.
@@ -141,6 +174,14 @@ full_block(_Page, Body) -> % {{{2
                body=Body}}.
 
 
+%% Event handlers % {{{1
+event({asset, type, change}) -> % {{{2
+    AssetType = wf:to_atom(q(asset_type, "image")),
+    wf:replace(asset_id, assets_dropdown(AssetType));
+
+event(Ev) -> % {{{2
+    wf:info("~p event ~p", [?MODULE, Ev]).
+
 %% Helpers {{{1
 sub_block(Block, Sub) -> % {{{2
     wf:to_list(Block) ++ "/" ++ wf:to_list(Sub).
@@ -151,3 +192,21 @@ q(Id, Default) -> % {{{2
            Default;
         A -> A
     end.
+
+%% Dropdown formatters {{{1
+asset_types() -> % {{{2
+    [{css, "CSS"},
+     {script, "Script"},
+     {image, "Image"},
+     {binary, "Other"}].
+
+assets_dropdown(AssetType) -> % {{{2
+    AssetsDup = db:get_assets(AssetType),
+    Assets = sets:to_list(sets:from_list(AssetsDup)),
+    Options = [ #option{value=string:join(Id, "."),
+                        text=Name} || #{id := Id,
+                                        name := Name} <- Assets],
+     #dd{
+        id=asset_id,
+        options=Options
+       }.

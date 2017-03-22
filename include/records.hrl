@@ -11,3 +11,15 @@
                start=0,
                count=10
     }).
+
+-record(wysiwyg_button, {?ELEMENT_BASE(element_wysiwyg_button),
+        func :: any(),
+        body :: any()
+    }).
+
+-record(wysiwyg, {?ELEMENT_BASE(element_wysiwyg),
+        buttons = [] :: [#wysiwyg_button{}],
+        preview = false:: boolean(),
+        hotkeys = #{} :: map()
+    }).
+
