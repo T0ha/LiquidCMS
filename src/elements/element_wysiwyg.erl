@@ -41,6 +41,10 @@ buttons([]) ->
     [];
 buttons(Buttons) ->
     #panel{class = "btn-toolbar",
+           data_fields = [
+                         {target, "#wysiwyg_editor"},
+                         {role, "editor-toolbar"}
+                        ],
            body = Buttons}.
 
 preview(_) ->

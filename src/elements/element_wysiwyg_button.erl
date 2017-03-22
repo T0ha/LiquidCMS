@@ -18,13 +18,13 @@ render_element(_Record = #wysiwyg_button{
                             class = Class
                            }) ->
     #link{data_fields = [
-                         {edit, func(Func)},
-                         {target, "#editor"},
-                         {role, "editor-toolbar"}
+                         {edit, func(Func)}
                         ],
           class = ["btn-toolbar" | Class],
           body = Body}.
 
+func({F, []}) ->
+    wf:f("~s", [F]);
 func({F, A}) ->
     wf:f("~s ~s", [F, A]);
 func(S) when is_list(S); is_binary(S) ->
