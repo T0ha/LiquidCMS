@@ -11,15 +11,17 @@ functions() -> % {{{2
      %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
      {template, "Template"},
-     %{nav_items, "Navigation Menu Items List"},
+     %{list, "Items List"},
      %{list_item, "List Item"},
-     %{link_url, "Link"},
+     {link_url, "Link"},
      %{icon, "Icon"},
      %{script, "Inline Script"},
      {text, "Text with HTML"}
      %{full_block, "One Column Row"}
      ].
 
+format_block(link_url, [Block, URL]) -> % {{{2
+    wf:f("Link: ~s(href=~s)", [Block, URL]);
 format_block(text, [Text]) -> % {{{2
     #panel{body=Text};
 format_block(template, [TID]) -> % {{{2
@@ -31,6 +33,19 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("common:~s(~p)", [F, A]).
 
+form_data(link_url) -> % {{{2
+    [
+     #span{text="Link content block"},
+     #txtbx{
+        id=block,
+        placeholder="link-text-block"
+       },
+     #span{text="URL"},
+     #txtbx{
+        id=url,
+        placeholder="http://yoursite.com"
+       }
+    ];
 form_data(text) -> % {{{2
     [
      #wysiwyg{class=["form-control"],
@@ -69,6 +84,10 @@ form_data(asset) -> % {{{2
 form_data(F) -> % {{{2
     [].
 
+save_block(#cms_mfa{mfa={common, link_url, []}}=Rec) -> % {{{2
+    Block = q(block, "link-content-block"),
+    URL = q(url, "https://liquid-nitrogen.org"),
+    Rec#cms_mfa{mfa={common, link_url, [Block, URL]}};
 save_block(#cms_mfa{mfa={common, text, []}}=Rec) -> % {{{2
     HTML = q(text, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
@@ -124,12 +143,15 @@ asset(_Page, AID) -> % {{{1 % {{{2
 
 
 template(#cms_page{id=PID}=Page, TID) -> % {{{2
+    template(#cms_page{id=PID}=Page, TID, []).
+
+template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
     wf:info("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
 
     #template{file=File,
-              bindings=[{'Page', Page} | Bindings]}.
+              bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
 nav_items(Page, Block, Classes) -> % {{{2
     Items = parallel_block(Page, Block),

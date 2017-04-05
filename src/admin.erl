@@ -811,5 +811,7 @@ modules() -> % {{{2
     [
      {admin, "Admin"},
      {common, "Common"},
-     {index, "Main"}].
+     {index, "Main"},
+     {bootstrap, "Bootstrap"}
+    ].
 
