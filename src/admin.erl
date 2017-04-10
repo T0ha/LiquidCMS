@@ -176,7 +176,7 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                                 [ItemLinkBlock, ""]},
                            sort=1},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={bootstrap,
                                 nav_items,
                                 [SubMenuBlock, ["nav-second-level", "collapse"]]},
                            sort=2}
@@ -343,6 +343,11 @@ new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
                 text="Save",
                 postback=SavePoctback
                },
+    BodyCols = case UploadTag of
+                   undefined -> {lg, 12};
+                   _ -> {lg, 6}
+               end,
+
     Body = #bs_row{
               body=[
                     #bs_col{
@@ -355,7 +360,7 @@ new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
                                overall_progress=true
                               }},
                     #bs_col{
-                       cols={lg, 6},
+                       cols=BodyCols,
                        body=Form}
                    ]},
     coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]).
