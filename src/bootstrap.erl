@@ -10,7 +10,6 @@ functions() -> % {{{2
      {navbar, "Navigation Bar"},
      {nav_item, "Navigation Bar button"},
      {slider, "Slider"},
-     %{nav_items, "Navigation Menu Items List"},
      %{script, "Inline Script"},
      {full_block, "One Column Row"}
      ].
@@ -36,11 +35,18 @@ form_data(nav_item) -> % {{{2
         text="navbar-button",
         placeholder="Block name for navbar elements"
        },
-     #span{text="URL"},
-     #txtbx{
-        id=url,
-        placeholder="https://yourdomain.com"
+     #panel{
+        id=submenu_box,
+        body=
+        #checkbox{
+           text="Dropdown",
+           id=submenu,
+           postback=submenu,
+           delegate=?MODULE,
+           checked=false
+          }
        },
+     #br{},
      #span{text="Text"},
      #txtbx{
         id=text,
@@ -55,30 +61,87 @@ form_data(navbar) -> % {{{2
         text="navbar-main",
         placeholder="Block name for navbar elements"
        },
-     #span{text="Additional CSS classes for NavBar"}
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Position"},
+                       #dd{
+                          id=position,
+                          options=position_classes(navbar)
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Alignment"},
+                       #dd{
+                          id=alignment,
+                          options=alignment_classes(navbar)
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       %#span{text="Color"},
+                       #checkbox{
+                          text="Inverse",
+                          value="inverse",
+                          label_position=before,
+                          id=inverse,
+                          checked=false
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Custom classes"},
+                       #txtarea{
+                          id=css_classes,
+                          placeholder="Other CSS classes"
+                         }
+                      ]}
+             ]}
     ];
 form_data(F) -> % {{{2
     [].
 
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, []}}=Rec) -> % {{{2
     Block = common:q(block, "navbar-button"),
-    URL = common:q(url, "https://liquid-nitrogen.org"),
     Text = common:q(text, "Just button"),
     NavItemBlock = common:sub_block(Block, "li"),
-    [
-     Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
-     #cms_mfa{id={PID, NavItemBlock},
-              mfa={common, link_url, [Block, URL]},
-              sort=1},
-     #cms_mfa{id={PID, Block},
-              mfa={common, text, [Text]},
-              sort=1}
-    ];
+
+    case common:q(url, undefined) of
+        undefined ->
+            [
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
+             #cms_mfa{id={PID, NavItemBlock},
+                      mfa={bootstrap, dropdown, [Block]},
+                      sort=1},
+             #cms_mfa{id={PID, common:sub_block(Block, "link")},
+                      mfa={common, text, [Text ++ "<b class='caret'></b>"]},
+                      sort=1}
+            ];
+        URL ->
+            %URL = common:q(url, "https://liquid-nitrogen.org"),
+            [
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
+             #cms_mfa{id={PID, NavItemBlock},
+                      mfa={common, link_url, [Block, URL]},
+                      sort=1},
+             #cms_mfa{id={PID, Block},
+                      mfa={common, text, [Text]},
+                      sort=1}
+            ]
+    end;
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, []}}=Rec) -> % {{{2
     Block = common:q(nav_block, "navbar-main"),
     NavItemsBlock = common:sub_block(Block, "navbar-ul"),
+    Classes = get_classes("navbar"),
     [
-     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, []]}},
+     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, Classes]}},
      #cms_mfa{id={PID, NavItemsBlock},
               mfa={bootstrap, nav_items, [Block, ["navbar-nav"]]},
               sort=1}
@@ -93,8 +156,7 @@ navbar(Page, Block, Classes) -> % {{{2
     common:template(Page, "templates/navbar.html", Bindings).
 
 nav_items(Page, Block, Classes) -> % {{{2
-    Items = common:parallel_block(Page, Block),
-    #list{body=Items, class=["nav" | Classes], html_id=Block}.
+    common:list(Page, Block, ["nav" | Classes]).
 
 nav_item(Page, ItemID) -> % {{{2
     %<li>
@@ -102,6 +164,20 @@ nav_item(Page, ItemID) -> % {{{2
     %</li>
     #listitem{body=common:parallel_block(Page, ItemID)}.
 
+dropdown(Page, Block) -> % {{{2
+    LinkBlock = common:sub_block(Block, "link"),
+    ItemsBlock = common:sub_block(Block, "items"),
+    [
+    #link{
+       %actions=Event,
+       body=common:parallel_block(Page, LinkBlock),
+       class="dropdown-toggle",
+       data_fields=[
+                    {toggle, "dropdown"}
+                   ]
+      },
+       common:list(Page, ItemsBlock, ["dropdown-menu"])
+    ].
 full_block(_Page, Body) -> % {{{2
     #bs_row{
        body=#bs_col{
@@ -110,12 +186,49 @@ full_block(_Page, Body) -> % {{{2
 
 
 %% Event handlers % {{{1
+event(submenu) -> % {{{2
+    case common:q(submenu, "off") of
+        "off" ->
+            wf:remove(url_box);
+        "on" ->
+            wf:insert_after(submenu_box,
+                            #panel{
+                               id=url_box,
+                               body=[
+                                     #span{text="URL"},
+                                     #txtbx{
+                                        id=url,
+                                        placeholder="https://yourdomain.com"
+                                       }
+                                    ]})
+    end;
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 
 %% Dropdown formatters {{{1
+position_classes(navbar) -> % {{{2
+    [
+     #option{value=none,
+             text="None"},
+     #option{value="fixed-top",
+             text="Fixed Top"},
+     #option{value="fixed-bottom",
+             text="Fixed Bottom"},
+     #option{value="static-top",
+             text="Static Top"}
+    ].
+
+alignment_classes(navbar) -> % {{{2
+    [
+     #option{value=none,
+             text="None"},
+     #option{value="left",
+             text="Left"},
+     #option{value="right",
+             text="Right"}
+    ].
 assets_dropdown(AssetType) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
     Assets = sets:to_list(sets:from_list(AssetsDup)),
@@ -126,3 +239,13 @@ assets_dropdown(AssetType) -> % {{{2
         id=asset_id,
         options=Options
        }.
+
+%% Helpers {{{1
+get_classes(Prefix) -> % {{{2
+   Classes = wf:mq([position, alignment, inverse, css_classes]),
+   lists:map(fun(none) -> "";
+                (undefined) -> wf:f("~s-default", [Prefix]);
+                ("") -> "";
+                (Class) -> wf:f("~s-~s", [Prefix, Class])
+            end,
+            Classes).

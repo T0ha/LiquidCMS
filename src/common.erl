@@ -153,9 +153,9 @@ template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
     #template{file=File,
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
-nav_items(Page, Block, Classes) -> % {{{2
+list(Page, Block, Classes) -> % {{{2
     Items = parallel_block(Page, Block),
-    #list{body=Items, class=["nav" | Classes], html_id=Block}.
+    #list{body=Items, class=Classes, html_id=Block}.
 
 list_item(Page, ItemID) -> % {{{2
     %<li>
@@ -211,7 +211,9 @@ sub_block(Block, Sub) -> % {{{2
 q(Id, Default) -> % {{{2
     case wf:q(Id) of
         "" ->
-           Default;
+            Default;
+        undefined ->
+            Default;
         A -> A
     end.
 
