@@ -51,9 +51,124 @@ form_data(text) -> % {{{2
      #wysiwyg{class=["form-control"],
               id=text,
               buttons=[
-                       #wysiwyg_button{body="Italic",
-                                       func="italic",
-                                       class=["btn", "btn-default"]}
+                       #panel{
+                          class="btn-group",
+                          body=[
+                                #wysiwyg_button{body="B",
+                                                func="bold",
+                                                class=["btn", "btn-default"]},
+                                #wysiwyg_button{body="<i>I</i>",
+                                                func="italic",
+                                                class=["btn", "btn-default"]},
+                                #wysiwyg_button{body="<u>U</u>",
+                                                func="underline",
+                                                class=["btn", "btn-default"]},
+                                #wysiwyg_button{body="<s>S</s>",
+                                                func="strikethrough",
+                                                class=["btn", "btn-default"]}
+                               ]},
+                       #panel{
+                          class="btn-group",
+                          body=[
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-align-left'></i>",
+                                   func="justifyleft",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-align-center'></i>",
+                                   func="justifycenter",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-align-right'></i>",
+                                   func="justifyright",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-align-justify'></i>",
+                                   func="justifyfull",
+                                   class=["btn", "btn-default"]}
+                               ]},
+                       #panel{
+                          class="btn-group",
+                          body=[
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-undo'></i>",
+                                   func="undo",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-repeat'></i>",
+                                   func="redo",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-close'></i>",
+                                   func="removeFormat",
+                                   class=["btn", "btn-default"]}
+                               ]},
+                       #panel{
+                          class="btn-group",
+                          body=[
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-list-ol'></i>",
+                                   func="insertorderedlist",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-list-ul'></i>",
+                                   func="insertunorderedlist",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-outdent'></i>",
+                                   func="outdent",
+                                   class=["btn", "btn-default"]},
+                                #wysiwyg_button{
+                                   body="<i class='fa fa-indent'></i>",
+                                   func="indent",
+                                   class=["btn", "btn-default"]}
+                               ]},
+                       #panel{
+                          class="btn-group",
+                          body=[
+                                #link{
+                                   class=[
+                                          "btn",
+                                          "btn-default",
+                                          "dropdown-toggle"
+                                         ],
+                                   text="H<i class='caret'></i>",
+                                   data_fields=[
+                                                {toggle, dropdown}
+                                               ]},
+                                #list{
+                                   class="dropdown-menu",
+                                   numbered=flase,
+                                   body=[ 
+                                         #listitem{
+                                            body=
+                                            #wysiwyg_button{
+                                            body="H1",
+                                            func="heading h1",
+                                            class=["btn", "btn-default"]}
+                                           },
+                                         #listitem{
+                                            body=
+                                         #wysiwyg_button{
+                                            body="H2",
+                                            func="heading 2",
+                                            class=["btn", "btn-default"]}
+                                           },
+                                         #listitem{
+                                            body=
+                                         #wysiwyg_button{
+                                            body="H3",
+                                            func="heading 3",
+                                            class=["btn", "btn-default"]}
+                                           },
+                                         #listitem{
+                                            body=
+                                         #wysiwyg_button{
+                                            body="H4",
+                                            func="heading 4",
+                                            class=["btn", "btn-default"]}}
+                                        ]}
+                               ]}
                       ]}
     ];
 form_data(template) -> % {{{2

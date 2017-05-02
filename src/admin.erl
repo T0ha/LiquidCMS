@@ -803,8 +803,10 @@ sort_event(SortTag, Blocks) -> % {{{2
 cms_modules() -> % {{{2
     [{index, "Main"},
      {admin, "Admin"},
-     {blog, "Blog"},
-     {galery, "Galery"}].
+     %{blog, "Blog"},
+     {account, "Account"}
+     %{galery, "Galery"}
+     ].
 
 cms_roles() -> % {{{2
     [{"undefined", "Nobody"},

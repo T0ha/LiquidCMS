@@ -62,7 +62,6 @@
          }).
 
 -record(cms_user, {
-          id :: binary(),
           email :: string(),
           password :: binary(),
           role :: role(),

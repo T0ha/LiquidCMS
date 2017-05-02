@@ -25,7 +25,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_asset, bag, [type, name]),
     %?CREATE_TABLE(cms_block_asset, bag, [asset_id]),
     ?CREATE_TABLE(cms_page, set, []),
-    %?CREATE_TABLE(cms_user, bag, []),
+    ?CREATE_TABLE(cms_user, bag, []),
     %?CREATE_TABLE(cms_account, bag, []),
     mnesia:transaction(
       fun() ->
@@ -44,6 +44,14 @@ install([])-> % {{{1
 update([]) -> % {{{1
     ok.
                         
+%% Getters
+login(Email, Password) ->
+    transaction(fun() ->
+                        mnesia:match_object(#cms_user{email=Email,
+                                                      password=Password,
+                                                      _='_'})
+                end).
+
 get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1
@@ -207,6 +215,8 @@ fields(cms_page) -> % {{{1
     record_info(fields, cms_page);
 fields(cms_mfa) -> % {{{1
     record_info(fields, cms_mfa);
+fields(cms_user) -> % {{{1
+    record_info(fields, cms_user);
 fields(cms_template) -> % {{{1
     record_info(fields, cms_template).
 

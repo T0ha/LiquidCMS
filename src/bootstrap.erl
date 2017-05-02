@@ -14,6 +14,9 @@ functions() -> % {{{2
      {full_block, "One Column Row"}
      ].
 
+format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
+    wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
+         [Block, RowClass, ColClass]);
 format_block(navbar, [Block, Classes]) -> % {{{2
     wf:f("NavBar: ~s(class=~p)", [Block, Classes]);
 format_block(nav_item, [Block]) -> % {{{2
@@ -25,8 +28,91 @@ format_block(asset, [AID]) -> % {{{2
     [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
     wf:f("Asset ~s: ~s(~p)", [Type, Name, File]);
 format_block(F, A) -> % {{{2
-    wf:f("common:~s(~p)", [F, A]).
+    wf:f("bootstrap:~s(~p)", [F, A]).
 
+form_data(full_block) -> % {{{2
+    [
+     #span{text="Block name"},
+     #txtbx{
+        id=block,
+        text="page-row",
+        placeholder="Block name for horizontal block"
+       },
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 6},
+                 body=[
+                       #span{text="Additional classes for .row div"},
+                       #txtarea{
+                          id=row_class,
+                          placeholder="Additional CSS classes"
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 6},
+                 body=[
+                       #span{text="Additional classes for .col div"},
+                       #txtarea{
+                          id=col_class,
+                          placeholder="Additional CSS classes"
+                         }
+                      ]}
+             ]}
+    ];
+form_data(slider) -> % {{{2
+    [
+     #span{text="Block for slider"},
+     #txtbx{
+        id=block,
+        text="navbar-main",
+        placeholder="Block name for navbar elements"
+       },
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Position"},
+                       #dd{
+                          id=position,
+                          options=position_classes(navbar)
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Alignment"},
+                       #dd{
+                          id=alignment,
+                          options=alignment_classes(navbar)
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       %#span{text="Color"},
+                       #checkbox{
+                          text="Inverse",
+                          value="inverse",
+                          label_position=before,
+                          id=inverse,
+                          checked=false
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Custom classes"},
+                       #txtarea{
+                          id=css_classes,
+                          placeholder="Other CSS classes"
+                         }
+                      ]}
+             ]}
+    ];
 form_data(nav_item) -> % {{{2
     [
      #span{text="Block for button"},
@@ -108,6 +194,11 @@ form_data(navbar) -> % {{{2
 form_data(F) -> % {{{2
     [].
 
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, []}}=Rec) -> % {{{2
+    Block = common:q(block, "page-row"),
+    RowClass = common:q(row_class, ""),
+    ColClass = common:q(col_class, ""),
+    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, []}}=Rec) -> % {{{2
     Block = common:q(block, "navbar-button"),
     Text = common:q(text, "Just button"),
@@ -178,11 +269,24 @@ dropdown(Page, Block) -> % {{{2
       },
        common:list(Page, ItemsBlock, ["dropdown-menu"])
     ].
-full_block(_Page, Body) -> % {{{2
+
+slider(Page, Block, Height, Classes) -> % {{{2
+    Bindings = [
+                {'Height', "50%"}
+               ],
+    common:template(Page, "templates/slider.html", Bindings).
+
+full_block(Page, Body) -> % {{{2
+    full_block(Page, Body, [], []).
+
+full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
     #bs_row{
+       class=RowClasses,
        body=#bs_col{
+               class=ColClasses,
                cols={lg, 12},
-               body=Body}}.
+               body=common:parallel_block(Page, Block)
+              }}.
 
 
 %% Event handlers % {{{1

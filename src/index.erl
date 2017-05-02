@@ -54,7 +54,7 @@ event(click) -> % {{{1
     }).
 
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{1
-    wf:info("Redirect to login: ~p", [Page]),
+    wf:info("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{1
     wf:info("Redirect to login: ~p", [Page]),
