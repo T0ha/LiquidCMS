@@ -1,7 +1,7 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
 -module (admin).
--compile(export_all).
+-compile([export_all, {parse_transform, lager_transform}]).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
@@ -45,6 +45,7 @@ default_data() -> % {{{2
                       ]}.
 
 install() -> % {{{2
+    lager:info("Installing ~p module", [?MODULE]),
     {ok, StaticFolders} = application:get_env(simple_bridge, static_paths),
     %io:format("StaticFolders: ~p~n", [StaticFolders]),
     {ok, OldCWD} = file:get_cwd(),
@@ -110,6 +111,7 @@ add_page(PID, TemplatePath) -> % {{{2
    add_page(PID, TemplatePath, undefined, index).
 
 add_page(PID, TemplatePath, Role, Module) -> % {{{2
+    lager:info("Installing ~p module", [?MODULE]),
     add_page(PID, <<"LiquidCMS">>, "LiquidCMS", Role, Module),
     add_to_block(PID, "body", {template, TemplatePath}).
 
