@@ -84,9 +84,9 @@ install() -> % {{{2
 %% Event handlers {{{1
 event({auth, login}) -> % {{{2
     Email = common:q(email, undefined),
-    Passwd = common:q(password, undefined),
+    Passwd = hash(common:q(password, "")),
     wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
-    case db:login(Email, hash(Passwd)) of
+    case db:login(Email, Passwd) of
         [] ->
             ok;
         [#cms_user{email=Email,

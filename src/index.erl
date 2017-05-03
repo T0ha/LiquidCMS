@@ -18,7 +18,7 @@ main() ->  % {{{1
     try common:waterfall(Page, "page")
     catch
         error:unauthorized -> 
-            wf:redirect_to_login("/auth?page=login");
+            wf:redirect_to_login("/account");
         error:{change_module, Module} ->
             URI = wf:uri(),
             [_, QS] = string:tokens(URI, "?"),

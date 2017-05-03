@@ -118,7 +118,7 @@ add_page(PID, TemplatePath, Role, Module) -> % {{{2
 add_page(PID, Title, Description, Role, Module) -> % {{{2
 
     Funs = [
-            %fun index:maybe_redirect_to_login/1,
+            {index, maybe_redirect_to_login, []},
             {index, maybe_change_module, []},
             {common, template, ["templates/main.html"]}
            ],
