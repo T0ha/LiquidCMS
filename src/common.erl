@@ -320,6 +320,9 @@ event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
+private_block(Block) -> % {{{2
+    wf:f("+~s", [Block]).
+
 sub_block(Block, Sub) -> % {{{2
     wf:to_list(Block) ++ "/" ++ wf:to_list(Sub).
 

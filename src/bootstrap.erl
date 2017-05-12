@@ -21,9 +21,9 @@ functions() -> % {{{2
 format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
     wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
          [Block, Width, Offset, Classes]);
-format_block(panel, [HeaderBlock, BodyBlock]) -> % {{{2
-    wf:f("Panel: ~s(header_block=~p, body_block=~p)",
-         [HeaderBlock, BodyBlock]);
+format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
+    wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p)",
+         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]);
 format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
     wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
          [Block, RowClass, ColClass]);

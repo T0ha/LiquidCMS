@@ -6,6 +6,16 @@
 -include("records.hrl").
 -include("db.hrl").
 
+%% CMS Module interface {{{1
+functions() -> % {{{2
+    [
+     {email_field, "Login /Email Field"},
+     {password_field, "Password Field"},
+     {retype_password_field, "Retype Password Field"},
+     {login_button, "Login Button"},
+     {register_button, "Register Button"}
+     ].
+
 %% Module render functions {{{1
 main() -> % {{{2
     PID = case wf:q(page) of
@@ -24,18 +34,34 @@ title() -> "LiquidCMS - Log In".
 body(Page) ->  % {{{2
     index:body(Page).
 	
-login_form(Page) -> % {{{2
-    [
+email_field(Page) -> % {{{2
      #panel{
         class="form-group",
         body=#txtbx{
                 id=email,
-                placeholder="E-mail"}},
+                placeholder="E-mail"}}.
+
+password_field(_Page) -> % {{{2
+    #panel{
+       class="form-group",
+       body=#pass{
+               id=password,
+               placeholder="Password"}}.
+
+retype_password_field(_Page) -> % {{{2
      #panel{
         class="form-group",
         body=#pass{
-                id=password,
-                placeholder="Passwprd"}},
+                id=repassword,
+                actions=#validate{
+                           validators=#confirm_password{
+                                         text="Password and confirmation are different",
+                                         password=password
+                                        }
+                          },
+                placeholder="Confirm Password"}}.
+
+login_button(_Page) -> % {{{2
      #btn{
         type=success,
         size=lg,
@@ -43,9 +69,32 @@ login_form(Page) -> % {{{2
         text="Login",
         postback={auth, login},
         delegate=?MODULE
-       }
+       }.
+
+register_button(_Page, Role) -> % {{{2
+    #btn{
+       type=success,
+       size=lg,
+       class="btn-block",
+       text="Register",
+       postback={auth, register, Role},
+       delegate=?MODULE
+      }.
+
+login_form(Page) -> % {{{2
+    [
+     email_field(Page),
+     password_field(Page),
+     login_button(Page)
     ].
 
+register_form(Page, Role) -> % {{{2
+    [
+     email_field(Page),
+     password_field(Page),
+     retype_password_field(Page),
+     register_button(Page, Role)
+    ].
 %% Module install routines {{{1
 default_data() -> % {{{2
     #{cms_mfa => [
@@ -77,11 +126,51 @@ default_data() -> % {{{2
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
+    % Log In page
     admin:add_page("login", "templates/login.html", undefined, account),
     admin:add_to_block("login", "css", {asset, ["css", "sb-admin-2"]}, 3),
+
+    % Index Setup page
+    admin:add_page("index", "templates/setup.html", undefined, index),
+    % Admin setup
+    admin:add_to_block("index", "admin-setup", {bootstrap, col, ["col-admin", "5", "", ""]}, 1),
+    admin:add_to_block("index", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
+    admin:add_to_block("index", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
+    admin:add_to_block("index", "admin-panel-body", {account, email_field, []}, 1),
+    admin:add_to_block("index", "admin-panel-body", {account, password_field, []}, 2),
+    admin:add_to_block("index", "admin-panel-body", {account, retype_password_field, []}, 3),
+    admin:add_to_block("index", "admin-panel-body", {account, register_button, [admin]}, 4),
+
+    % Page setup
+    %admin:add_to_block("index", "page-setup", {bootstrap, col, ["col-page", "6", "1", ""]}, 2),
+    %admin:add_to_block("index", "col-page", {bootstrap, panel, ["page-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
+    %admin:add_to_block("index", "page-panel-header", {text, ["Admin Account Settings"]}, 1),
+    %admin:add_to_block("index", "page-panel-body", {admin, email_field, []}, 1),
+    %admin:add_to_block("index", "page-panel-body", {admin, password_field, []}, 2),
+    %admin:add_to_block("index", "page-panel-body", {admin, retype_password_field, []}, 3),
+
     ok.
 
 %% Event handlers {{{1
+event({auth, register, Role}) -> % {{{2
+    Email = common:q(email, undefined),
+    Passwd = hash(common:q(password, "")),
+    wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
+    case db:register(Email, Passwd, Role) of
+        #cms_user{email=Email,
+                  password=Passwd,
+                  role=Role} = User ->
+            wf:user(User),
+            UserRoles = roles(Role),
+            lists:foreach(fun(R) ->
+                                  wf:role(R, true)
+                          end,
+                          UserRoles),
+            wf:redirect_from_login("/");
+        Any -> 
+            wf:flash("Error occured: ~p", [Any]),
+            wf:warning("Error occured: ~p", [Any])
+    end;
 event({auth, login}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),

@@ -78,7 +78,7 @@ install() -> % {{{2
     file:set_cwd(OldCWD),
     {ok, TemplateFiles} = file:list_dir("templates"),
     lists:foreach(fun(F) -> add_template("templates/" ++ F, []) end, TemplateFiles),
-    add_page("index", "templates/index.html"),
+    %add_page("index", "templates/index.html"),
     add_page("admin", "templates/blank.html", admin, admin),
     add_to_block("admin", "css", {asset, ["css", "font-awesome"]}, 3),
     add_to_block("admin", "css", {asset, ["css", "metisMenu"]}, 4),
@@ -155,9 +155,11 @@ add_to_block(PID, Block, Mater)  -> % {{{2
     add_to_block(PID, Block, Mater, 1).
 
 add_to_block(PID, Block, {Type, ID}, Sort) -> % {{{2
+    add_to_block(PID, Block, {common, Type, [ID]}, Sort);
+add_to_block(PID, Block, {M, F, A}, Sort) -> % {{{2
     db:save(#cms_mfa{
                id={PID, Block},
-               mfa={common, Type, [ID]},
+               mfa={M, F, A},
                sort=Sort}).
 
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock}) -> % {{{2

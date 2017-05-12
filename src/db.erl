@@ -45,13 +45,26 @@ update([]) -> % {{{1
     ok.
                         
 %% Getters
-login(Email, Password) ->
+login(Email, Password) -> % {{{1
     transaction(fun() ->
                         mnesia:match_object(#cms_user{email=Email,
                                                       password=Password,
                                                       _='_'})
                 end).
 
+register(Email, Password, Role) -> % {{{1
+    transaction(fun() ->
+                        case mnesia:match_object(#cms_user{email=Email,
+                                                           _='_'}) of
+                            [] -> 
+                                User = #cms_user{email=Email,
+                                                 password=Password,
+                                                 role=Role},
+                                mnesia:write(User),
+                                User;
+                            _ -> {error, "User already exist"}
+                        end
+                end).
 get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1
