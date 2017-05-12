@@ -4,7 +4,8 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
 
-main() ->  % {{{1
+%% Module render functions {{{1
+main() ->  % {{{2
     PID = case wf:q(page) of
               undefined -> "index";
               A -> A
@@ -26,37 +27,46 @@ main() ->  % {{{1
     end.
 
 
-block(Page, Block) -> % {{{1
-    common:parallel_block(Page, Block).
 
-author(_Page) ->  % {{{1
+author(_Page) ->  % {{{2
     "".
 
-description(_Page) ->  % {{{1
+description(_Page) ->  % {{{2
     "".
 
-body_attrs(_Page) ->  % {{{1
+body_attrs(_Page) ->  % {{{2
     "".
 
-head(_Page) ->  % {{{1
+head(_Page) ->  % {{{2
     "".
 
-title(#cms_page{title=Title}) ->  % {{{1
+title(#cms_page{title=Title}) ->  % {{{2
     Title.
 
-body(Page) -> % {{{1
+body(Page) -> % {{{2
     common:parallel_block(Page, "body").
 	
-event(click) -> % {{{1
+%% Event handlers {{{1
+event(click) -> % {{{2
     wf:replace(button, #panel { 
         body="You clicked the button!", 
         actions=#effect { effect=highlight }
     }).
 
-maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{1
+%% Block renderers {{{1
+maybe_block(_Page, "", _Classes) -> % {{{2
+    "";
+maybe_block(Page, Block, Classes) -> % {{{2
+    #panel{
+       class=Classes,
+       body=common:parallel_block(Page, Block)
+    }.
+block(Page, Block) -> % {{{2
+    common:parallel_block(Page, Block).
+maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
     wf:info("Not redirect to login: ~p", [Page]),
     Page;
-maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{1
+maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
     wf:info("Redirect to login: ~p", [Page]),
     case wf:role(Role) of 
         true ->
@@ -65,7 +75,7 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{1
             error(unauthorized)
     end.
 
-maybe_change_module(#cms_page{module=Module} = Page) -> % {{{1
+maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
     wf:info("Change module: ~p", [Page]),
     case wf:page_module() of 
         Module ->

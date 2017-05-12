@@ -9,11 +9,15 @@ functions() -> % {{{2
     [
      {navbar, "Navigation Bar"},
      {nav_item, "Navigation Bar button"},
+     {panel, "Panel"},
      {slider, "Slider"},
      %{script, "Inline Script"},
      {full_block, "One Column Row"}
      ].
 
+format_block(panel, [HeaderBlock, BodyBlock]) -> % {{{2
+    wf:f("Panel: ~s(header_block=~p, body_block=~p)",
+         [HeaderBlock, BodyBlock]);
 format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
     wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
          [Block, RowClass, ColClass]);
@@ -30,6 +34,55 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("bootstrap:~s(~p)", [F, A]).
 
+form_data(panel) -> % {{{2
+    [
+     #span{text="Block for panel header"},
+     #txtbx{
+        id=panel_header_block,
+        text="",
+        placeholder="Block name for panel header (leave blank for none)"
+       },
+     #span{text="Block for panel body"},
+     #txtbx{
+        id=panel_body_block,
+        text="panel-body",
+        placeholder="Block name for panel body elements"
+       },
+     #span{text="Block for panel addons"},
+     #txtbx{
+        id=panel_addons_block,
+        text="",
+        placeholder="Block name for panel addons (leave blank for none)"
+       },
+     #span{text="Block for panel header"},
+     #txtbx{
+        id=panel_footer_block,
+        text="",
+        placeholder="Block name for panel footer (leave blank for none)"
+       },
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Context"},
+                       #dd{
+                          id=context,
+                          options=context_classes(panel)
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 3},
+                 body=[
+                       #span{text="Custom classes"},
+                       #txtarea{
+                          id=css_classes,
+                          placeholder="Other CSS classes"
+                         }
+                      ]}
+             ]}
+    ];
 form_data(full_block) -> % {{{2
     [
      #span{text="Block name"},
@@ -194,6 +247,14 @@ form_data(navbar) -> % {{{2
 form_data(F) -> % {{{2
     [].
 
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, []}}=Rec) -> % {{{2
+    HeaderBlock = common:q(panel_header_block, ""),
+    FooterBlock = common:q(panel_footer_block, ""),
+    BodyBlock = common:q(panel_body_block, "panel-body"),
+    AddonsBlock = common:q(panel_addons_block, ""),
+    
+    Classes = get_classes("panel"),
+    Rec#cms_mfa{mfa={bootstrap, panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, []}}=Rec) -> % {{{2
     Block = common:q(block, "page-row"),
     RowClass = common:q(row_class, ""),
@@ -254,6 +315,17 @@ nav_item(Page, ItemID) -> % {{{2
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
     #listitem{body=common:parallel_block(Page, ItemID)}.
+
+panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
+    #panel{
+       class=["panel" | Classes],
+       body=[
+             index:maybe_block(Page, HeaderBlock, ["panel-heading"]),
+             index:maybe_block(Page, BodyBlock, ["panel-body"]),
+             index:maybe_block(Page, AddonsBlock, []),
+             index:maybe_block(Page, FooterBlock, ["panel-footer"])
+            ]
+      }.
 
 dropdown(Page, Block) -> % {{{2
     LinkBlock = common:sub_block(Block, "link"),
@@ -333,6 +405,22 @@ alignment_classes(navbar) -> % {{{2
      #option{value="right",
              text="Right"}
     ].
+
+context_classes(_) -> % {{{2
+    [
+     #option{value="default",
+             text="Default"},
+     #option{value="primary",
+             text="Primary"},
+     #option{value="success",
+             text="Success"},
+     #option{value="info",
+             text="Info"},
+     #option{value="warning",
+             text="Warning"},
+     #option{value="danger",
+             text="Danger"}
+    ].
 assets_dropdown(AssetType) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
     Assets = sets:to_list(sets:from_list(AssetsDup)),
@@ -346,7 +434,8 @@ assets_dropdown(AssetType) -> % {{{2
 
 %% Helpers {{{1
 get_classes(Prefix) -> % {{{2
-   Classes = wf:mq([position, alignment, inverse, css_classes]),
+   AllClasses = wf:mq([position, alignment, inverse, context, css_classes]),
+   Classes = sets:to_list(sets:from_list(AllClasses)),
    lists:map(fun(none) -> "";
                 (undefined) -> wf:f("~s-default", [Prefix]);
                 ("") -> "";
