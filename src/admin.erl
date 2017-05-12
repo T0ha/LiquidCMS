@@ -103,7 +103,6 @@ install() -> % {{{2
     add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
     add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
 
-    add_to_block("admin", "container", {template, "templates/datatables.html"}, 1),
     ok.
 
 %% Different components adding to pages  {{{1
