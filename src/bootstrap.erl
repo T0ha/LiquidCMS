@@ -11,10 +11,16 @@ functions() -> % {{{2
      {nav_item, "Navigation Bar button"},
      {panel, "Panel"},
      {slider, "Slider"},
+     %{dropdown, "Dropdown"},
      %{script, "Inline Script"},
+     {row, "Row"},
+     {col, "Column"},
      {full_block, "One Column Row"}
      ].
 
+format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
+    wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
+         [Block, Width, Offset, Classes]);
 format_block(panel, [HeaderBlock, BodyBlock]) -> % {{{2
     wf:f("Panel: ~s(header_block=~p, body_block=~p)",
          [HeaderBlock, BodyBlock]);
@@ -34,6 +40,67 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("bootstrap:~s(~p)", [F, A]).
 
+form_data(row) -> % {{{2
+    [
+     #span{text="Block name"},
+     #txtbx{
+        id=block,
+        text="row",
+        placeholder="Block name for row"
+       },
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 12},
+                 body=[
+                       #span{text="Additional classes for .row div"},
+                       #txtarea{
+                          id=class,
+                          placeholder="Additional CSS classes"
+                         }
+                      ]}
+             ]}
+    ];
+form_data(col) -> % {{{2
+    [
+     #span{text="Block name"},
+     #txtbx{
+        id=block,
+        text="row",
+        placeholder="Block name for row"
+       },
+     #span{text="Formatting"},
+     #bs_row{
+        body=[
+              #bs_col{
+                 cols={lg, 4},
+                 body=[
+                       #span{text="Width (1 ≤ w ≤ 12)"},
+                       #txtarea{
+                          id=width,
+                          text=12
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 4},
+                 body=[
+                       #span{text="Offset empty if none (1 ≤ o ≤ 11)"},
+                       #txtarea{
+                          id=offset
+                         }
+                      ]},
+              #bs_col{
+                 cols={lg, 4},
+                 body=[
+                       #span{text="Additional classes for .col div"},
+                       #txtarea{
+                          id=col_class,
+                          placeholder="Additional CSS classes"
+                         }
+                      ]}
+             ]}
+    ];
 form_data(panel) -> % {{{2
     [
      #span{text="Block for panel header"},
@@ -54,7 +121,7 @@ form_data(panel) -> % {{{2
         text="",
         placeholder="Block name for panel addons (leave blank for none)"
        },
-     #span{text="Block for panel header"},
+     #span{text="Block for panel footer"},
      #txtbx{
         id=panel_footer_block,
         text="",
@@ -255,6 +322,13 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, []}}=Rec) -> % {{{2
     
     Classes = get_classes("panel"),
     Rec#cms_mfa{mfa={bootstrap, panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]}};
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, []}}=Rec) -> % {{{2
+    Block = common:q(block, "row"),
+    Width = common:q(width, "12"),
+    Offset = common:q(offset, ""),
+    Classes = common:q(col_class, ""),
+
+    Rec#cms_mfa{mfa={bootstrap, col, [Block, Width, Offset, Classes]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, []}}=Rec) -> % {{{2
     Block = common:q(block, "page-row"),
     RowClass = common:q(row_class, ""),
@@ -297,7 +371,12 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, []}}=Rec) -> % {{{2
      #cms_mfa{id={PID, NavItemsBlock},
               mfa={bootstrap, nav_items, [Block, ["navbar-nav"]]},
               sort=1}
-    ].
+    ];
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, Fun, []}}=Rec) -> % {{{2
+    Block = common:q(block, "row"),
+    Classes = common:q(col_class, ""),
+
+    Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
 %% Block renderers {{{1
 navbar(Page, Block, Classes) -> % {{{2
@@ -350,6 +429,19 @@ slider(Page, Block, Height, Classes) -> % {{{2
 
 full_block(Page, Body) -> % {{{2
     full_block(Page, Body, [], []).
+
+row(Page, Block, Classes) -> % {{{2
+    #bs_row{
+       class=Classes,
+       body=common:parallel_block(Page, Block)
+      }.
+
+col(Page, Block, Width, Offset, Classes) -> % {{{2
+    #bs_col{
+       class=Classes,
+       cols=column_classes(Width, Offset),
+       body=common:parallel_block(Page, Block)
+      }.
 
 full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
     #bs_row{
@@ -442,3 +534,17 @@ get_classes(Prefix) -> % {{{2
                 (Class) -> wf:f("~s-~s", [Prefix, Class])
             end,
             Classes).
+column_classes(Width, "") -> % {{{2
+    W = list_to_integer(Width),
+    if W > 0, W =< 12 ->
+           [wf:f("col-~s-~s", [Screen, Width]) || Screen <- ["xs", "sm", "md", "lg"]];
+       true -> column_classes("12", "")
+    end;
+column_classes(Width, Offset) -> % {{{2
+      O = list_to_integer(Offset),
+      if O > 0, O =< 12 ->
+             [wf:f("col-~s-offset-~s", [Screen, Offset]) || Screen <- ["xs", "sm", "md", "lg"]] ++ column_classes(Width, "");
+         true -> column_classes(Width, "")
+      end;
+column_classes(_, _) -> % {{{2
+    column_classes("12", "").
