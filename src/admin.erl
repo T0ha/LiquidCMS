@@ -417,6 +417,61 @@ format_block(#cms_mfa{ % {{{2$
                      ]}
             ]}.
 
+add_default_fields({Data, Formatting}) -> % {{{2
+    add_default_fields(Data, Formatting).
+
+add_default_fields(Data, Formatting) -> % {{{2
+    [ 
+     {"Data", [
+               {"Block name", block}
+               | Data]},
+     {"Formatting",
+      Formatting ++ [{"Additional classes", classes}]}
+      ].
+
+render_fields(Cols) -> % {{{2
+    Width = 12 / length(Cols),
+    [
+     #bs_row{
+        body=[render_field(Col, Width) || Col <- Cols]
+       }
+    ].
+
+render_field(Any) -> % {{{2
+    render_field(Any, 12).
+
+render_field({Label, ID}, Width) when is_atom(ID) -> % {{{2
+    render_field({Label, {ID, ""}}, Width);
+render_field({Label, {ID, Text}}, Width) -> % {{{2
+    #bs_col{
+       cols={lg, Width},
+       body=[
+             #span{text=Label},
+             #txtarea{
+                id=ID,
+                text=Text
+               }
+            ]};
+render_field({Label, Any}, Width) when is_list(Any) -> % {{{2
+    #bs_col{
+       cols={lg, 12},
+       body=[
+             #span{text=Label},
+             render_fields(Any)
+            ]};
+render_field({Label, Any}, Width) -> % {{{2
+    #bs_col{
+       cols={lg, Width},
+       body=[
+     #span{text=Label},
+     Any
+    ]};
+render_field(Any, Width) -> % {{{2
+    #bs_col{
+       cols={lg, Width},
+       body=Any
+      }.
+
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
     new_modal("Upload Static Asset",
@@ -699,12 +754,16 @@ event({block, change, module}) -> % {{{2
                   value=template,
                   postback={block, change, function},
                   options=apply(M, functions, [])
-                 });
+                 }),
+    event({block, change, function});
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
+    BlockData = try apply(M, form_data, [F])
+                catch error:undef -> {[], []}
+                end,
     wf:update(block_data,
-               apply(M, form_data, [F]));
+               render_fields(add_default_fields(BlockData)));
 event({block, add}) -> % {{{2
     Pages = db:get_pages(),
     [#{id := P} | _] = Pages,
