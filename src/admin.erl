@@ -418,7 +418,11 @@ format_block(#cms_mfa{ % {{{2$
             ]}.
 
 add_default_fields({Data, Formatting}) -> % {{{2
-    add_default_fields(Data, Formatting).
+    add_default_fields(Data, Formatting);
+add_default_fields(Any) when is_list(Any) -> % {{{2
+    [{"", Any}, {"", []}];
+add_default_fields(Any) -> % {{{2
+    [{"", Any}, {"", []}].
 
 add_default_fields(Data, Formatting) -> % {{{2
     [ 
@@ -430,12 +434,20 @@ add_default_fields(Data, Formatting) -> % {{{2
       ].
 
 render_fields(Cols) -> % {{{2
-    Width = 12 / length(Cols),
-    [
-     #bs_row{
-        body=[render_field(Col, Width) || Col <- Cols]
-       }
-    ].
+    try 12 / length(Cols) of
+        Width ->
+            [
+             #bs_row{
+                body=[render_field(Col, Width) || Col <- Cols]
+               }]
+    catch 
+        _:_ -> 
+            [
+             #bs_row{
+                body=[render_field(Col, 12) || Col <- Cols]
+               }]
+    end.
+
 
 render_field(Any) -> % {{{2
     render_field(Any, 12).
@@ -471,6 +483,64 @@ render_field(Any, Width) -> % {{{2
        cols={lg, Width},
        body=Any
       }.
+
+get_classes(M, Prefix) -> % {{{2
+    Fields = formatting_fields((M):form_data(Prefix)),
+    wf:info("Classes fields: ~p", [Fields]),
+    AllClasses = wf:mq([classes | Fields]),
+    wf:info("Classes data: ~p", [AllClasses]),
+    %Classes = sets:to_list(sets:from_list(AllClasses)),
+   lists:map(fun(none) -> "";
+                (undefined) -> "";
+                ("") -> "";
+                (Class) -> Class
+            end,
+            AllClasses).
+
+get_data(M, F) -> % {{{2
+    Fields = data_fields((M):form_data(F)),
+    wf:info("Fields: ~p", [Fields]),
+    Data = wf:mq([block | Fields]),
+    wf:info("Data: ~p", [Data]),
+    lists:map(fun(none) -> "";
+                 (undefined) -> "";
+                 ("") -> "";
+                 (Field) -> Field
+              end,
+              Data).
+
+
+
+data_fields({Data, _}) -> % {{{2
+    data_fields(Data);
+data_fields(Data) when is_list(Data) -> % {{{2
+    lists:flatten([get_fields(F) || F <- Data, get_fields(F) /= []]).
+
+formatting_fields({_, Formats}) -> % {{{2
+    [get_fields(F) || F <- Formats, get_fields(F) /= []];
+formatting_fields(_Any) -> % {{{2
+    [].
+
+get_fields({_, ID}) when is_atom(ID) -> % {{{2
+    ID;
+get_fields({_, Any}) -> % {{{2
+    get_fields(Any);
+get_fields(#dd{id=ID}) -> % {{{2
+    ID;
+get_fields(#txtbx{id=ID}) -> % {{{2
+    ID;
+get_fields(#txtarea{id=ID}) -> % {{{2
+    ID;
+get_fields(#panel{body=Body}) when is_list(Body) -> % {{{2
+    [get_fields(E) || E <- Body];
+get_fields(#panel{body=Body}) -> % {{{2
+    get_fields(Body);
+get_fields(D) -> % {{{2
+    wf:info("Data: ~p", [D]),
+    [].
+
+prefix_classes(Prefix, Classes) -> % {{{2
+    [wf:f("~s-~s", [Prefix, C]) || C <- Classes].
 
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
@@ -812,9 +882,15 @@ event({block, save}) -> % {{{2
     PID = common:q(add_page_select, "index"),
     Block = common:q(add_block, "body"),
     
+    Args = admin:get_data(M, F),
+    Classes = admin:get_classes(M, wf:to_atom(F)),
+
+
     Rec = db:fix_sort(#cms_mfa{id={PID, Block}, 
-                               mfa={M, F, []}}),
-    NewRec = apply(M, save_block, [Rec]),
+                               mfa={M, F, Args ++ [Classes]}}),
+
+    NewRec = try apply(M, save_block, [Rec])
+             catch error:udef -> Rec end,
     db:save(NewRec),
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
@@ -878,9 +954,9 @@ cms_roles() -> % {{{2
 
 modules() -> % {{{2
     [
-     {admin, "Admin"},
+     %{admin, "Admin"},
      {common, "Common"},
-     {index, "Main"},
+     %{index, "Main"},
      {bootstrap, "Bootstrap"}
     ].
 

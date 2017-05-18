@@ -10,12 +10,12 @@ functions() -> % {{{2
      {navbar, "Navigation Bar"},
      {nav_item, "Navigation Bar button"},
      {panel, "Panel"},
-     {slider, "Slider"},
+     %{slider, "Slider"},
      %{dropdown, "Dropdown"},
      %{script, "Inline Script"},
      {row, "Row"},
-     {col, "Column"},
-     {full_block, "One Column Row"}
+     {col, "Column"}
+     %{full_block, "One Column Row"}
      ].
 
 format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
@@ -40,306 +40,144 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("bootstrap:~s(~p)", [F, A]).
 
-form_data(row) -> % {{{2
-    [
-     #span{text="Block name"},
-     #txtbx{
-        id=block,
-        text="row",
-        placeholder="Block name for row"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 12},
-                 body=[
-                       #span{text="Additional classes for .row div"},
-                       #txtarea{
-                          id=class,
-                          placeholder="Additional CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
 form_data(col) -> % {{{2
-    [
-     #span{text="Block name"},
-     #txtbx{
-        id=block,
-        text="row",
-        placeholder="Block name for row"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 4},
-                 body=[
-                       #span{text="Width (1 ≤ w ≤ 12)"},
-                       #txtarea{
-                          id=width,
-                          text=12
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 4},
-                 body=[
-                       #span{text="Offset empty if none (1 ≤ o ≤ 11)"},
-                       #txtarea{
-                          id=offset
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 4},
-                 body=[
-                       #span{text="Additional classes for .col div"},
-                       #txtarea{
-                          id=col_class,
-                          placeholder="Additional CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
+    {[], 
+     [
+      {"Width (1..12)", width},
+      {"Offset", offset}
+     ]
+    };
 form_data(panel) -> % {{{2
-    [
-     #span{text="Block for panel header"},
-     #txtbx{
-        id=panel_header_block,
-        text="",
-        placeholder="Block name for panel header (leave blank for none)"
-       },
-     #span{text="Block for panel body"},
-     #txtbx{
-        id=panel_body_block,
-        text="panel-body",
-        placeholder="Block name for panel body elements"
-       },
-     #span{text="Block for panel addons"},
-     #txtbx{
-        id=panel_addons_block,
-        text="",
-        placeholder="Block name for panel addons (leave blank for none)"
-       },
-     #span{text="Block for panel footer"},
-     #txtbx{
-        id=panel_footer_block,
-        text="",
-        placeholder="Block name for panel footer (leave blank for none)"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Context"},
-                       #dd{
-                          id=context,
-                          options=context_classes(panel)
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Custom classes"},
-                       #txtarea{
-                          id=css_classes,
-                          placeholder="Other CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
-form_data(full_block) -> % {{{2
-    [
-     #span{text="Block name"},
-     #txtbx{
-        id=block,
-        text="page-row",
-        placeholder="Block name for horizontal block"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 6},
-                 body=[
-                       #span{text="Additional classes for .row div"},
-                       #txtarea{
-                          id=row_class,
-                          placeholder="Additional CSS classes"
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 6},
-                 body=[
-                       #span{text="Additional classes for .col div"},
-                       #txtarea{
-                          id=col_class,
-                          placeholder="Additional CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
+    {[
+      {"Block for panel header",
+      #txtbx{
+         id=panel_header_block,
+         text="",
+         placeholder="Block name for panel header (leave blank for none)"
+        }},
+      {"Block for panel addons",
+      #txtbx{
+         id=panel_addons_block,
+         text="",
+         placeholder="Block name for panel addons (leave blank for none)"
+        }},
+      {"Block for panel footer",
+      #txtbx{
+         id=panel_footer_block,
+         text="",
+         placeholder="Block name for panel footer (leave blank for none)"
+        }}
+     ],
+     [
+      {"Context",
+       #dd{
+          id=context,
+          options=context_classes(panel)
+         }}
+     ]
+    };
 form_data(slider) -> % {{{2
-    [
-     #span{text="Block for slider"},
-     #txtbx{
-        id=block,
-        text="navbar-main",
-        placeholder="Block name for navbar elements"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Position"},
-                       #dd{
-                          id=position,
-                          options=position_classes(navbar)
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Alignment"},
-                       #dd{
-                          id=alignment,
-                          options=alignment_classes(navbar)
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       %#span{text="Color"},
-                       #checkbox{
-                          text="Inverse",
-                          value="inverse",
-                          label_position=before,
-                          id=inverse,
-                          checked=false
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Custom classes"},
-                       #txtarea{
-                          id=css_classes,
-                          placeholder="Other CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
+    {[],
+     [
+      {"Position",
+       #dd{
+          id=position,
+          options=position_classes(navbar)
+         }
+      },
+      {"Alignment",
+       #dd{
+          id=alignment,
+          options=alignment_classes(navbar)
+         }
+      },
+      #bs_col{
+         cols={lg, 3},
+         body=[
+               %#span{text="Color"},
+               #checkbox{
+                  text="Inverse",
+                  value="inverse",
+                  label_position=before,
+                  id=inverse,
+                  checked=false
+                 }
+              ]}
+     ]
+    };
 form_data(nav_item) -> % {{{2
-    [
-     #span{text="Block for button"},
-     #txtbx{
-        id=block,
-        text="navbar-button",
-        placeholder="Block name for navbar elements"
-       },
-     #panel{
-        id=submenu_box,
-        body=
-        #checkbox{
-           text="Dropdown",
-           id=submenu,
-           postback=submenu,
-           delegate=?MODULE,
-           checked=false
-          }
-       },
-     #br{},
-     #span{text="Text"},
-     #txtbx{
-        id=text,
-        placeholder="Text for button"
-       }
-    ];
+    {[
+      #panel{
+         id=submenu_box,
+         body=
+         #checkbox{
+            text="Dropdown",
+            id=submenu,
+            postback=submenu,
+            delegate=?MODULE,
+            checked=false
+           }
+        },
+      #panel{
+         id=url_box,
+         body=[
+               #span{text="URL"},
+               #txtbx{
+                  id=url,
+                  placeholder="https://yourdomain.com"
+                 }
+              ]},
+      {"Text",
+       text}
+     ],
+     []
+    };
 form_data(navbar) -> % {{{2
-    [
-     #span{text="Block for navbar"},
-     #txtbx{
-        id=nav_block,
-        text="navbar-main",
-        placeholder="Block name for navbar elements"
-       },
-     #span{text="Formatting"},
-     #bs_row{
-        body=[
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Position"},
-                       #dd{
-                          id=position,
-                          options=position_classes(navbar)
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Alignment"},
-                       #dd{
-                          id=alignment,
-                          options=alignment_classes(navbar)
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       %#span{text="Color"},
-                       #checkbox{
-                          text="Inverse",
-                          value="inverse",
-                          label_position=before,
-                          id=inverse,
-                          checked=false
-                         }
-                      ]},
-              #bs_col{
-                 cols={lg, 3},
-                 body=[
-                       #span{text="Custom classes"},
-                       #txtarea{
-                          id=css_classes,
-                          placeholder="Other CSS classes"
-                         }
-                      ]}
-             ]}
-    ];
+    {[],
+     [
+      {"Position",
+       #dd{
+          id=position,
+          options=position_classes(navbar)
+         }
+      },
+      {"Alignment",
+       #dd{
+          id=alignment,
+          options=alignment_classes(navbar)
+         }
+      },
+      #checkbox{
+         text="Inverse",
+         value="inverse",
+         label_position=before,
+         id=inverse,
+         checked=false
+        }
+     ]
+    };
 form_data(F) -> % {{{2
-    [].
+    {[], []}.
 
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, []}}=Rec) -> % {{{2
-    HeaderBlock = common:q(panel_header_block, ""),
-    FooterBlock = common:q(panel_footer_block, ""),
-    BodyBlock = common:q(panel_body_block, "panel-body"),
-    AddonsBlock = common:q(panel_addons_block, ""),
-    
-    Classes = get_classes("panel"),
-    Rec#cms_mfa{mfa={bootstrap, panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, []}}=Rec) -> % {{{2
-    Block = common:q(block, "row"),
-    Width = common:q(width, "12"),
-    Offset = common:q(offset, ""),
-    Classes = common:q(col_class, ""),
-
-    Rec#cms_mfa{mfa={bootstrap, col, [Block, Width, Offset, Classes]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, []}}=Rec) -> % {{{2
-    Block = common:q(block, "page-row"),
-    RowClass = common:q(row_class, ""),
-    ColClass = common:q(col_class, ""),
-    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, []}}=Rec) -> % {{{2
-    Block = common:q(block, "navbar-button"),
-    Text = common:q(text, "Just button"),
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={bootstrap,
+                     panel,
+                     [
+                      Header,
+                      Block,
+                      Addons,
+                      Footer,
+                      [Context, Classes]
+                     ]}};
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
+%save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
+%    ColClass = common:q(col_class, ""),
+%    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes]}}=Rec) -> % {{{2
     NavItemBlock = common:sub_block(Block, "li"),
 
-    case common:q(url, undefined) of
+    case URL of
         undefined ->
             [
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
@@ -362,20 +200,18 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, []}}=Rec) -> % {{{2
                       sort=1}
             ]
     end;
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, []}}=Rec) -> % {{{2
-    Block = common:q(nav_block, "navbar-main"),
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes | Other]]}}=Rec) -> % {{{2
     NavItemsBlock = common:sub_block(Block, "navbar-ul"),
-    Classes = get_classes("navbar"),
+    Inverse = common:q(inverse, "default"),
+    NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse | Other])],
+
     [
-     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, Classes]}},
+     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}},
      #cms_mfa{id={PID, NavItemsBlock},
               mfa={bootstrap, nav_items, [Block, ["navbar-nav"]]},
               sort=1}
     ];
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, Fun, []}}=Rec) -> % {{{2
-    Block = common:q(block, "row"),
-    Classes = common:q(col_class, ""),
-
+save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
 %% Block renderers {{{1
@@ -456,9 +292,9 @@ full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
 %% Event handlers % {{{1
 event(submenu) -> % {{{2
     case common:q(submenu, "off") of
-        "off" ->
-            wf:remove(url_box);
         "on" ->
+            wf:remove(url_box);
+        "off" ->
             wf:insert_after(submenu_box,
                             #panel{
                                id=url_box,
@@ -498,19 +334,19 @@ alignment_classes(navbar) -> % {{{2
              text="Right"}
     ].
 
-context_classes(_) -> % {{{2
+context_classes(F) -> % {{{2
     [
-     #option{value="default",
+     #option{value=wf:f("~s-default", [F]),
              text="Default"},
-     #option{value="primary",
+     #option{value=wf:f("~s-primary", [F]),
              text="Primary"},
-     #option{value="success",
+     #option{value=wf:f("~s-success", [F]),
              text="Success"},
-     #option{value="info",
+     #option{value=wf:f("~s-info", [F]),
              text="Info"},
-     #option{value="warning",
+     #option{value=wf:f("~s-warning", [F]),
              text="Warning"},
-     #option{value="danger",
+     #option{value=wf:f("~s-danger", [F]),
              text="Danger"}
     ].
 assets_dropdown(AssetType) -> % {{{2
@@ -525,15 +361,6 @@ assets_dropdown(AssetType) -> % {{{2
        }.
 
 %% Helpers {{{1
-get_classes(Prefix) -> % {{{2
-   AllClasses = wf:mq([position, alignment, inverse, context, css_classes]),
-   Classes = sets:to_list(sets:from_list(AllClasses)),
-   lists:map(fun(none) -> "";
-                (undefined) -> wf:f("~s-default", [Prefix]);
-                ("") -> "";
-                (Class) -> wf:f("~s-~s", [Prefix, Class])
-            end,
-            Classes).
 column_classes(Width, "") -> % {{{2
     W = list_to_integer(Width),
     if W > 0, W =< 12 ->
@@ -548,3 +375,4 @@ column_classes(Width, Offset) -> % {{{2
       end;
 column_classes(_, _) -> % {{{2
     column_classes("12", "").
+

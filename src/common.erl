@@ -34,18 +34,14 @@ format_block(F, A) -> % {{{2
     wf:f("common:~s(~p)", [F, A]).
 
 form_data(link_url) -> % {{{2
-    [
-     #span{text="Link content block"},
-     #txtbx{
-        id=block,
-        placeholder="link-text-block"
-       },
-     #span{text="URL"},
-     #txtbx{
-        id=url,
-        placeholder="http://yoursite.com"
-       }
-    ];
+    {[
+      {"URL",
+      #txtbx{
+         id=url,
+         placeholder="http://yoursite.com"
+        }}
+     ],
+    []};
 form_data(text) -> % {{{2
     [
      #wysiwyg{class=["form-control"],
@@ -197,21 +193,17 @@ form_data(asset) -> % {{{2
      assets_dropdown(image)
     ];
 form_data(F) -> % {{{2
-    [].
+    {[], []}.
 
-save_block(#cms_mfa{mfa={common, link_url, []}}=Rec) -> % {{{2
-    Block = q(block, "link-content-block"),
-    URL = q(url, "https://liquid-nitrogen.org"),
-    Rec#cms_mfa{mfa={common, link_url, [Block, URL]}};
-save_block(#cms_mfa{mfa={common, text, []}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};
+save_block(#cms_mfa{mfa={common, text, [_Block, _Classes]}}=Rec) -> % {{{2
     HTML = q(text, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
-save_block(#cms_mfa{mfa={common, asset, []}}=Rec) -> % {{{2
-    StringId = q(asset_id, "gif.spinner"),
+save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
     Rec#cms_mfa{mfa={common, asset, [Id]}};
-save_block(#cms_mfa{mfa={common, template, []}}=Rec) -> % {{{2
-    File = q(template, "templates/index.html"),
+save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, template, [File]}}.
 
 %% Block renderers {{{1
@@ -279,8 +271,12 @@ list_item(Page, ItemID) -> % {{{2
     #listitem{body=parallel_block(Page, ItemID)}.
 
 link_url(Page, Block, URL) -> % {{{2
+    link_url(Page, Block, URL, []).
+
+link_url(Page, Block, URL, Classes) -> % {{{2
     #link{
        url=URL, 
+       class=Classes,
        body=parallel_block(Page, Block)
       }.
 
