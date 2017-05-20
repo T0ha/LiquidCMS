@@ -40,31 +40,37 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("bootstrap:~s(~p)", [F, A]).
 
-form_data(col) -> % {{{2
+form_data(col, A) -> % {{{2
+    [_, Block, W, O, Classes] = admin:maybe_empty(A, 5),
+
     {[], 
      [
-      {"Width (1..12)", width},
-      {"Offset", offset}
-     ]
+      {"Width (1..12)", {width, W}},
+      {"Offset", {offset, O}}
+     ],
+     Block,
+     Classes
     };
-form_data(panel) -> % {{{2
+form_data(panel, A) -> % {{{2
+    [_, HeaderBlock, Block, AddonsBlock, FooterBlock, C] = admin:maybe_empty(A, 6),
+    [Classes, Context] = admin:maybe_empty(C, 2),
     {[
       {"Block for panel header",
       #txtbx{
          id=panel_header_block,
-         text="",
+         text=HeaderBlock,
          placeholder="Block name for panel header (leave blank for none)"
         }},
       {"Block for panel addons",
       #txtbx{
          id=panel_addons_block,
-         text="",
+         text=AddonsBlock,
          placeholder="Block name for panel addons (leave blank for none)"
         }},
       {"Block for panel footer",
       #txtbx{
          id=panel_footer_block,
-         text="",
+         text=FooterBlock,
          placeholder="Block name for panel footer (leave blank for none)"
         }}
      ],
@@ -72,11 +78,14 @@ form_data(panel) -> % {{{2
       {"Context",
        #dd{
           id=context,
+          value=Context,
           options=context_classes(panel)
          }}
-     ]
+     ],
+     Block,
+     Classes
     };
-form_data(slider) -> % {{{2
+form_data(slider, A) -> % {{{2
     {[],
      [
       {"Position",
@@ -105,7 +114,9 @@ form_data(slider) -> % {{{2
               ]}
      ]
     };
-form_data(nav_item) -> % {{{2
+form_data(nav_item, A) -> % {{{2
+    [PID, NavBlock, Classes] = admin:maybe_empty(A, 3),
+    {Block, Text, URL} = get_navitem_data(PID, NavBlock),
     {[
       #panel{
          id=submenu_box,
@@ -115,35 +126,48 @@ form_data(nav_item) -> % {{{2
             id=submenu,
             postback=submenu,
             delegate=?MODULE,
-            checked=false
+            checked=(URL == "")
            }
         },
       #panel{
          id=url_box,
+         show_if=(URL /= ""),
          body=[
                #span{text="URL"},
                #txtbx{
                   id=url,
+                  text=URL,
                   placeholder="https://yourdomain.com"
                  }
               ]},
       {"Text",
-       text}
+       {text, Text}}
      ],
-     []
+     [],
+     Block,
+     Classes
     };
-form_data(navbar) -> % {{{2
+form_data(navbar, A) -> % {{{2
+    [_PID, UlBlock, AllClasses] = admin:maybe_empty(A, 3),
+    [Classes, Inverse, Position, Alignment] = admin:maybe_empty(AllClasses, 4),
+    Block = case string:tokens(UlBlock, "/") of
+         [B | _] -> B;
+        B -> B
+    end,
+
     {[],
      [
       {"Position",
        #dd{
           id=position,
+          value=admin:remove_prefix(Position),
           options=position_classes(navbar)
          }
       },
       {"Alignment",
        #dd{
           id=alignment,
+          value=admin:remove_prefix(Alignment),
           options=alignment_classes(navbar)
          }
       },
@@ -152,11 +176,13 @@ form_data(navbar) -> % {{{2
          value="inverse",
          label_position=before,
          id=inverse,
-         checked=false
+         checked=(Inverse == "navbar-inverse")
         }
-     ]
+     ],
+     Block,
+     Classes
     };
-form_data(F) -> % {{{2
+form_data(F, A) -> % {{{2
     {[], []}.
 
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
@@ -167,7 +193,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, 
                       Block,
                       Addons,
                       Footer,
-                      [Context, Classes]
+                      [Classes, Context]
                      ]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
@@ -179,25 +205,37 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
 
     case URL of
         undefined ->
+            
+            db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
+                               mfa={bootstrap, dropdown, [Block]},
+                               sort=1}),
+            db:maybe_update(#cms_mfa{id={PID, common:sub_block(Block, "link")},
+                               mfa={common, text, [Text ++ "<b class='caret'></b>"]},
+                               sort=1}),
             [
-             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
-             #cms_mfa{id={PID, NavItemBlock},
-                      mfa={bootstrap, dropdown, [Block]},
-                      sort=1},
-             #cms_mfa{id={PID, common:sub_block(Block, "link")},
-                      mfa={common, text, [Text ++ "<b class='caret'></b>"]},
-                      sort=1}
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes]]}}
+             %#cms_mfa{id={PID, NavItemBlock},
+             %         mfa={bootstrap, dropdown, [Block]},
+             %         sort=1},
+             %#cms_mfa{id={PID, common:sub_block(Block, "link")},
+             %         mfa={common, text, [Text ++ "<b class='caret'></b>"]},
+             %         sort=1}
             ];
         URL ->
-            %URL = common:q(url, "https://liquid-nitrogen.org"),
+            db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
+                               mfa={common, link_url, [Block, URL]},
+                               sort=1}),
+            db:maybe_update(#cms_mfa{id={PID, Block},
+                               mfa={common, text, [Text]},
+                               sort=1}),
             [
-             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock]}},
-             #cms_mfa{id={PID, NavItemBlock},
-                      mfa={common, link_url, [Block, URL]},
-                      sort=1},
-             #cms_mfa{id={PID, Block},
-                      mfa={common, text, [Text]},
-                      sort=1}
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes]}}
+             %#cms_mfa{id={PID, NavItemBlock},
+             %         mfa={common, link_url, [Block, URL]},
+             %         sort=1},
+             %#cms_mfa{id={PID, Block},
+             %         mfa={common, text, [Text]},
+             %         sort=1}
             ]
     end;
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes | Other]]}}=Rec) -> % {{{2
@@ -226,10 +264,16 @@ nav_items(Page, Block, Classes) -> % {{{2
     common:list(Page, Block, ["nav" | Classes]).
 
 nav_item(Page, ItemID) -> % {{{2
+    nav_item(Page, ItemID, []).
+
+nav_item(Page, ItemID, Classes) -> % {{{2
     %<li>
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
-    #listitem{body=common:parallel_block(Page, ItemID)}.
+    #listitem{
+       class=Classes, 
+       body=common:parallel_block(Page, ItemID)
+      }.
 
 panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
     #panel{
@@ -361,6 +405,20 @@ assets_dropdown(AssetType) -> % {{{2
        }.
 
 %% Helpers {{{1
+get_navitem_data(_PID, "") -> % {{{ 2
+    {"", "", ""};
+get_navitem_data(PID, NavBlock) -> % {{{ 2
+    [Block, "li"] = string:tokens(NavBlock, "/"),
+    {Text, URL} = case db:get_mfa(PID, NavBlock) of
+                      [#cms_mfa{mfa={_, dropdown, [Block]}}] -> 
+                          [#cms_mfa{mfa={_, _, [T]}}] = db:get_mfa(PID, common:sub_block(Block, "link")),
+                          {string:substr(T, 1, length(T) - 21), ""};
+                      [#cms_mfa{mfa={_, link_url, [Block, U]}}] -> 
+                          [#cms_mfa{mfa={_, _, [T]}}] = db:get_mfa(PID, Block),
+                          {T, U}
+                  end,
+    {Block, Text, URL}.
+
 column_classes(Width, "") -> % {{{2
     W = list_to_integer(Width),
     if W > 0, W =< 12 ->

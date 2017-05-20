@@ -19,6 +19,7 @@
 
 -record(wysiwyg, {?ELEMENT_BASE(element_wysiwyg),
         buttons = [] :: [#wysiwyg_button{}],
+        html="" :: iodata(),
         preview = false:: boolean(),
         hotkeys = #{} :: map()
     }).

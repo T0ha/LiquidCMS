@@ -7,12 +7,12 @@
 -include("db.hrl").
 
 %% Module render functions {{{1
-main() -> 
+main() -> % {{{2
     index:main().
 
-title() -> "Liquid CMS - Admin".
+title() -> "Liquid CMS - Admin".% {{{2
 
-body(Page) ->
+body(Page) ->% {{{2
     index:body(Page).
 
 %% Module install routines {{{1
@@ -418,20 +418,28 @@ format_block(#cms_mfa{ % {{{2$
             ]}.
 
 add_default_fields({Data, Formatting}) -> % {{{2
-    add_default_fields(Data, Formatting);
+    add_default_fields(Data, Formatting, "", "");
+add_default_fields({Data, Formatting, Block, Classes}) -> % {{{2
+    add_default_fields(Data, Formatting, Block, Classes);
 add_default_fields(Any) when is_list(Any) -> % {{{2
     [{"", Any}, {"", []}];
 add_default_fields(Any) -> % {{{2
     [{"", Any}, {"", []}].
 
-add_default_fields(Data, Formatting) -> % {{{2
+add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
     [ 
      {"Data", [
-               {"Block name", block}
+               {"Block name", {block, Block}}
                | Data]},
      {"Formatting",
-      Formatting ++ [{"Additional classes", classes}]}
+      Formatting ++ [{"Additional classes", {classes, Classes}}]}
       ].
+
+form_elements(M, F, A) -> % {{{2
+    BlockData = try apply(M, form_data, [F, A])
+                catch error:undef -> {[], []}
+                end,
+    render_fields(add_default_fields(BlockData)).
 
 render_fields(Cols) -> % {{{2
     try 12 / length(Cols) of
@@ -485,7 +493,7 @@ render_field(Any, Width) -> % {{{2
       }.
 
 get_classes(M, Prefix) -> % {{{2
-    Fields = formatting_fields((M):form_data(Prefix)),
+    Fields = formatting_fields((M):form_data(Prefix, [])),
     wf:info("Classes fields: ~p", [Fields]),
     AllClasses = wf:mq([classes | Fields]),
     wf:info("Classes data: ~p", [AllClasses]),
@@ -498,7 +506,7 @@ get_classes(M, Prefix) -> % {{{2
             AllClasses).
 
 get_data(M, F) -> % {{{2
-    Fields = data_fields((M):form_data(F)),
+    Fields = data_fields((M):form_data(F, [])),
     wf:info("Fields: ~p", [Fields]),
     Data = wf:mq([block | Fields]),
     wf:info("Data: ~p", [Data]),
@@ -509,18 +517,23 @@ get_data(M, F) -> % {{{2
               end,
               Data).
 
-
-
+data_fields({Data, _, _, _}) -> % {{{2
+    data_fields(Data);
 data_fields({Data, _}) -> % {{{2
     data_fields(Data);
 data_fields(Data) when is_list(Data) -> % {{{2
     lists:flatten([get_fields(F) || F <- Data, get_fields(F) /= []]).
 
+formatting_fields({_, Formats, _, _}) -> % {{{2
+    [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
-formatting_fields(_Any) -> % {{{2
+formatting_fields(Any) -> % {{{2
+    wf:info("Other fields: ~p", [Any]),
     [].
 
+get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
+    ID;
 get_fields({_, ID}) when is_atom(ID) -> % {{{2
     ID;
 get_fields({_, Any}) -> % {{{2
@@ -541,6 +554,16 @@ get_fields(D) -> % {{{2
 
 prefix_classes(Prefix, Classes) -> % {{{2
     [wf:f("~s-~s", [Prefix, C]) || C <- Classes].
+
+remove_prefix([]) -> % {{{2
+    "";
+remove_prefix(Class) -> % {{{2
+    lists:last(string:tokens(Class, "-")).
+
+maybe_empty([], N) -> % {{{2
+    lists:duplicate(N, "");
+maybe_empty(A, _N) -> % {{{2
+    A.
 
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
@@ -829,16 +852,18 @@ event({block, change, module}) -> % {{{2
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    BlockData = try apply(M, form_data, [F])
-                catch error:undef -> {[], []}
-                end,
-    wf:update(block_data,
-               render_fields(add_default_fields(BlockData)));
+    wf:update(block_data, admin:form_elements(M, F, []));
 event({block, add}) -> % {{{2
+    PID = common:q(page_select, "index"),
+    Block = common:q(block_select, "body"),
+    B = #cms_mfa{
+           id={PID, Block},
+           mfa={common, template, ["templates/login.html"]},
+           sort=new},
+    event({block, edit, B});
+event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
     Pages = db:get_pages(),
     [#{id := P} | _] = Pages,
-    PID = common:q(page_select, P),
-    Block = common:q(block_select, "page"),
     Header = [
               "Add new block to page: ",
                   #dropdown{
@@ -854,29 +879,29 @@ event({block, add}) -> % {{{2
                      }
              ],
     new_modal(Header,
-              {block, save},
+              {block, save, B},
               undefined, 
               [
                #span{text="Module"},
                #dd{id=module,
-                  value=common,
+                  value=M,
                   postback={block, change, module},
                   options=modules()},
 
                #span{text="Block Type"},
                #dd{
                   id=function,
-                  value=template,
+                  value=F,
                   postback={block, change, function},
-                  options=common:functions()
+                  options=(M):functions()
                  },
                #panel{
                   id=block_data,
-                  body=apply(common, form_data, [template])
+                  body=form_elements(M, F, [PID | A])
                  }
               ]);
 
-event({block, save}) -> % {{{2
+event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),
     F = wf:to_atom(common:q(function, "template")),
     PID = common:q(add_page_select, "index"),
@@ -886,8 +911,14 @@ event({block, save}) -> % {{{2
     Classes = admin:get_classes(M, wf:to_atom(F)),
 
 
-    Rec = db:fix_sort(#cms_mfa{id={PID, Block}, 
-                               mfa={M, F, Args ++ [Classes]}}),
+    Rec = case {OldID, Sort} of
+              {{PID, Block}, _} when Sort /= new ->
+                  db:delete(Old),
+                  Old#cms_mfa{mfa={M, F, Args ++ [Classes]}};
+              _ ->
+                  db:fix_sort(#cms_mfa{id={PID, Block}, 
+                                       mfa={M, F, Args ++ [Classes]}})
+          end,
 
     NewRec = try apply(M, save_block, [Rec])
              catch error:udef -> Rec end,

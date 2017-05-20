@@ -33,19 +33,23 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     wf:f("common:~s(~p)", [F, A]).
 
-form_data(link_url) -> % {{{2
+form_data(link_url, A) -> % {{{2
+    [_, Block, URL, Classes] = admin:maybe_empty(A, 4),
     {[
       {"URL",
-      #txtbx{
-         id=url,
-         placeholder="http://yoursite.com"
-        }}
+       #txtbx{
+          id=url,
+          text=URL,
+          placeholder="http://yoursite.com"
+         }}
      ],
-    []};
-form_data(text) -> % {{{2
+     [], Block, Classes};
+form_data(text, A) -> % {{{2
+    [_, Text] = admin:maybe_empty(A, 2),
     [
      #wysiwyg{class=["form-control"],
               id=text,
+              html=Text,
               buttons=[
                        #panel{
                           class="btn-group",
@@ -167,32 +171,39 @@ form_data(text) -> % {{{2
                                ]}
                       ]}
     ];
-form_data(template) -> % {{{2
+form_data(template, A) -> % {{{2
+    [_, TID] = admin:maybe_empty(A, 2),
     Templates = db:get_templates(),
     DropdDown = [ {Path, Name} || #{file := Path, name := Name} <- Templates],
     [
      #span{text="Template"},
      #dd{
         id=template,
-        %value=template,
+        value=TID,
         options=DropdDown
        }
     ];
-form_data(asset) -> % {{{2
+form_data(asset, A) -> % {{{2
+    [_, AID] = admin:maybe_empty(A, 2),
+    Type = case db:get_asset(AID) of
+               [] -> other;
+               [#cms_asset{type=T}|_] -> T
+           end,
+
     [
      #span{text="Asset Type"},
      #dd{
         id=asset_type,
-        value=image,
+        value=Type,
         postback={asset, type, change},
         delegate=?MODULE,
         options=asset_types()
        },
 
      #span{text="Asset"},
-     assets_dropdown(image)
+     assets_dropdown(Type, AID)
     ];
-form_data(F) -> % {{{2
+form_data(F, A) -> % {{{2
     {[], []}.
 
 save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
@@ -339,6 +350,9 @@ asset_types() -> % {{{2
      {binary, "Other"}].
 
 assets_dropdown(AssetType) -> % {{{2
+    assets_dropdown(AssetType, undefined).
+
+assets_dropdown(AssetType, AID) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
     Assets = sets:to_list(sets:from_list(AssetsDup)),
     Options = [ #option{value=string:join(Id, "."),
@@ -346,5 +360,6 @@ assets_dropdown(AssetType) -> % {{{2
                                         name := Name} <- Assets],
      #dd{
         id=asset_id,
+        value=string:join(AID, "."),
         options=Options
        }.

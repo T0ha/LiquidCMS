@@ -177,8 +177,20 @@ maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
                             [] ->
                                 mnesia:write(empty_mfa(PID, Block, Sort));
                             L when is_list(L) -> 
-                                mnesia:delete_object(B)
+                                
+                                [mnesia:delete_object(B1) || B1 <- L, B1#cms_mfa.sort == Sort]
                         end
+                end).
+maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
+    transaction(fun() ->
+                        case mnesia:wread({cms_mfa, {PID, Block}}) of
+                            [] ->
+                                ok;
+                            L when is_list(L) -> 
+                                
+                                [mnesia:delete_object(B1) || B1 <- L, B1#cms_mfa.sort == Sort]
+                        end,
+                        mnesia:write(B)
                 end).
 
 delete(#{}=Map) -> % {{{1

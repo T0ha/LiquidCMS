@@ -17,6 +17,7 @@ render_element(_Record = #wysiwyg{
                             id=Id,
                             buttons=Buttons,
                             preview=Preview,
+                            html=HTML,
                             class=Class,
                             hotkeys=HotKeys
                            }) ->
@@ -33,6 +34,7 @@ render_element(_Record = #wysiwyg{
                        id=Id,
                        html_id="wysiwyg_raw_html"},
              #panel{html_id="wysiwyg_editor",
+                    body=HTML,
                     class=Class},
              preview(Preview)
             ]}.
