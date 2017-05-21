@@ -184,9 +184,10 @@ form_data(template, A) -> % {{{2
        }
     ];
 form_data(asset, A) -> % {{{2
+    wf:info("Asset: ~p", [A]),
     [_, AID] = admin:maybe_empty(A, 2),
     Type = case db:get_asset(AID) of
-               [] -> other;
+               [] -> binary;
                [#cms_asset{type=T}|_] -> T
            end,
 
@@ -350,7 +351,7 @@ asset_types() -> % {{{2
      {binary, "Other"}].
 
 assets_dropdown(AssetType) -> % {{{2
-    assets_dropdown(AssetType, undefined).
+    assets_dropdown(AssetType, "").
 
 assets_dropdown(AssetType, AID) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
