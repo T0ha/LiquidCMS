@@ -21,12 +21,12 @@ render_element(_Record = #wysiwyg{
                             class=Class,
                             hotkeys=HotKeys
                            }) ->
-    wf:wire(#script{script="$('#wysiwyg_editor').wysiwyg();"}),
     wf:wire("#wysiwyg_editor",
             #event{
                type=change,
                actions=#script{script="$('#wysiwyg_raw_html').val($('#wysiwyg_editor').html());"}
               }),
+    wf:wire(#script{script="$('#wysiwyg_editor').wysiwyg();$('#wysiwyg_editor').trigger('change');"}),
     #panel{
        body=[
              buttons(Buttons),
