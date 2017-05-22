@@ -182,8 +182,8 @@ form_data(navbar, A) -> % {{{2
      Block,
      Classes
     };
-form_data(F, A) -> % {{{2
-    {[], []}.
+form_data(F, [_, Block, Classes]) -> % {{{2
+    {[], [], Block, Classes}.
 
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap,

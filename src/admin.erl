@@ -437,7 +437,9 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
 
 form_elements(M, F, A) -> % {{{2
     BlockData = try apply(M, form_data, [F, A])
-                catch error:undef -> {[], []}
+                catch error:undef -> 
+                          [_, Block, Classes] = A,
+                          {[], [], Block, Classes}
                 end,
     render_fields(add_default_fields(BlockData)).
 
