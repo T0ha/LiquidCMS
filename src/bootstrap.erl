@@ -355,8 +355,6 @@ event(submenu) -> % {{{2
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
-%% Helpers {{{1
-
 %% Dropdown formatters {{{1
 position_classes(navbar) -> % {{{2
     [

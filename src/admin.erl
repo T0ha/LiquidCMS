@@ -990,6 +990,7 @@ modules() -> % {{{2
      %{admin, "Admin"},
      {common, "Common"},
      %{index, "Main"},
+     {emailform, "Form to email"},
      {bootstrap, "Bootstrap"}
     ].
 
