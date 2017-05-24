@@ -211,5 +211,5 @@ q(Id, Default) -> % {{{2
             Default;
         undefined ->
             Default;
-        A -> unicode:characters_to_binary(string:strip(A))
+        A -> string:strip(A)
     end.
