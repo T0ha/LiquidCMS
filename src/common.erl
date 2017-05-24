@@ -340,7 +340,7 @@ q(Id, Default) -> % {{{2
             Default;
         undefined ->
             Default;
-        A -> A
+        A -> unicode:characters_to_binary(string:strip(A))
     end.
 
 %% Dropdown formatters {{{1

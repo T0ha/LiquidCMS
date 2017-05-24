@@ -172,8 +172,8 @@ event({auth, register, Role}) -> % {{{2
             wf:warning("Error occured: ~p", [Any])
     end;
 event({auth, login}) -> % {{{2
-    Email = common:q(email, undefined),
-    Passwd = hash(common:q(password, "")),
+    Email = q(email, undefined),
+    Passwd = hash(q(password, "")),
     wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:login(Email, Passwd) of
         [] ->
@@ -205,3 +205,11 @@ roles(Role) -> % {{{2
 
 hash(Data) -> % {{{2
     crypto:hash(sha256, Data).
+q(Id, Default) -> % {{{2
+    case wf:q(Id) of
+        "" ->
+            Default;
+        undefined ->
+            Default;
+        A -> unicode:characters_to_binary(string:strip(A))
+    end.
