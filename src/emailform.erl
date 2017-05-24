@@ -72,9 +72,9 @@ submit(Page, Block, ToEmail, Classes) -> % {{{2
 
 %% Event handlers % {{{1
 event({submit, Page, Block, ToEmail}) -> % {{{2
-    Email = common:q(email, "nomail@site.com"),
-    Phone = common:q(phone, ""),
-    Text = wf:f("Phone: ~s~n~n~s", [Phone, common:q(text, "")]),
+    Email = wf:to_list(common:q(email, "nomail@site.com")),
+    Phone = wf:to_list(common:q(phone, "")),
+    Text = wf:f("Phone: ~s~n~n~s", [Phone, wf:to_list(common:q(text, ""))]),
     Header = common:parallel_block(Page, common:sub_block(Block, "popup-header")),
     Body = common:parallel_block(Page, common:sub_block(Block, "popup")),
 
