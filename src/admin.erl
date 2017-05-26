@@ -393,7 +393,7 @@ format_block(#cms_mfa{ % {{{2$
                }=B) ->
     Body = try apply(M, format_block, [F, A])
            catch
-              _ -> wf:f("~p, ~p(~p)", [Name, F, A])
+              _:_ -> wf:f("~p, ~p(~p)", [Name, F, A])
            end,
 
     #sortitem{
