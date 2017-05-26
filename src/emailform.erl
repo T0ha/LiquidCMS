@@ -16,7 +16,7 @@ functions() -> % {{{2
      ].
 
 format_block(F, A) -> % {{{2
-    wf:f("bootstrap:~s(~p)", [F, A]).
+    wf:f("bootstrap:~ts(~p)", [F, A]).
 
 
 form_data(submit, A) -> % {{{2
@@ -74,7 +74,7 @@ submit(Page, Block, ToEmail, Classes) -> % {{{2
 event({submit, Page, Block, ToEmail}) -> % {{{2
     Email = wf:to_list(common:q(email, "nomail@site.com")),
     Phone = wf:to_list(common:q(phone, "")),
-    Text = wf:f("Phone: ~s~n~n~s", [Phone, wf:to_list(common:q(text, ""))]),
+    Text = wf:f("Phone: ~ts~n~n~ts", [Phone, wf:to_list(common:q(text, ""))]),
     Header = common:parallel_block(Page, common:sub_block(Block, "popup-header")),
     Body = common:parallel_block(Page, common:sub_block(Block, "popup")),
 
