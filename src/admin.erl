@@ -46,38 +46,9 @@ default_data() -> % {{{2
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
-    {ok, StaticFolders} = application:get_env(simple_bridge, static_paths),
-    %io:format("StaticFolders: ~p~n", [StaticFolders]),
-    {ok, OldCWD} = file:get_cwd(),
-    file:set_cwd("static"),
-    Static = [{wf:f("~s", [Path]), Files} ||
-              Path <- StaticFolders,
-              filelib:is_dir(Path),
-              {ok, Files} <- [file:list_dir(Path)],
-              Path /= "nitrogen/"],
-    io:format("Static: ~p~n", [Static]),
-    Assets = lists:foldl(fun({Path, Files}, A) ->
-                                 [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
-                         end,
-                         [],
-                         Static),
-    %io:format("Assets: ~p~n", [Assets]),
-    NitrogenStatic = [
-                      {"nitrogen/", 
-                       ["bert.js", "bert.min.js",
-                        %"jquery.js", "jquery.min.js",
-                        "livevalidation.js", "livevalidation.min.js",
-                        "nitrogen.js", "nitrogen.min.js", "nitrogen.css"]},
-                      {"nitrogen/jquery-ui/", 
-                       ["jquery-ui.js", "jquery-ui.min.js",
-                        "jquery-ui.css", "jquery-ui.min.css"]}
-                     ],
-    NitrogenAssets = [
-                      file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
-    db:save(Assets ++ NitrogenAssets),
-    file:set_cwd(OldCWD),
-    {ok, TemplateFiles} = file:list_dir("templates"),
-    lists:foreach(fun(F) -> add_template("templates/" ++ F, []) end, TemplateFiles),
+    get_files_from_folder("static"),
+    get_files_from_folder("templates"),
+
     %add_page("index", "templates/index.html"),
     add_page("admin", "templates/blank.html", admin, admin),
     add_to_block("admin", "css", {asset, ["css", "font-awesome"]}, 3),
@@ -294,6 +265,17 @@ file_to_asset(File, Path) -> % {{{2
                    description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=css};
+            {Any, _} when Any == "jpg";
+                          Any == "jpeg";
+                          Any == "png";
+                          Any == "gif";
+                          Any == "svg" ->
+                #cms_asset{
+                   id=[Ext, Min | Id],
+                   name=string:join(lists:reverse([Min|Id]), "."),
+                   description=string:join(lists:reverse([Min|Id]), "."),
+                   file=filename:join([Path, File]),
+                   type=image};
             {Any, _} ->
                 #cms_asset{
                    id=[Ext, Min | Id],
@@ -377,7 +359,7 @@ format_block(#cms_mfa{ % {{{2$
        tag={block, PID, B},
        class="well",
        body=wf:f("Grant access to  '~s' page for '~s' only", [PID, Name])};
-format_block(#cms_mfa{ % {{{2$
+format_block(#cms_mfa{ % {{{2
                 id={PID, _},
                 mfa={index, maybe_change_module, []}
                }=B) ->
@@ -579,6 +561,43 @@ maybe_empty([], N) -> % {{{2
 maybe_empty(A, _N) -> % {{{2
     A.
 
+get_files_from_folder("static"=SubFolder) -> % {{{2
+    %{ok, StaticFolders} = application:get_env(simple_bridge, static_paths),
+    {ok, StaticFolders} = file:list_dir(SubFolder),
+    %io:format("Folders: ~p~n", [Folders]),
+    {ok, OldCWD} = file:get_cwd(),
+    file:set_cwd(SubFolder),
+    Static = [{wf:f("~s", [Path]), Files} ||
+              Path <- StaticFolders,
+              filelib:is_dir(Path),
+              {ok, Files} <- [file:list_dir(Path)],
+              Path /= "nitrogen"],
+    %io:format("Static: ~p~n", [Static]),
+    Assets = lists:foldl(fun({Path, Files}, A) ->
+                                 [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
+                         end,
+                         [],
+                         Static),
+    %io:format("Assets: ~p~n", [Assets]),
+    NitrogenStatic = [
+                      {"nitrogen/", 
+                       ["bert.js", "bert.min.js",
+                        %"jquery.js", "jquery.min.js",
+                        "livevalidation.js", "livevalidation.min.js",
+                        "nitrogen.js", "nitrogen.min.js", "nitrogen.css"]},
+                      {"nitrogen/jquery-ui/", 
+                       ["jquery-ui.js", "jquery-ui.min.js",
+                        "jquery-ui.css", "jquery-ui.min.css"]}
+                     ],
+    NitrogenAssets = [
+                      file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
+    db:save(Assets ++ NitrogenAssets),
+    file:set_cwd(OldCWD);
+
+get_files_from_folder(SubFolder) -> % {{{2
+    {ok, TemplateFiles} = file:list_dir(SubFolder),
+    lists:foreach(fun(F) -> add_template(wf:f("~s/~s", [SubFolder, F]), []) end, TemplateFiles).
+
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
     new_modal("Upload Static Asset",
@@ -602,6 +621,9 @@ event({asset, new, Type}) -> % {{{2
                   options=common:asset_types()
                  }
               ]);
+event({asset, refresh, Type}) -> % {{{2
+    get_files_from_folder("static"),
+    event({asset, show, Type});
 event({asset, save}) -> % {{{2
     Type = wf:to_atom(wf:q(type)),
     Path = wf:q(path),
@@ -639,9 +661,19 @@ event({asset, show, Type}) -> % {{{2
                            #bs_row{
                               body=[
                                     #bs_col{
-                                      cols={lg, 10},
+                                      cols={lg, 8},
                                       body=#h1{text=wf:f("Static Assets: ~s", [Type])}
                                               },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Refresh filesystem",
+                                              class=["btn",
+                                                     "btn-warning",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({asset, refresh, Type})
+                                             }},
                                     #bs_col{
                                       cols={lg, 2},
                                       body=#button{
@@ -675,6 +707,9 @@ event({template, new}) -> % {{{2
                #hidden{id=path}
               ]);
 
+event({template, refresh}) -> % {{{2
+    get_files_from_folder("templates"),
+    event({template, show});
 event({template, save}) -> % {{{2
     Path = wf:q(path),
     add_template(wf:q(name), wf:q(description), Path, []),
@@ -703,9 +738,19 @@ event({template, show}) -> % {{{2
                            #bs_row{
                               body=[
                                     #bs_col{
-                                      cols={lg, 10},
+                                      cols={lg, 8},
                                       body=#h1{text="Templates"}
                                               },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Refresh filesystem",
+                                              class=["btn",
+                                                     "btn-warning",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({template, refresh})
+                                             }},
                                     #bs_col{
                                       cols={lg, 2},
                                       body=#button{
