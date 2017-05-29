@@ -802,14 +802,14 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
     PageSelect = [
                   #dropdown{
                      id=page_select,
-                     options=[{N, N} || #{id := N} <- Pages],
+                     options=lists:keysort(1, [{N, N} || #{id := N} <- Pages]),
                      value=PID,
                      postback={page, construct}
                     },
                   #span{text=" / "},
                   #dropdown{
                      id=block_select,
-                     options=[{N, N} ||  N <- AllBlocks],
+                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks]),
                      value=Block,
                      postback={page, construct}
                     }
@@ -848,7 +848,7 @@ event({block, change, module}) -> % {{{2
                   id=function,
                   value=template,
                   postback={block, change, function},
-                  options=apply(M, functions, [])
+                  options=lists:keysort(2, apply(M, functions, []))
                  }),
     event({block, change, function});
 event({block, change, function}) -> % {{{2
