@@ -21,17 +21,17 @@ functions() -> % {{{2
      ].
 
 format_block(link_url, [Block, URL]) -> % {{{2
-    wf:f("Link: ~s(href=~s)", [Block, URL]);
+    {wf:f("Link: ~s(href=~s)", [Block, URL]), Block};
 format_block(text, [Text]) -> % {{{2
-    #panel{body=Text};
+    {#panel{body=Text}, undefined};
 format_block(template, [TID]) -> % {{{2
     [#cms_template{name=Name}] = db:get_template(TID),
-    wf:f("Template: ~s(~p)", [Name, TID]);
+    {wf:f("Template: ~s(~p)", [Name, TID]), undefined};
 format_block(asset, [AID]) -> % {{{2
     [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
-    wf:f("Asset ~s: ~s(~p)", [Type, Name, File]);
+    {wf:f("Asset ~s: ~s(~p)", [Type, Name, File]), undefined};
 format_block(F, A) -> % {{{2
-    wf:f("common:~s(~p)", [F, A]).
+    {wf:f("common:~s(~p)", [F, A]), undefined}.
 
 form_data(link_url, A) -> % {{{2
     [_, Block, URL, Classes] = admin:maybe_empty(A, 4),

@@ -19,26 +19,25 @@ functions() -> % {{{2
      ].
 
 format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
-    wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
-         [Block, Width, Offset, Classes]);
+    {wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
+         [Block, Width, Offset, Classes]),
+    Block};
 format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
-    wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p)",
-         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]);
+    {wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p)",
+         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]),
+     BodyBlock};
 format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
-    wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
-         [Block, RowClass, ColClass]);
+    {wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
+         [Block, RowClass, ColClass]),
+    Block};
 format_block(navbar, [Block, Classes]) -> % {{{2
-    wf:f("NavBar: ~s(class=~p)", [Block, Classes]);
+    [B, _] = string:tokens(Block, "/"),
+    {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
 format_block(nav_item, [Block]) -> % {{{2
-    wf:f("NavBarButton: ~s", [Block]);
-format_block(template, [TID]) -> % {{{2
-    [#cms_template{name=Name}] = db:get_template(TID),
-    wf:f("Template: ~s(~p)", [Name, TID]);
-format_block(asset, [AID]) -> % {{{2
-    [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
-    wf:f("Asset ~s: ~s(~p)", [Type, Name, File]);
-format_block(F, A) -> % {{{2
-    wf:f("bootstrap:~s(~p)", [F, A]).
+    [B, _] = string:tokens(Block, "/"),
+    {wf:f("NavBarButton: ~s", [B]), B};
+format_block(F, [Block|_]=A) -> % {{{2
+    {wf:f("bootstrap:~s(~p)", [F, A]), Block}.
 
 form_data(col, A) -> % {{{2
     [_, Block, W, O, Classes] = admin:maybe_empty(A, 5),

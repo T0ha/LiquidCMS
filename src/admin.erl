@@ -391,9 +391,9 @@ format_block(#cms_mfa{ % {{{2$
                 id={PID, Name},
                 mfa={M, F, A}
                }=B) ->
-    Body = try apply(M, format_block, [F, A])
+    {Body, Sub} = try apply(M, format_block, [F, A])
            catch
-              _:_ -> wf:f("~p, ~p(~p)", [Name, F, A])
+              _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
            end,
 
     #sortitem{
@@ -404,6 +404,18 @@ format_block(#cms_mfa{ % {{{2$
              #span{
                 class="pull-right",
                 body=[
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "plus", []),
+                         show_if=(Sub /= undefined),
+                         actions=?POSTBACK({block, add, Sub})
+                        },
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "arrow-right", []),
+                         show_if=(Sub /= undefined),
+                         actions=?POSTBACK({page, construct, PID, [Sub]})
+                        },
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "pencil", []),
@@ -858,6 +870,13 @@ event({block, change, function}) -> % {{{2
 event({block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
     Block = common:q(block_select, "body"),
+    B = #cms_mfa{
+           id={PID, Block},
+           mfa={common, template, ["templates/login.html"]},
+           sort=new},
+    event({block, edit, B});
+event({block, add, Block}) -> % {{{2
+    PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
            mfa={common, template, ["templates/login.html"]},
