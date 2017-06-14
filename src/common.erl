@@ -274,13 +274,18 @@ template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
 
 list(Page, Block, Classes) -> % {{{2
     Items = parallel_block(Page, Block),
-    #list{body=Items, class=Classes, html_id=Block}.
+    #list{body=Items,
+          class=Classes,
+          html_id=block_to_html_id(Block)}.
 
 list_item(Page, ItemID) -> % {{{2
     %<li>
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
-    #listitem{body=parallel_block(Page, ItemID)}.
+    #listitem{
+       html_id=block_to_html_id(ItemID),
+       body=parallel_block(Page, ItemID)
+      }.
 
 link_url(Page, Block, URL) -> % {{{2
     link_url(Page, Block, URL, []).
@@ -288,12 +293,14 @@ link_url(Page, Block, URL) -> % {{{2
 link_url(Page, Block, URL, Classes) -> % {{{2
     #link{
        url=URL, 
+       html_id=block_to_html_id(Block),
        class=Classes,
        body=parallel_block(Page, Block)
       }.
 
 link_event(Page, Block, Event) -> % {{{2
     #link{
+       html_id=block_to_html_id(Block),
        actions=Event,
        body=parallel_block(Page, Block)
       }.
@@ -328,6 +335,9 @@ event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
+block_to_html_id(Block) -> % {{{2
+    re:replace(Block, "/", "-",[global, {return, list}]).
+
 private_block(Block) -> % {{{2
     wf:f("+~s", [Block]).
 

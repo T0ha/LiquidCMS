@@ -272,12 +272,14 @@ nav_item(Page, ItemID, Classes) -> % {{{2
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
     #listitem{
+       html_id=common:block_to_html_id(ItemID),
        class=Classes, 
        body=common:parallel_block(Page, ItemID)
       }.
 
 panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
     #panel{
+       %html_id=common:block_to_html_id(BodyBlock),
        class=["panel" | Classes],
        body=[
              index:maybe_block(Page, HeaderBlock, ["panel-heading"]),
@@ -295,6 +297,7 @@ dropdown(Page, Block) -> % {{{2
        %actions=Event,
        body=common:parallel_block(Page, LinkBlock),
        class="dropdown-toggle",
+       html_id=common:block_to_html_id(LinkBlock),
        data_fields=[
                     {toggle, "dropdown"}
                    ]
@@ -313,12 +316,14 @@ full_block(Page, Body) -> % {{{2
 
 row(Page, Block, Classes) -> % {{{2
     #bs_row{
+       html_id=common:block_to_html_id(Block),
        class=Classes,
        body=common:parallel_block(Page, Block)
       }.
 
 col(Page, Block, Width, Offset, Classes) -> % {{{2
     #bs_col{
+       html_id=common:block_to_html_id(Block),
        class=Classes,
        cols=column_classes(Width, Offset),
        body=common:parallel_block(Page, Block)
@@ -326,6 +331,7 @@ col(Page, Block, Width, Offset, Classes) -> % {{{2
 
 full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
     #bs_row{
+       html_id=common:block_to_html_id(Block),
        class=RowClasses,
        body=#bs_col{
                class=ColClasses,

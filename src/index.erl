@@ -58,6 +58,7 @@ maybe_block(_Page, "", _Classes) -> % {{{2
     "";
 maybe_block(Page, Block, Classes) -> % {{{2
     #panel{
+       html_id=common:block_to_html_id(Block),
        class=Classes,
        body=common:parallel_block(Page, Block)
     }.
