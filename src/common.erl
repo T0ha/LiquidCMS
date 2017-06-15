@@ -338,6 +338,10 @@ event(Ev) -> % {{{2
 block_to_html_id(Block) -> % {{{2
     re:replace(Block, "/", "-",[global, {return, list}]).
 
+is_private_block([$+ | _Block]) -> % {{{2
+    true;
+is_private_block(_Block) -> % {{{2
+    false.
 private_block(Block) -> % {{{2
     wf:f("+~s", [Block]).
 

@@ -33,7 +33,7 @@ format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
          [Block, RowClass, ColClass]),
     Block};
 format_block(navbar, [Block, Classes]) -> % {{{2
-    [B, _] = string:tokens(Block, "/"),
+    [[$+|B], _] = string:tokens(Block, "/"),
     {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
 format_block(nav_item, [Block]) -> % {{{2
     [B, _] = string:tokens(Block, "/"),
@@ -152,6 +152,7 @@ form_data(navbar, A) -> % {{{2
     [_PID, UlBlock, AllClasses] = admin:maybe_empty(A, 3),
     [Classes, Inverse, Position, Alignment] = admin:maybe_empty(AllClasses, 4),
     Block = case string:tokens(UlBlock, "/") of
+         [[$+|B] | _] -> B;
          [B | _] -> B;
         B -> B
     end,
@@ -231,7 +232,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}
 %    ColClass = common:q(col_class, ""),
 %    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes]}}=Rec) -> % {{{2
-    NavItemBlock = common:sub_block(Block, "li"),
+    NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
     case URL of
         undefined ->
@@ -269,7 +270,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
             ]
     end;
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes | Other]]}}=Rec) -> % {{{2
-    NavItemsBlock = common:sub_block(Block, "navbar-ul"),
+    NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse | Other])],
 

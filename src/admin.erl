@@ -856,6 +856,9 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
+
+    ShowAll = (common:q(show_all, "false") /= "false"),
+
     PageSelect = [
                   #dropdown{
                      id=page_select,
@@ -866,10 +869,18 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
                   #span{text=" / "},
                   #dropdown{
                      id=block_select,
-                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks]),
+                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll]),
                      value=Block,
                      postback={page, construct}
+                    },
+                  #span{text=" Show All "},
+                  #checkbox{
+                     text="",
+                     id=show_all,
+                     checked=ShowAll,
+                     postback={page, construct}
                     }
+
                  ],
     Sort = #sortblock{
                   tag={PID, Block},
