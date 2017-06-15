@@ -13,6 +13,8 @@ functions() -> % {{{2
      %{slider, "Slider"},
      %{dropdown, "Dropdown"},
      %{script, "Inline Script"},
+     {tabs, "Tabs"},
+     {tab, "Tab"},
      {row, "Row"},
      {col, "Column"}
      %{full_block, "One Column Row"}
@@ -196,6 +198,33 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, 
                       Footer,
                       [Classes, Context]
                      ]}};
+save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes]}}=Rec) -> % {{{2
+    % Outside blocks
+    HeaderBlock = common:sub_block(Block, "tab-header"),
+    BodyBlock = common:sub_block(Block, "tab-body"),
+
+    % Inside blocks
+    HeaderBlockInside = common:sub_block(TabBlock, "header"),
+    BodyBlockInside = common:sub_block(TabBlock, "body"),
+
+    [
+     #cms_mfa{
+        id={PID, HeaderBlock},
+        mfa={bootstrap,
+             tab_header,
+             [
+              HeaderBlockInside,
+              Classes
+             ]}},
+     #cms_mfa{
+        id={PID, BodyBlock},
+        mfa={bootstrap,
+                     tab_body,
+                     [
+                      BodyBlockInside,
+                      Classes
+                     ]}}
+    ];
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
 %save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
@@ -339,6 +368,44 @@ full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
                body=common:parallel_block(Page, Block)
               }}.
 
+tabs(Page, Block, Classes) -> % {{{2
+    HeaderBlock = common:sub_block(Block, "tab-header"),
+    BodyBlock = common:sub_block(Block, "tab-body"),
+
+    #panel{
+       html_id=common:block_to_html_id(Block),
+       body=[
+             common:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
+             #panel{
+                class=["tab-content"|Classes],
+                body=common:parallel_block(Page, BodyBlock)
+               }
+            ]}.
+
+tab_header(Page, Block, Classes) -> % {{{2
+    [BaseBlock|_] = string:tokens(Block, "/"),
+    BodyBlock = common:sub_block(BaseBlock, "body"),
+    #listitem{
+       html_id=common:block_to_html_id(Block),
+       role="presentation",
+       class=Classes,
+       body=#link{
+               url=wf:f("#~s", [common:block_to_html_id(BodyBlock)]),
+               %role="tab",
+               body=common:parallel_block(Page, Block),
+               data_fields=[
+                            {toggle, "tab"}
+                           ]
+              }}.
+
+tab_body(Page, Block, Classes) -> % {{{2
+
+    #panel{
+       html_id=common:block_to_html_id(Block),
+       %role="tabpanel",
+       class=["tab-pane" | Classes],
+       body=common:parallel_block(Page, Block)
+      }.
 
 %% Event handlers % {{{1
 event(submenu) -> % {{{2
