@@ -20,8 +20,8 @@ functions() -> % {{{2
      %{full_block, "One Column Row"}
      ].
 
-format_block(link_url, [Block, URL]) -> % {{{2
-    {wf:f("Link: ~s(href=~s)", [Block, URL]), Block};
+format_block(link_url, [Block, URL, Classes]) -> % {{{2
+    {wf:f("Link: ~s(href=~s, class=~p)", [Block, URL, Classes]), Block};
 format_block(text, [Text]) -> % {{{2
     {#panel{body=Text}, undefined};
 format_block(template, [TID]) -> % {{{2
@@ -337,6 +337,11 @@ event(Ev) -> % {{{2
 %% Helpers {{{1
 block_to_html_id(Block) -> % {{{2
     re:replace(Block, "/", "-",[global, {return, list}]).
+
+format_private_block([$+ | Block]) -> % {{{2
+    Block;
+format_private_block(Block) -> % {{{2
+    Block.
 
 is_private_block([$+ | _Block]) -> % {{{2
     true;

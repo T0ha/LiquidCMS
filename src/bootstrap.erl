@@ -33,11 +33,11 @@ format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
          [Block, RowClass, ColClass]),
     Block};
 format_block(navbar, [Block, Classes]) -> % {{{2
-    [[$+|B], _] = string:tokens(Block, "/"),
+    [B, _] = string:tokens(common:format_private_block(Block), "/"),
     {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
-format_block(nav_item, [Block]) -> % {{{2
-    [B, _] = string:tokens(Block, "/"),
-    {wf:f("NavBarButton: ~s", [B]), B};
+format_block(nav_item, [Block, Classes]) -> % {{{2
+    [B, _] = string:tokens(common:format_private_block(Block), "/"),
+    {wf:f("NavBarButton: ~s(class=~p)", [B, Classes]), B};
 format_block(F, [Block|_]=A) -> % {{{2
     {wf:f("bootstrap:~s(~p)", [F, A]), Block}.
 
@@ -481,7 +481,7 @@ assets_dropdown(AssetType) -> % {{{2
 get_navitem_data(_PID, "") -> % {{{ 2
     {"", "", ""};
 get_navitem_data(PID, NavBlock) -> % {{{ 2
-    [Block, "li"] = string:tokens(NavBlock, "/"),
+    [Block, "li"] = string:tokens(common:format_private_block(NavBlock), "/"),
     {Text, URL} = case db:get_mfa(PID, NavBlock) of
                       [#cms_mfa{mfa={_, dropdown, [Block]}}] -> 
                           [#cms_mfa{mfa={_, _, [T]}}] = db:get_mfa(PID, common:sub_block(Block, "link")),
