@@ -14,12 +14,15 @@ functions() -> % {{{2
      %{list, "Items List"},
      %{list_item, "List Item"},
      {link_url, "Link"},
+     {block, "Block (div)"},
      %{icon, "Icon"},
      %{script, "Inline Script"},
      {text, "Text with HTML"}
      %{full_block, "One Column Row"}
      ].
 
+format_block(block, [Block, Classes]) -> % {{{2
+    {wf:f("Block (div): ~s(class=~p)", [Block, Classes]), Block};
 format_block(link_url, [Block, URL, Classes]) -> % {{{2
     {wf:f("Link: ~s(href=~s, class=~p)", [Block, URL, Classes]), Block};
 format_block(text, [Text]) -> % {{{2
@@ -318,6 +321,13 @@ script(_Page, Script) -> % {{{2
 
 text(_Page, Text) -> % {{{2
     Text.
+
+block(Page, Block, Classes) -> % {{{2
+    #panel{
+       html_id=block_to_html_id(Block),
+       class=Classes,
+       body=common:parallel_block(Page, Block)
+      }.
 
 full_block(_Page, Body) -> % {{{2
     #bs_row{

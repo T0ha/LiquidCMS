@@ -1001,7 +1001,10 @@ event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
           end,
 
     NewRec = try apply(M, save_block, [Rec])
-             catch error:udef -> Rec end,
+             catch 
+                 error:udef -> Rec;
+                 error:function_clause -> Rec 
+             end,
     db:save(NewRec),
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
