@@ -302,9 +302,13 @@ link_url(Page, Block, URL, Classes) -> % {{{2
       }.
 
 link_event(Page, Block, Event) -> % {{{2
+    link_event(Page, Block, Event, []).
+
+link_event(Page, Block, Event, Classes) -> % {{{2
     #link{
        html_id=block_to_html_id(Block),
        actions=Event,
+       class=Classes,
        body=parallel_block(Page, Block)
       }.
 

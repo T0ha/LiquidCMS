@@ -10,9 +10,11 @@ functions() -> % {{{2
      {navbar, "Navigation Bar"},
      {nav_item, "Navigation Bar button"},
      {panel, "Panel"},
+     {modal, "Modal"},
      %{slider, "Slider"},
      %{dropdown, "Dropdown"},
      %{script, "Inline Script"},
+     {container, "Container"},
      {tabs, "Tabs"},
      {tab, "Tab"},
      {row, "Row"},
@@ -28,6 +30,10 @@ format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes])
     {wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p)",
          [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]),
      BodyBlock};
+format_block(modal, [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]) -> % {{{2
+    {wf:f("Modal(link_block=~s, title_block=~p, body_block=~p, footer_block=~p, classes=~p)",
+         [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]),
+     Block};
 format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
     {wf:f("One Column Row: ~s(row_class=~p, col_class=~p)",
          [Block, RowClass, ColClass]),
@@ -38,6 +44,10 @@ format_block(navbar, [Block, Classes]) -> % {{{2
 format_block(nav_item, [Block, Classes]) -> % {{{2
     [B, _] = string:tokens(common:format_private_block(Block), "/"),
     {wf:f("NavBarButton: ~s(class=~p)", [B, Classes]), B};
+format_block(container, [Block, AllClasses]) -> % {{{2
+    [Fluid, Classes] = admin:maybe_empty(AllClasses, 2),
+    IsFluid = (Fluid == "container-fluid"),
+    {wf:f("Container: ~s(fluid=~p, class=~p)", [Block, IsFluid, Classes]), Block};
 format_block(F, [Block|_]=A) -> % {{{2
     {wf:f("bootstrap:~s(~p)", [F, A]), Block}.
 
@@ -83,6 +93,33 @@ form_data(panel, A) -> % {{{2
           options=context_classes(panel)
          }}
      ],
+     Block,
+     Classes
+    };
+form_data(modal, A) -> % {{{2
+    [_, Block, HeaderBlock, BodyBlock, FooterBlock, C] = admin:maybe_empty(A, 6),
+    [Classes, Context] = admin:maybe_empty(C, 2),
+    {[
+      {"Block for modal title",
+      #txtbx{
+         id=header_block,
+         text=HeaderBlock,
+         placeholder="Block name for modal title (leave blank for none)"
+        }},
+      {"Block for modal body",
+      #txtbx{
+         id=body_block,
+         text=BodyBlock,
+         placeholder="Block name for modal body"
+        }},
+    {"Block for modal footer",
+      #txtbx{
+         id=footer_block,
+         text=FooterBlock,
+         placeholder="Block name for modal title (leave blank for none)"
+        }}
+     ],
+     [],
      Block,
      Classes
     };
@@ -184,6 +221,22 @@ form_data(navbar, A) -> % {{{2
      Block,
      Classes
     };
+form_data(container, A) -> % {{{2
+    [_PID, Block, AllClasses] = admin:maybe_empty(A, 3),
+    [Fluid, Classes] = admin:maybe_empty(AllClasses, 2),
+    {[],
+     [
+      #checkbox{
+         text="Fluid",
+         value="fluid",
+         label_position=before,
+         id=fluid,
+         checked=(Fluid == "container-fluid")
+        }
+     ],
+     Block,
+     Classes
+    };
 form_data(F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
 form_data(F, []) -> % {{{2
@@ -280,6 +333,12 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes | Othe
               mfa={bootstrap, nav_items, [Block, ["navbar-nav"]]},
               sort=1}
     ];
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, container, [Block, Classes]}}=Rec) -> % {{{2
+    Fluid = case common:q(fluid, "") of
+                "" -> "container";
+                "fluid" -> "container-fluid"
+            end,
+    Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
 save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
@@ -344,6 +403,9 @@ slider(Page, Block, Height, Classes) -> % {{{2
 full_block(Page, Body) -> % {{{2
     full_block(Page, Body, [], []).
 
+container(Page, Block, Classes) -> % {{{2
+    common:block(Page, Block, Classes).
+
 row(Page, Block, Classes) -> % {{{2
     #bs_row{
        html_id=common:block_to_html_id(Block),
@@ -400,7 +462,6 @@ tab_header(Page, Block, Classes) -> % {{{2
               }}.
 
 tab_body(Page, Block, Classes) -> % {{{2
-
     #panel{
        html_id=common:block_to_html_id(Block),
        %role="tabpanel",
@@ -408,7 +469,15 @@ tab_body(Page, Block, Classes) -> % {{{2
        body=common:parallel_block(Page, Block)
       }.
 
+modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes) -> % {{{2
+    common:link_event(Page, Block, ?POSTBACK({modal, Page, TitleBlock, BodyBlock, FooterBlock}, ?MODULE), Classes).
+
 %% Event handlers % {{{1
+event({modal, Page, TitleBlock, BodyBlock, FooterBlock}) -> % {{{2
+    Title = common:parallel_block(Page, TitleBlock),
+    Body = common:parallel_block(Page, BodyBlock),
+    Bottom = common:parallel_block(Page, FooterBlock),
+    coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]);
 event(submenu) -> % {{{2
     case common:q(submenu, "off") of
         "on" ->
