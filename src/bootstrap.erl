@@ -31,7 +31,7 @@ format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes])
          [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]),
      BodyBlock};
 format_block(modal, [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]) -> % {{{2
-    {wf:f("Modal(link_block=~s, title_block=~p, body_block=~p, footer_block=~p, classes=~p)",
+    {wf:f("Modal(link_block=~p, title_block=~p, body_block=~p, footer_block=~p, classes=~p)",
          [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]),
      Block};
 format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
@@ -97,8 +97,8 @@ form_data(panel, A) -> % {{{2
      Classes
     };
 form_data(modal, A) -> % {{{2
-    [_, Block, HeaderBlock, BodyBlock, FooterBlock, C] = admin:maybe_empty(A, 6),
-    [Classes, Context] = admin:maybe_empty(C, 2),
+    [_, Block, HeaderBlock, BodyBlock, FooterBlock, Classes] = admin:maybe_empty(A, 6),
+    %[Classes, Context] = admin:maybe_empty(C, 2),
     {[
       {"Block for modal title",
       #txtbx{

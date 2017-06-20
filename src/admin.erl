@@ -560,7 +560,7 @@ maybe_empty([], N) -> % {{{2
     lists:duplicate(N, "");
 maybe_empty(A, N) when length(A) < N -> % {{{2
     Delta = N - length(A),
-    A ++ lists:dup(Delta, "");
+    A ++ lists:duplicate(Delta, "");
 maybe_empty(A, _N) -> % {{{2
     A.
 
