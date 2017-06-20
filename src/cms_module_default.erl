@@ -13,7 +13,7 @@ functions() -> % {{{2
      ].
 
 format_block(F, A) -> % {{{2
-    wf:f("?MODULE:~s(~p)", [F, A]).
+    {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
 
 form_data(F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
