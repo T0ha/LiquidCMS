@@ -438,12 +438,18 @@ form_elements(M, F, A) -> % {{{2
     render_fields(add_default_fields(BlockData)).
 
 render_fields(Cols) -> % {{{2
-    try 12 / length(Cols) of
-        Width ->
-            [
+    try 12 div length(Cols) of
+            Width when Width >= 4 ->
+            wf:info("Width: ~p", [Width]),
+                [
              #bs_row{
                 body=[render_field(Col, Width) || Col <- Cols]
-               }]
+               }];
+        Width ->
+            wf:info("Width: ~p", [Width]),
+            {Row, Rows} = lists:split(3, Cols),
+            [render_fields(Row) | render_fields(Rows)]
+            
     catch 
         _:_ -> 
             [
@@ -451,7 +457,6 @@ render_fields(Cols) -> % {{{2
                 body=[render_field(Col, 12) || Col <- Cols]
                }]
     end.
-
 
 render_field(Any) -> % {{{2
     render_field(Any, 12).
