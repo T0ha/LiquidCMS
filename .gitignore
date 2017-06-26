@@ -1,3 +1,4 @@
 *.beam
 Mnesia*
 *.app
+static/nitrogen
