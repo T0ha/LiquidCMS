@@ -74,7 +74,7 @@ install() -> % {{{2
     add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
     add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
 
-    add_navbar_button("admin", "sidebar-nav", "users-all", {{"fa", "group-o", []}, "Users"}, {event, ?POSTBACK({user, show})}),
+    add_navbar_button("admin", "sidebar-nav", "users-all", {{"fa", "users", []}, "Users"}, {event, ?POSTBACK({user, show})}),
 
     ok.
 
