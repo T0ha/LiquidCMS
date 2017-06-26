@@ -1,6 +1,6 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
--module (cms_module_default).
+-module (cms_collection_default).
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
@@ -8,7 +8,7 @@
 
 %% CMS Module interface {{{1
 description() -> % {{{2
-    "CMS Module Template".
+    "CMS Collection Template".
 
 functions() -> % {{{2
     [
