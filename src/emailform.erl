@@ -7,6 +7,9 @@
 -include("db.hrl").
 
 %% CMS Module interface {{{1
+description() -> % {{{2
+    "Form to email".
+
 functions() -> % {{{2
     [
      {email_field, "Email field"},

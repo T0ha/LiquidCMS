@@ -5,6 +5,10 @@
 -include("records.hrl").
 
 %% CMS Module interface {{{1
+
+description() -> % {{{2
+    "Bootstrap".
+
 functions() -> % {{{2
     [
      {navbar, "Navigation Bar"},

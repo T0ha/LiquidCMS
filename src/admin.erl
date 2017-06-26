@@ -789,7 +789,7 @@ event({page, show}) -> % {{{2
              {id, "Name", tb},
              {title, "Title", ta},
              {description, "Description", ta},
-             {module, "Module", {select, cms_modules()}},
+             {module, "Module", {select, modules()}},
              {accepted_role, "Assess role", {select, cms_roles()}}
             ],
        funs=#{
@@ -843,7 +843,7 @@ event({page, new}) -> % {{{2
                #dd{
                   id=module,
                   value=index,
-                  options=cms_modules()
+                  options=modules()
                  },
 
                #span{text="Who Have Access"},
@@ -973,7 +973,7 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
                #dd{id=module,
                   value=M,
                   postback={block, change, module},
-                  options=modules()},
+                  options=collections()},
 
                #span{text="Block Type"},
                #dd{
@@ -1119,12 +1119,10 @@ sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
 
 %% Dropdown formatters {{{1
-cms_modules() -> % {{{2
+modules() -> % {{{2
     [{index, "Main"},
      {admin, "Admin"},
-     %{blog, "Blog"},
      {account, "Account"}
-     %{galery, "Galery"}
      ].
 
 cms_roles() -> % {{{2
@@ -1133,12 +1131,12 @@ cms_roles() -> % {{{2
      {root, "Root"},
      {editor, "Editor"}].
 
-modules() -> % {{{2
-    [
-     %{admin, "Admin"},
-     {common, "Common"},
-     %{index, "Main"},
-     {emailform, "Form to email"},
-     {bootstrap, "Bootstrap"}
-    ].
+collections() -> % {{{2
+    {ok, Files} = file:list_dir("ebin"),
+    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    Modules = [M || M <- Mods,
+                    M /= cms_module_default,
+                    F <- M:module_info(exports),
+                    F == {functions, 0}],
+    lists:map(fun(M) -> {M, M:description()} end, Modules).
 

@@ -7,6 +7,9 @@
 -include("db.hrl").
 
 %% CMS Module interface {{{1
+description() -> % {{{2
+    "CMS Module Template".
+
 functions() -> % {{{2
     [
      {block, "Block (div)"}
