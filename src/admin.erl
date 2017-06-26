@@ -74,6 +74,8 @@ install() -> % {{{2
     add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
     add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
 
+    add_navbar_button("admin", "sidebar-nav", "users-all", {{"fa", "group-o", []}, "Users"}, {event, ?POSTBACK({user, show})}),
+
     ok.
 
 %% Different components adding to pages  {{{1
@@ -1017,6 +1019,66 @@ event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2
     db:maybe_delete(B),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
     
+event({user, show}) -> % {{{2
+    CRUD = #crud{
+       pagination_class=["btn", "btn-default"],
+       button_class=["btn", "btn-link"],
+       table_class=["table-striped", "table-bordered", "table-hover"],
+       start=0,
+       count=10,
+       cols=[
+             {email, "Email", tb},
+             {role, "User role", {select, cms_roles()}}
+            ],
+       funs=#{
+         list => fun db:get_users/0,
+         update => fun db:update_map/1, 
+         delete => fun db:delete/1
+        }
+      },
+    wf:update(container, [
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text="Users"}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Create User",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({user, new})
+                                             }}
+                                   ]},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=CRUD
+                                     }
+                             }]);
+event({user, new}) -> % {{{2
+    new_modal("Create User", 
+              {user, save},
+              undefined,
+              [
+               account:email_field("admin"),
+               account:password_field("admin"),
+               account:retype_password_field("admin"),
+               #span{text="Role"},
+               #dd{
+                  id=role,
+                  value=undefined,
+                  options=cms_roles()
+                 }
+              ]);
+event({user, save}) -> % {{{2
+    account:event({auth, register}),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={user, show}});
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 

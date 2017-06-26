@@ -89,6 +89,11 @@ get_all_blocks(PID) -> % {{{1
                          end),
     sets:to_list(sets:from_list(Blocks)).
                                  
+get_users() -> % {{{1
+    transaction(fun() ->
+                        Users = mnesia:match_object(#cms_user{_='_'}),
+                        [record_to_map(A) || A <- Users]
+                end).
 get_templates() -> % {{{1
     transaction(fun() ->
                         Templates = mnesia:match_object(#cms_template{_='_'}),

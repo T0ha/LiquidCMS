@@ -34,7 +34,7 @@ title() -> "LiquidCMS - Log In".
 body(Page) ->  % {{{2
     index:body(Page).
 	
-email_field(Page) -> % {{{2
+email_field(_Page) -> % {{{2
      #panel{
         class="form-group",
         body=#txtbx{
@@ -152,6 +152,9 @@ install() -> % {{{2
     ok.
 
 %% Event handlers {{{1
+event({auth, register}) -> % {{{2
+    Role = wf:to_atom(common:q(role, undefined)),
+    event({auth, register, Role});
 event({auth, register, Role}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),

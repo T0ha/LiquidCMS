@@ -23,6 +23,7 @@ start(_StartType, _StartArgs) ->
             nitrogen_sup:start_link();
         {error, _} ->
             {ok, _}=application:ensure_all_started(mnesia),
+            admin:install(),
             application:set_env(nitrogen, installing, false),
             nitrogen_sup:start_link()
     end.
