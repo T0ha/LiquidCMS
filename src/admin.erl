@@ -6,6 +6,10 @@
 -include("records.hrl").
 -include("db.hrl").
 
+%% CMS Module interface {{{1
+description() -> % {{{2
+    "Admin".
+
 %% Module render functions {{{1
 main() -> % {{{2
     index:main().
@@ -42,7 +46,13 @@ default_data() -> % {{{2
                     #cms_mfa{id={"*", "css"},
                              mfa={common, asset, [["css", "bootstrap"]]},
                              sort=2}
-                      ]}.
+                      ],
+     cms_role => [
+                  #cms_role{role = undefined, name="Nobody"},
+                  #cms_role{role = admin, name="Admin"},
+                  #cms_role{role = root, name="Root"},
+                  #cms_role{role = editor, name="Editor"}
+                 ]}.
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -1121,22 +1131,26 @@ sort_event(SortTag, Blocks) -> % {{{2
 
 %% Dropdown formatters {{{1
 modules() -> % {{{2
-    [{index, "Main"},
-     {admin, "Admin"},
-     {account, "Account"}
-     ].
+    {ok, Files} = file:list_dir("ebin"),
+    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    Modules = [M || M <- Mods,
+                    M /= cms_collection_default,
+                    F <- M:module_info(exports),
+                    F == {main, 0}],
+    lists:map(fun(M) -> {M, M:description()} end, Modules).
+    %[{index, "Main"},
+    % {admin, "Admin"},
+    % {account, "Account"}
+    % ].
 
 cms_roles() -> % {{{2
-    [{"undefined", "Nobody"},
-     {admin, "Admin"},
-     {root, "Root"},
-     {editor, "Editor"}].
+    [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()].
 
 collections() -> % {{{2
     {ok, Files} = file:list_dir("ebin"),
     Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
     Modules = [M || M <- Mods,
-                    M /= cms_module_default,
+                    M /= cms_collection_default,
                     F <- M:module_info(exports),
                     F == {functions, 0}],
     lists:map(fun(M) -> {M, M:description()} end, Modules).

@@ -4,6 +4,10 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
 
+%% CMS Module interface {{{1
+description() -> % {{{2
+    "Main module".
+
 %% Module render functions {{{1
 main() ->  % {{{2
     PID = case wf:q(page) of

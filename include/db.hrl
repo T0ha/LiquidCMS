@@ -8,7 +8,7 @@
                         postback=P,
                         delegate=Delegate
                        }).
--type role() :: 'admin' | 'editor' | undefined.
+-type role() :: 'admin' | 'editor' | undefined | atom().
 -type asset_type() :: 'image' | 'script' | 'css' | 'less' | binary.
 
 %% DB tables records goes here
@@ -76,5 +76,10 @@
          }).
           
            
+-record(cms_role, {
+          role :: role(),
+          name :: binary(),
+          settings = #{} :: map()
+         }).
 
 

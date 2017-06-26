@@ -8,7 +8,7 @@
 
 %% CMS Module interface {{{1
 description() -> % {{{2
-    "Account related elements".
+    "Account".
 
 functions() -> % {{{2
     [

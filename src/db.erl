@@ -26,6 +26,7 @@ install([])-> % {{{1
     %?CREATE_TABLE(cms_block_asset, bag, [asset_id]),
     ?CREATE_TABLE(cms_page, set, []),
     ?CREATE_TABLE(cms_user, bag, []),
+    ?CREATE_TABLE(cms_role, set, []),
     %?CREATE_TABLE(cms_account, bag, []),
     mnesia:transaction(
       fun() ->
@@ -93,6 +94,12 @@ get_users() -> % {{{1
     transaction(fun() ->
                         Users = mnesia:match_object(#cms_user{_='_'}),
                         [record_to_map(A) || A <- Users]
+                end).
+
+get_roles() -> % {{{1
+    transaction(fun() ->
+                        Role = mnesia:match_object(#cms_role{_='_'}),
+                        [record_to_map(A) || A <- Role]
                 end).
 get_templates() -> % {{{1
     transaction(fun() ->
@@ -247,6 +254,8 @@ fields(cms_mfa) -> % {{{1
     record_info(fields, cms_mfa);
 fields(cms_user) -> % {{{1
     record_info(fields, cms_user);
+fields(cms_role) -> % {{{1
+    record_info(fields, cms_role);
 fields(cms_template) -> % {{{1
     record_info(fields, cms_template).
 
