@@ -48,10 +48,10 @@ default_data() -> % {{{2
                              sort=2}
                       ],
      cms_role => [
-                  #cms_role{role = undefined, name="Nobody"},
-                  #cms_role{role = admin, name="Admin"},
-                  #cms_role{role = root, name="Root"},
-                  #cms_role{role = editor, name="Editor"}
+                  #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
+                  #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
+                  #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
+                  #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
                  ]}.
 
 install() -> % {{{2

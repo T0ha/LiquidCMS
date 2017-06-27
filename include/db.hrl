@@ -8,7 +8,13 @@
                         postback=P,
                         delegate=Delegate
                        }).
--type role() :: 'admin' | 'editor' | undefined | atom().
+
+-define(ROLE_ROOT_SORT, 1).
+-define(ROLE_ADMIN_SORT, 1000).
+-define(ROLE_EDITOR_SORT, 2000).
+-define(ROLE_NOBODY_SORT, 10000).
+
+-type role() :: 'admin' | 'editor' | 'nobody' | atom().
 -type asset_type() :: 'image' | 'script' | 'css' | 'less' | binary.
 
 %% DB tables records goes here
@@ -56,7 +62,7 @@
           id :: string(),
           description = <<>> :: binary(),
           module = index :: module(),
-          accepted_role :: atom(),
+          accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
           settings = #{}
          }).
@@ -79,6 +85,7 @@
 -record(cms_role, {
           role :: role(),
           name :: binary(),
+          sort=1 :: integer(),
           settings = #{} :: map()
          }).
 

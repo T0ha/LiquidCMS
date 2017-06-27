@@ -203,11 +203,10 @@ event(E) -> % {{{2
 %% Helper functions {{{1
 roles(Role) -> % {{{2
     lists:dropwhile(fun(R) -> R == Role end,
-                    [
-                     root,
-                     admin,
-                     editor
-                    ]).
+                    [R || #{role := R} <- lists:sort(
+                                            fun(#{sort := S1},
+                                                #{sort := S2}) -> S1 > S2 end, 
+                                            db:get_roles())]).
 
 hash(Data) -> % {{{2
     crypto:hash(sha256, Data).

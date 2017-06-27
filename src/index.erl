@@ -69,6 +69,8 @@ maybe_block(Page, Block, Classes) -> % {{{2
 block(Page, Block) -> % {{{2
     common:parallel_block(Page, Block).
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
+    maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
+maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
     wf:info("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
