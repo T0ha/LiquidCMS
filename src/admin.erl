@@ -84,7 +84,9 @@ install() -> % {{{2
     add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
     add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
 
-    add_navbar_button("admin", "sidebar-nav", "users-all", {{"fa", "users", []}, "Users"}, {event, ?POSTBACK({user, show})}),
+    add_navbar_button("admin", "sidebar-nav", "accounts", {{"fa", "users", []}, "Access"}, {menu, "accounts-menu"}),
+    add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({user, show})}),
+    add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({role, show})}),
 
     ok.
 
@@ -1088,6 +1090,70 @@ event({user, new}) -> % {{{2
               ]);
 event({user, save}) -> % {{{2
     account:event({auth, register}),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={user, show}});
+event({role, show}) -> % {{{2
+    CRUD = #crud{
+       pagination_class=["btn", "btn-default"],
+       button_class=["btn", "btn-link"],
+       table_class=["table-striped", "table-bordered", "table-hover"],
+       start=0,
+       count=10,
+       cols=[
+             {name, "Role name", tb},
+             {sort, "Role priority", tb}
+            ],
+       funs=#{
+         list => fun db:get_roles/0,
+         update => fun db:update_map/1, 
+         delete => fun db:delete/1
+        }
+      },
+    wf:update(container, [
+                           #bs_row{
+                              body=[
+                                    #bs_col{
+                                      cols={lg, 10},
+                                      body=#h1{text="Roles"}
+                                              },
+                                    #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Create Role",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({role, new})
+                                             }}
+                                   ]},
+                           #bs_row{
+                              body=#bs_col{
+                                      cols={lg, 12},
+                                      body=CRUD
+                                     }
+                             }]);
+event({role, new}) -> % {{{2
+    new_modal("Create Role", 
+              {role, save},
+              undefined,
+              [
+               #span{text="Role"},
+               #txtbx{id=name,
+                      placeholder="Role name"},
+
+               #span{text="Priority"},
+               #txtbx{id=priority,
+                      placeholder="Access priority for role (int)"}
+              ]);
+event({role, save}) -> % {{{2
+    Name = wf:q(name),
+    Role = wf:to_atom(string:to_lower(re:replace(Name, "\s", "_", [{return, list}]))),
+    Priority = wf:to_integer(wf:q(priority)),
+    db:save(#cms_role{
+               role = Role,
+               name = Name,
+               sort = Priority}),
     coldstrap:close_modal(),
     wf:wire(#event{postback={user, show}});
 event(Ev) -> % {{{2
