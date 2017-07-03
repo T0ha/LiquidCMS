@@ -98,6 +98,19 @@ register_form(Page, Role) -> % {{{2
      retype_password_field(Page),
      register_button(Page, Role)
     ].
+maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
+    maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
+maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
+    wf:info("Not redirect to login: ~p", [Page]),
+    Page;
+maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
+    wf:info("Redirect to login: ~p", [Page]),
+    case wf:role(Role) of 
+        true ->
+            Page;
+        false ->
+            error(unauthorized)
+    end.
 %% Module install routines {{{1
 default_data() -> % {{{2
     #{cms_mfa => [

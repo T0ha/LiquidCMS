@@ -45,7 +45,18 @@ default_data() -> % {{{2
                              sort=1},
                     #cms_mfa{id={"*", "css"},
                              mfa={common, asset, [["css", "bootstrap"]]},
-                             sort=2}
+                             sort=2},
+
+                    % Page (routing and auth)
+                    #cms_mfa{id={"*", "page"},
+                             mfa={account, maybe_redirect_to_login, []},
+                             sort=1},
+                    #cms_mfa{id={"*", "page"},
+                             mfa={index, maybe_change_module, []},
+                             sort=2},
+                    #cms_mfa{id={"*", "page"},
+                             mfa={common, template, ["templates/main.html"]},
+                             sort=3}
                       ],
      cms_role => [
                   #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
@@ -101,16 +112,16 @@ add_page(PID, TemplatePath, Role, Module) -> % {{{2
 
 add_page(PID, Title, Description, Role, Module) -> % {{{2
 
-    Funs = [
-            {index, maybe_redirect_to_login, []},
-            {index, maybe_change_module, []},
-            {common, template, ["templates/main.html"]}
-           ],
-    NFuns = lists:zip(lists:seq(1, length(Funs)), Funs),
-    MFAs = [#cms_mfa{
-               id = {PID, "page"},
-               mfa=F,
-               sort=N} || {N, F} <- NFuns],
+    %Funs = [
+    %        {index, maybe_redirect_to_login, []},
+    %        {index, maybe_change_module, []},
+    %        {common, template, ["templates/main.html"]}
+    %       ],
+    %NFuns = lists:zip(lists:seq(1, length(Funs)), Funs),
+    %MFAs = [#cms_mfa{
+    %           id = {PID, "page"},
+    %           mfa=F,
+    %           sort=N} || {N, F} <- NFuns],
     Page = #cms_page{
               id=PID,
               title=Title,
@@ -118,7 +129,7 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
               accepted_role=Role,
               module=Module
              },
-    db:save([Page | MFAs]).
+    db:save(Page).
 
 add_template(TemplatePath, Bindings) -> % {{{2
     add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
@@ -366,7 +377,7 @@ new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
 
 format_block(#cms_mfa{ % {{{2$
                 id={PID, _},
-                mfa={index, maybe_redirect_to_login, []}
+                mfa={account, maybe_redirect_to_login, []}
                }=B) ->
     [#cms_page{accepted_role=Name}] = db:get_page(PID),
     #sortitem{
