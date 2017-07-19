@@ -210,8 +210,6 @@ form_data(asset, A) -> % {{{2
      #span{text="Asset"},
      assets_dropdown(Type, AID)
     ].
-%form_data(F, A) -> % {{{2
-%    {[], []}.
 
 save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};

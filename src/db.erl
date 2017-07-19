@@ -42,7 +42,11 @@ install([])-> % {{{1
 
 %% Don't remove! This is is used to update your Mnesia DB backend  from CLI tool
 update([]) -> % {{{1
-    ok.
+    transaction(fun() ->
+                        A = mnesia:match_object(#cms_mfa{mfa={index, maybe_redirect_to_login, '_'}, _ = '_'}),
+                        B = mnesia:match_object(#cms_mfa{mfa={index, maybe_change_module, '_'}, _ = '_'}),
+                        [mnesia:delete_object(O) || O <- A ++ B]
+                end).
                         
 %% Getters
 login(Email, Password) -> % {{{1
