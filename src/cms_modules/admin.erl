@@ -45,24 +45,7 @@ default_data() -> % {{{2
                              sort=1},
                     #cms_mfa{id={"*", "css"},
                              mfa={common, asset, [["css", "bootstrap"]]},
-                             sort=2},
-
-                    % Page (routing and auth)
-                    #cms_mfa{id={"*", "page"},
-                             mfa={account, maybe_redirect_to_login, []},
-                             sort=1},
-                    #cms_mfa{id={"*", "page"},
-                             mfa={index, maybe_change_module, []},
-                             sort=2},
-                    #cms_mfa{id={"*", "page"},
-                             mfa={common, template, ["templates/main.html"]},
-                             sort=3}
-                      ],
-     cms_role => [
-                  #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
-                  #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
-                  #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
-                  #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
+                             sort=2}
                  ]}.
 
 install() -> % {{{2
@@ -454,14 +437,17 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
       Formatting ++ [{"Additional classes", {classes, Classes}}]}
       ].
 
+form_fields(M, F, A) -> % {{{2
+    add_default_fields(
+      try apply(M, form_data, [F, A])
+      catch error:E when E == undef; 
+                         E == function_clause -> 
+                [_, Block, Classes] = maybe_empty(A, 3),
+                {[], [], Block, Classes}
+      end).
+
 form_elements(M, F, A) -> % {{{2
-    BlockData = try apply(M, form_data, [F, A])
-                catch error:undef -> 
-                          
-                          [_, Block, Classes] = maybe_empty(A, 3),
-                          {[], [], Block, Classes}
-                end,
-    render_fields(add_default_fields(BlockData)).
+    render_fields(form_fields(M, F, A)).
 
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
@@ -520,7 +506,7 @@ render_field(Any, Width) -> % {{{2
       }.
 
 get_classes(M, Prefix) -> % {{{2
-    Fields = formatting_fields((M):form_data(Prefix, [])),
+    Fields = formatting_fields(form_fields(M, Prefix, [])),
     wf:info("Classes fields: ~p", [Fields]),
     AllClasses = wf:mq([classes | Fields]),
     wf:info("Classes data: ~p", [AllClasses]),
@@ -533,7 +519,7 @@ get_classes(M, Prefix) -> % {{{2
             AllClasses).
 
 get_data(M, F) -> % {{{2
-    Fields = data_fields((M):form_data(F, [])),
+    Fields = data_fields(form_fields(M, F, [])),
     wf:info("Fields: ~p", [Fields]),
     Data = wf:mq([block | Fields]),
     wf:info("Data: ~p", [Data]),
@@ -1208,27 +1194,13 @@ sort_event(SortTag, Blocks) -> % {{{2
 
 %% Dropdown formatters {{{1
 modules() -> % {{{2
-    {ok, Files} = file:list_dir("ebin"),
-    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
-    Modules = [M || M <- Mods,
-                    M /= cms_collection_default,
-                    F <- M:module_info(exports),
-                    F == {main, 0}],
+    Modules = common:module_by_function({main, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
-    %[{index, "Main"},
-    % {admin, "Admin"},
-    % {account, "Account"}
-    % ].
 
 cms_roles() -> % {{{2
     [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()].
 
 collections() -> % {{{2
-    {ok, Files} = file:list_dir("ebin"),
-    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
-    Modules = [M || M <- Mods,
-                    M /= cms_collection_default,
-                    F <- M:module_info(exports),
-                    F == {functions, 0}],
+    Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 

@@ -26,18 +26,10 @@
          }).
 
 -record(cms_template, {
-          %id :: binary(),
           file :: iodata(), % Path
           bindings=[] :: [proplists:property()],
           name="" :: string(),
           description="" :: string(),
-          settings=#{} :: map()
-         }).
-
--record(cms_block_template, {
-          id :: {string(), string()},
-          template_id :: binary(),
-          bindings=[] :: [proplists:property()],
           settings=#{} :: map()
          }).
 
@@ -51,17 +43,10 @@
           settings=#{} :: map()
          }).
 
--record(cms_block_asset, {
-          id :: {string(), string()},
-          asset_id :: [string()],
-          sort=1 :: integer(),
-          settings=#{} :: map()
-         }).
-
 -record(cms_page, {
           id :: string(),
           description = <<>> :: binary(),
-          module = index :: module(),
+          module = router :: module(),
           accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
           settings = #{}

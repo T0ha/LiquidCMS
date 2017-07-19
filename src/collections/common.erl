@@ -209,9 +209,9 @@ form_data(asset, A) -> % {{{2
 
      #span{text="Asset"},
      assets_dropdown(Type, AID)
-    ];
-form_data(F, A) -> % {{{2
-    {[], []}.
+    ].
+%form_data(F, A) -> % {{{2
+%    {[], []}.
 
 save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};
@@ -237,9 +237,9 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
     wf:info("Waterfall: ~p", [Functions]),
-    lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{module=router}=P) ->
+    lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{}=P) ->
                         apply(M, F, [P | Args]);
-                   (#cms_mfa{mfa=Fun}, #cms_page{module=router}=P) when is_function(Fun) ->
+                   (#cms_mfa{mfa=Fun}, #cms_page{}=P) when is_function(Fun) ->
                                     Fun(P);
                    (_, P) -> P
                 end, 
@@ -379,6 +379,15 @@ q(Id, Default) -> % {{{2
             Default;
         A -> unicode:characters_to_list(string:strip(A))
     end.
+
+
+module_by_function(FunTuple) -> % {{{2
+    {ok, Files} = file:list_dir("ebin"),
+    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    [M || M <- Mods,
+          M /= cms_collection_default,
+          F <- M:module_info(exports),
+          F == FunTuple].
 
 %% Dropdown formatters {{{1
 asset_types() -> % {{{2

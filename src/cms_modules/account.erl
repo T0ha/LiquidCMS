@@ -109,36 +109,17 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
         true ->
             Page;
         false ->
-            error(unauthorized)
+            wf:redirect_to_login("/account")
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
-    #{cms_mfa => [
-                    %Scripts
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery"]]},
-                             sort=1},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery-ui"]]},
-                             sort=2},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "bert"]]},
-                             sort=3},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "nitrogen"]]},
-                             sort=4},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "livevalidation"]]},
-                             sort=5},
-
-                    %CSS
-                    #cms_mfa{id={"*", "css"},
-                             mfa={common, asset, [["css", "jquery-ui"]]},
-                             sort=1},
-                    #cms_mfa{id={"*", "css"},
-                             mfa={common, asset, [["css", "bootstrap"]]},
-                             sort=2}
-                      ]}.
+    #{
+     cms_role => [
+                  #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
+                  #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
+                  #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
+                  #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
+                 ]}.
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),

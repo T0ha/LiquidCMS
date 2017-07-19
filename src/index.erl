@@ -10,33 +10,13 @@ description() -> % {{{2
 
 %% Module render functions {{{1
 main() ->  % {{{2
-    PID = case wf:q(page) of
-              undefined -> "index";
-              A -> A
-          end,
-    Page = case db:get_page(PID) of
-               [P] -> P;
-               [] -> #cms_page{id="404"}
-           end, 
-            
-
-    try common:waterfall(Page, "page")
-    catch
-        error:unauthorized -> 
-            wf:redirect_to_login("/account");
-        error:{change_module, Module} ->
-            URI = wf:uri(),
-            [_, QS] = string:tokens(URI, "?"),
-            wf:redirect(wf:f("/~s?~s", [Module, QS]))
-    end.
-
-
+    common:waterfall(#cms_page{}, "router").
 
 author(_Page) ->  % {{{2
     "".
 
-description(_Page) ->  % {{{2
-    "".
+description(Page) ->  % {{{2
+    Page#cms_page.description.
 
 body_attrs(_Page) ->  % {{{2
     "".
@@ -68,25 +48,4 @@ maybe_block(Page, Block, Classes) -> % {{{2
     }.
 block(Page, Block) -> % {{{2
     common:parallel_block(Page, Block).
-maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
-    maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
-maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
-    wf:info("Not redirect to login: ~p", [Page]),
-    Page;
-maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
-    wf:info("Redirect to login: ~p", [Page]),
-    case wf:role(Role) of 
-        true ->
-            Page;
-        false ->
-            error(unauthorized)
-    end.
 
-maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
-    wf:info("Change module: ~p", [Page]),
-    case wf:page_module() of 
-        Module ->
-            Page;
-        _Other ->
-            error({change_module, Module})
-    end.

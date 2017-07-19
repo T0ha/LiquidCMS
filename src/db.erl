@@ -21,24 +21,23 @@
 install([])-> % {{{1
     ?CREATE_TABLE(cms_mfa, bag, []),
     ?CREATE_TABLE(cms_template, set, []),
-    %?CREATE_TABLE(cms_block_template, bag, [template_id]),
     ?CREATE_TABLE(cms_asset, bag, [type, name]),
-    %?CREATE_TABLE(cms_block_asset, bag, [asset_id]),
     ?CREATE_TABLE(cms_page, set, []),
     ?CREATE_TABLE(cms_user, bag, []),
     ?CREATE_TABLE(cms_role, set, []),
-    %?CREATE_TABLE(cms_account, bag, []),
+    DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
       fun() ->
-              maps:map(
-                fun(_K, V) ->
-                        lists:foreach(
-                          fun(R) ->
-                                  mnesia:write(R)
-                          end,
-                          V)
-                end,
-                admin:default_data())
+              [maps:map(
+                 fun(_K, V) ->
+                         lists:foreach(
+                           fun(R) ->
+                                   mnesia:write(R)
+                           end,
+                           V)
+                 end,
+                (M):default_data()) ||
+               M <- DataModules]
       end).
 
 %% Don't remove! This is is used to update your Mnesia DB backend  from CLI tool
@@ -112,11 +111,6 @@ get_template(TID) -> % {{{1
                         mnesia:read(cms_template, TID)
                 end).
 
-get_template(PID, Block) -> % {{{1
-    transaction(fun() ->
-                        [#cms_block_template{template_id=TID}] = mnesia:read(cms_block_template, {PID, Block}),
-                        mnesia:read(cms_template, TID)
-                end).
 
 get_asset(AID) -> % {{{1
     transaction(fun() ->
@@ -127,12 +121,6 @@ get_assets(Type) -> % {{{1
     transaction(fun() ->
                         Assets = mnesia:select(cms_asset, [{#cms_asset{type=Type, _='_'}, [], ['$_']}]),
                         [record_to_map(A) || A <- Assets]
-                end).
-get_assets(Page, Block) -> % {{{1
-    transaction(fun() ->
-                        AIDs = mnesia:read(cms_block_asset, {Page, Block}),
-                        [mnesia:read(cms_asset, AID) || 
-                         #cms_block_asset{asset_id=AID} <- AIDs]
                 end).
 
 fix_sort(#cms_mfa{id={PID, Block}}=Rec) -> % {{{1
