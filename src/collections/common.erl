@@ -262,6 +262,7 @@ asset(_Page, AID) -> % {{{1 % {{{2
             "<link href='" ++ wf:to_list(Path) ++ "' rel='stylesheet'>";
         image ->
             #image{image=wf:to_list(Path)};
+        none -> wf:f("No asset: ~p: ~p", [AID, Assets]);
         _ -> []
     end.
 
