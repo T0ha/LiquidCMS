@@ -438,16 +438,17 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
       ].
 
 form_fields(M, F, A) -> % {{{2
-    add_default_fields(
       try apply(M, form_data, [F, A])
       catch error:E when E == undef; 
                          E == function_clause -> 
                 [_, Block, Classes] = maybe_empty(A, 3),
                 {[], [], Block, Classes}
-      end).
+      end.
 
 form_elements(M, F, A) -> % {{{2
-    render_fields(form_fields(M, F, A)).
+    render_fields(
+      add_default_fields(
+        form_fields(M, F, A))).
 
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
