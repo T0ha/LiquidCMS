@@ -900,7 +900,21 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
                      id=show_all,
                      checked=ShowAll,
                      postback={page, construct}
+                    },
+                  #btn{
+                     text="Export Pages",
+                     class=["pull-right"],
+                     style="margin: 0 10px;",
+                     type=success,
+                     actions=?POSTBACK({?MODULE, pages, export})
+                    },
+                  #btn{
+                     text="Import Pages",
+                     class=["pull-right"],
+                     type=warning,
+                     actions=?POSTBACK({?MODULE, pages, import})
                     }
+
 
                  ],
     Sort = #sortblock{
@@ -1154,6 +1168,11 @@ event({role, save}) -> % {{{2
                sort = Priority}),
     coldstrap:close_modal(),
     wf:wire(#event{postback={user, show}});
+event({?MODULE, pages, export}) -> % {{{2
+    Path = "/tmp/" ++ wf:temp_id(),
+    ok=mnesia:backup(Path),
+    wf:redirect("/backup?path=" ++ Path);
+    
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 

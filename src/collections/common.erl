@@ -253,8 +253,8 @@ asset(_Page, AID) -> % {{{1 % {{{2
                                 {L, Debug} when L > 1 ->
                                     hd([A || A <- Assets,
                                              A#cms_asset.minified == not Debug]);
-                                    _ -> #cms_asset{type=none}
-                                       end,
+                                _ -> #cms_asset{type=none}
+                            end,
     case Type of
         script ->
             "<script src='" ++ wf:to_list(Path) ++ "' type='text/javascript' charset='utf-8'></script>";
