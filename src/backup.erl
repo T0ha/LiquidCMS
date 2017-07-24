@@ -6,6 +6,9 @@
 -include("records.hrl").
 
 %% TODO: Move to cms_module with role check
+description() -> % {{{1
+    "DB Backup download module".
+
 main() -> % {{{1
     Path = wf:q(path),
     wf:content_type("octet/binary"),
