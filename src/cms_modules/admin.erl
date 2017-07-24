@@ -1172,7 +1172,11 @@ event({?MODULE, pages, export}) -> % {{{2
     Path = "/tmp/" ++ wf:temp_id(),
     ok=mnesia:backup(Path),
     wf:redirect("/backup?path=" ++ Path);
-    
+event({?MODULE, pages, import}) -> % {{{2
+    new_modal("Upload Backup",
+              {popup, close},
+              backup,
+              undefined);
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
@@ -1184,6 +1188,10 @@ inplace_textbox_event(Tag, Value) -> % {{{2
     Value.
 start_upload_event(_Tag) -> % {{{2
     ok.
+finish_upload_event(backup, _Fname, Path, _Node) -> % {{{2
+    {atomic, _}=mnesia:restore(Path, [{skip_tables, [cms_role, cms_user]}]),
+    coldstrap:close_modal(),
+    file:delete(Path);
 finish_upload_event(template, Fname, Path, _Node) -> % {{{2
     NewPath = wf:f("templates/~s", [Fname]),
     file:rename(Path, NewPath),
