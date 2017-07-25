@@ -358,24 +358,6 @@ new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
                    ]},
     coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]).
 
-format_block(#cms_mfa{ % {{{2$
-                id={PID, _},
-                mfa={account, maybe_redirect_to_login, []}
-               }=B) ->
-    [#cms_page{accepted_role=Name}] = db:get_page(PID),
-    #sortitem{
-       tag={block, PID, B},
-       class="well",
-       body=wf:f("Grant access to  '~s' page for '~s' only", [PID, Name])};
-format_block(#cms_mfa{ % {{{2
-                id={PID, _},
-                mfa={index, maybe_change_module, []}
-               }=B) ->
-    [#cms_page{module=Name}] = db:get_page(PID),
-    #sortitem{
-       tag={block, PID, B},
-       class="well",
-       body=wf:f("Use '~s' module for '~s' page", [Name, PID])};
 
 format_block(#cms_mfa{ % {{{2$
                 id={PID, Name},
@@ -883,14 +865,14 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
     PageSelect = [
                   #dropdown{
                      id=page_select,
-                     options=lists:keysort(1, [{N, N} || #{id := N} <- Pages]),
+                     options=lists:keysort(1, [{"*", "All"} | [{N, N} || #{id := N} <- Pages]]),
                      value=PID,
                      postback={page, construct}
                     },
                   #span{text=" / "},
                   #dropdown{
                      id=block_select,
-                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll]),
+                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
                      value=Block,
                      postback={page, construct}
                     },
@@ -1034,8 +1016,9 @@ event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
 
     NewRec = try apply(M, save_block, [Rec])
              catch 
-                 error:undef -> Rec;
-                 error:function_clause -> Rec 
+                 _ -> Rec
+                 %error:undef -> Rec;
+                 %error:function_clause -> Rec 
              end,
     db:save(NewRec),
     coldstrap:close_modal(),

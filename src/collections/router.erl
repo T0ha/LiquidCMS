@@ -15,24 +15,36 @@ functions() -> % {{{2
      {page, "Default (page) router"},
      {maybe_change_module, "Change render module for page"},
      {qs_page_router, "Change page by QS parameter"},
-     {qs_page_router_page, "Page and QS parameter value association pair"},
+     {role_page_router, "Change page by current user main role"},
+     {kv_item, "Page and some (QS or role) parameter value association pair"},
      {render, "Render page after ruoting chain"}
      ].
 
 format_block(F, A) -> % {{{2
     {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
 
-form_data(qs_page_router, [_, Block, Param]) -> % {{{2
+form_data(qs_page_router, A) -> % {{{2
+    [_, Block, Param] = admin:maybe_empty(A, 3),
     [
      {"Block name", {block, Block}},
-      {"QS Param name", {param, Param}}
+     {"QS Param name", {param, Param}}
      ];
-form_data(F, [_, Block, Classes]) -> % {{{2
-    {[], [], Block, Classes};
+form_data(kv_item, A) -> % {{{2
+    [_, K, V] = admin:maybe_empty(A, 3),
+    [
+      {"Key", {key, K}},
+      {"Page to redirect", {value, V}}
+     ];
+%form_data(F, [_, Block, Classes]) -> % {{{2
+%    {[], [], Block, Classes};
 form_data(F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{id={undefined, "router"}, mfa={?MODULE, Fun, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, qs_page_router, [Block, Block, Param, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, qs_page_router, [Block, Param]}};
+save_block(#cms_mfa{mfa={?MODULE, kv_item, [_Block, K, V, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, kv_item, [K, V]}};
+save_block(#cms_mfa{mfa={?MODULE, Fun, [_, Block, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}}.
 
 %% Module install routines {{{1
@@ -65,17 +77,18 @@ page(Page, PID) -> % {{{2
         [P] -> P;
         [] -> Page
     end. 
+
+kv_item(Page, K, PID) -> % {{{2
+    common:kv_item(Page, K, PID).
+
+role_page_router(Page, Block) -> % {{{2
+    #cms_user{role=Role} = wf:user(),
+    page_from_kv(Page, Block, Role).
+
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
-    KV = common:parallel_block(Page, Block),
-    PID = proplists:get_value(Key, KV, Default),
-    case db:get_page(PID) of
-        [P] -> P;
-        [] -> Page
-    end. 
-
-qs_page_router_page(_Page, K, PID) -> % {{{2
-    {K, PID}.
+    wf:info("Key: ~p", [Key]),
+    page_from_kv(Page, Block, Key).
 
 maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
     wf:info("Change module: ~p", [Page]),
@@ -103,5 +116,11 @@ event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
+page_from_kv(#cms_page{id=Default}=Page, Block, Key) -> % {{{2
+    wf:info("Key: ~p", [Key]),
+    KV = common:parallel_block(Page, Block),
+    wf:info("KV: ~p", [KV]),
+    page(Page,
+         proplists:get_value(Key, KV, Default)).
 
 %% Dropdown formatters {{{1

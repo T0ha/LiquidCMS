@@ -279,8 +279,12 @@ template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
 list(Page, Block, Classes) -> % {{{2
+    list(Page, Block, false, Classes).
+
+list(Page, Block, Numbered, Classes) -> % {{{2
     Items = parallel_block(Page, Block),
     #list{body=Items,
+          numbered=Numbered,
           class=Classes,
           html_id=block_to_html_id(Block)}.
 
@@ -342,6 +346,8 @@ full_block(_Page, Body) -> % {{{2
                cols={lg, 12},
                body=Body}}.
 
+kv_item(_Page, K, PID) -> % {{{2
+    {wf:to_list(K), wf:to_list(PID)}.
 
 %% Event handlers % {{{1
 event({asset, type, change}) -> % {{{2
