@@ -129,22 +129,18 @@ install() -> % {{{2
 
     % Index Setup page
     admin:add_page("index", "templates/setup.html", undefined, index),
-    % Admin setup
-    admin:add_to_block("index", "admin-setup", {bootstrap, col, ["col-admin", "5", "", ""]}, 1),
-    admin:add_to_block("index", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
-    admin:add_to_block("index", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
-    admin:add_to_block("index", "admin-panel-body", {account, email_field, []}, 1),
-    admin:add_to_block("index", "admin-panel-body", {account, password_field, []}, 2),
-    admin:add_to_block("index", "admin-panel-body", {account, retype_password_field, []}, 3),
-    admin:add_to_block("index", "admin-panel-body", {account, register_button, [admin]}, 4),
+    admin:add_to_block("index", "router", {router, page, ["register"]}, 1),
 
-    % Page setup
-    %admin:add_to_block("index", "page-setup", {bootstrap, col, ["col-page", "6", "1", ""]}, 2),
-    %admin:add_to_block("index", "col-page", {bootstrap, panel, ["page-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
-    %admin:add_to_block("index", "page-panel-header", {text, ["Admin Account Settings"]}, 1),
-    %admin:add_to_block("index", "page-panel-body", {admin, email_field, []}, 1),
-    %admin:add_to_block("index", "page-panel-body", {admin, password_field, []}, 2),
-    %admin:add_to_block("index", "page-panel-body", {admin, retype_password_field, []}, 3),
+    % Register page
+    admin:add_page("register", "templates/setup.html", undefined, index),
+
+    admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
+    admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
+    admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
+    admin:add_to_block("register", "admin-panel-body", {account, email_field, []}, 1),
+    admin:add_to_block("register", "admin-panel-body", {account, password_field, []}, 2),
+    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, []}, 3),
+    admin:add_to_block("register", "admin-panel-body", {account, register_button, [admin]}, 4),
 
     ok.
 

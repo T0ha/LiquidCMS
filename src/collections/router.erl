@@ -58,11 +58,13 @@ default_data() -> % {{{2
 %% Block renderers {{{1
 page(Page) -> % {{{2
     PID = common:q(page, "index"),
+    page(Page, PID).
+
+page(Page, PID) -> % {{{2
     case db:get_page(PID) of
         [P] -> P;
         [] -> Page
     end. 
-
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
     KV = common:parallel_block(Page, Block),
