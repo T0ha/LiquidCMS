@@ -1034,7 +1034,7 @@ event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
 
     NewRec = try apply(M, save_block, [Rec])
              catch 
-                 error:udef -> Rec;
+                 error:undef -> Rec;
                  error:function_clause -> Rec 
              end,
     db:save(NewRec),
