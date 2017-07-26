@@ -15,7 +15,7 @@ functions() -> % {{{2
      {nav_item, "Navigation Bar button"},
      {panel, "Panel"},
      {modal, "Modal"},
-     %{slider, "Slider"},
+     {slider, "Slider"},
      %{dropdown, "Dropdown"},
      %{script, "Inline Script"},
      {container, "Container"},
@@ -122,68 +122,6 @@ form_data(modal, A) -> % {{{2
          text=FooterBlock,
          placeholder="Block name for modal title (leave blank for none)"
         }}
-     ],
-     [],
-     Block,
-     Classes
-    };
-form_data(slider, A) -> % {{{2
-    {[],
-     [
-      {"Position",
-       #dd{
-          id=position,
-          options=position_classes(navbar)
-         }
-      },
-      {"Alignment",
-       #dd{
-          id=alignment,
-          options=alignment_classes(navbar)
-         }
-      },
-      #bs_col{
-         cols={lg, 3},
-         body=[
-               %#span{text="Color"},
-               #checkbox{
-                  text="Inverse",
-                  value="inverse",
-                  label_position=before,
-                  id=inverse,
-                  checked=false
-                 }
-              ]}
-     ]
-    };
-form_data(nav_item, A) -> % {{{2
-    [PID, NavBlock, Classes] = admin:maybe_empty(A, 3),
-    {Block, Text, URL} = get_navitem_data(PID, NavBlock),
-    {[
-      #panel{
-         id=submenu_box,
-         body=
-         #checkbox{
-            text="Dropdown",
-            id=submenu,
-            postback=submenu,
-            delegate=?MODULE,
-            checked=(URL == "")
-           }
-        },
-      #panel{
-         id=url_box,
-         show_if=(URL /= ""),
-         body=[
-               #span{text="URL"},
-               #txtbx{
-                  id=url,
-                  text=URL,
-                  placeholder="https://yourdomain.com"
-                 }
-              ]},
-      {"Text",
-       {text, Text}}
      ],
      [],
      Block,
@@ -398,11 +336,22 @@ dropdown(Page, Block) -> % {{{2
        common:list(Page, ItemsBlock, ["dropdown-menu"])
     ].
 
-slider(Page, Block, Height, Classes) -> % {{{2
-    Bindings = [
-                {'Height', "50%"}
-               ],
-    common:template(Page, "templates/slider.html", Bindings).
+slider(Page, Block, Classes) -> % {{{2
+    slider(Page, Block, 5000, Classes).
+
+slider(Page, Block, Interval, Classes) -> % {{{2
+    Slides = common:parallel_block(Page, Block),
+    NSlides = length(Slides),
+    Id = common:block_to_html_id(Block),
+    wf:wire(#script{script=wf:f("$('#~s').carousel({interval: ~p});", [Id, Interval])}),
+    #html5_header{
+       html_id=Id,
+       class=["carousel", "slide" | Classes],
+       body=[
+             carusel_indicators(Block, NSlides),
+             carusel_items(Slides),
+             carusel_controls(Block)
+            ]}.
 
 full_block(Page, Body) -> % {{{2
     full_block(Page, Body, [], []).
@@ -580,3 +529,38 @@ column_classes(Width, Offset) -> % {{{2
 column_classes(_, _) -> % {{{2
     column_classes("12", "").
 
+carusel_indicators(Block, NSlides) when NSlides > 0 -> % {{{2
+    #list{
+       class=["carousel-indicators"],
+       numbered=true,
+       body=[#listitem{
+                data_fields=[
+                             {target, wf:f("#~s", [common:block_to_html_id(Block)])},
+                             {"slide-to", N}]}
+             || N <- lists:seq(0, NSlides - 1)]};
+carusel_indicators(_Block, 0) -> % {{{2
+    "".
+
+carusel_items(Slides) -> % {{{2
+    #panel{
+       class=["carousel-inner"],
+       body=Slides
+      }.
+       
+carusel_controls(Block) -> % {{{2
+    [
+     #link{
+        url=wf:f("#~s", [common:block_to_html_id(Block)]),
+        class=["left", "carousel-control"],
+        data_fields=[{slide, "prev"}],
+        body=[
+              #span{class=["glyphicon", "glyphicon-chevron-left"]}
+             ]},
+     #link{
+        url=wf:f("#~s", [common:block_to_html_id(Block)]),
+        class=["right", "carousel-control"],
+        data_fields=[{slide, "next"}],
+        body=[
+              #span{class=["glyphicon", "glyphicon-chevron-right"]}
+             ]}
+    ].
