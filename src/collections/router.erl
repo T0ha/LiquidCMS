@@ -29,6 +29,11 @@ form_data(qs_page_router, A) -> % {{{2
      {"Block name", {block, Block}},
      {"QS Param name", {param, Param}}
      ];
+form_data(role_page_router, A) -> % {{{2
+    [_, Block] = admin:maybe_empty(A, 2),
+    [
+     {"Block name", {block, Block}}
+     ];
 form_data(kv_item, A) -> % {{{2
     [_, K, V] = admin:maybe_empty(A, 3),
     [
@@ -37,9 +42,11 @@ form_data(kv_item, A) -> % {{{2
      ];
 %form_data(F, [_, Block, Classes]) -> % {{{2
 %    {[], [], Block, Classes};
-form_data(F, []) -> % {{{2
+form_data(f, []) -> % {{{2
     {[], []}.
 
+save_block(#cms_mfa{mfa={?MODULE, role_page_router, [Block, Block, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, role_page_router, [Block]}};
 save_block(#cms_mfa{mfa={?MODULE, qs_page_router, [Block, Block, Param, _Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, qs_page_router, [Block, Param]}};
 save_block(#cms_mfa{mfa={?MODULE, kv_item, [_Block, K, V, _Classes]}}=Rec) -> % {{{2
@@ -82,8 +89,8 @@ kv_item(Page, K, PID) -> % {{{2
     common:kv_item(Page, K, PID).
 
 role_page_router(Page, Block) -> % {{{2
-    #cms_user{role=Role} = wf:user(),
-    page_from_kv(Page, Block, Role).
+    #cms_user{role=Role} = account:user(),
+    page_from_kv(Page, Block, wf:to_list(Role)).
 
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
@@ -120,7 +127,8 @@ page_from_kv(#cms_page{id=Default}=Page, Block, Key) -> % {{{2
     wf:info("Key: ~p", [Key]),
     KV = common:parallel_block(Page, Block),
     wf:info("KV: ~p", [KV]),
-    page(Page,
-         proplists:get_value(Key, KV, Default)).
+    V = proplists:get_value(wf:to_list(Key), KV, Default),
+    wf:info("V: ~p", [V]),
+    page(Page, V).
 
 %% Dropdown formatters {{{1

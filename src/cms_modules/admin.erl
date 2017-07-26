@@ -421,8 +421,8 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
 
 form_fields(M, F, A) -> % {{{2
       try apply(M, form_data, [F, A])
-      catch error:E when E == undef; 
-                         E == function_clause -> 
+      catch error:E when E /= undef; 
+                         E /= function_clause -> 
                 [_, Block, Classes] = maybe_empty(A, 3),
                 {[], [], Block, Classes}
       end.
@@ -865,7 +865,7 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
     PageSelect = [
                   #dropdown{
                      id=page_select,
-                     options=lists:keysort(1, [{"*", "All"} | [{N, N} || #{id := N} <- Pages]]),
+                     options=lists:keysort(1,  [{N, N} || #{id := N} <- Pages]),
                      value=PID,
                      postback={page, construct}
                     },
@@ -1016,9 +1016,8 @@ event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
 
     NewRec = try apply(M, save_block, [Rec])
              catch 
-                 _ -> Rec
-                 %error:undef -> Rec;
-                 %error:function_clause -> Rec 
+                 error:undef -> Rec;
+                 error:function_clause -> Rec 
              end,
     db:save(NewRec),
     coldstrap:close_modal(),

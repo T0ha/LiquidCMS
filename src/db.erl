@@ -158,7 +158,7 @@ update_map(Map) -> % {{{1
 get_pages() -> % {{{1
     transaction(fun() ->
                         Pages = mnesia:match_object(#cms_page{_='_'}),
-                        [record_to_map(A) || A <- Pages]
+                        [#{id => "*"} | [record_to_map(A) || A <- Pages]]
                 end).
 
 get_page(PID) -> % {{{1

@@ -191,6 +191,12 @@ event(E) -> % {{{2
     wf:warning("Event ~p occured in module ~p", [E, ?MODULE]).
 
 %% Helper functions {{{1
+user() -> % {{{2
+    case wf:user() of
+        undefined -> #cms_user{};
+        U -> U
+    end.
+
 roles(Role) -> % {{{2
     lists:dropwhile(fun(R) -> R == Role end,
                     [R || #{role := R} <- lists:sort(
