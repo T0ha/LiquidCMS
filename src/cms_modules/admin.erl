@@ -935,10 +935,11 @@ event({block, change, module}) -> % {{{2
                   postback={block, change, function},
                   options=lists:keysort(2, apply(M, functions, []))
                  }),
-    event({block, change, function});
+    wf:wire(#event{postback={block, change, function}});
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
+    wf:info("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
