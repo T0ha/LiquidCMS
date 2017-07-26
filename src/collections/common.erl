@@ -4,10 +4,9 @@
 -include("db.hrl").
 -include("records.hrl").
 
-%% CMS Module interface {{{1
-description() -> % {{{2
-    "Common".
+?DESCRIPTION(Common elements).
 
+%% CMS Module interface {{{1
 functions() -> % {{{2
     [
      %{parallel_block, "Parallell Group of Blocks"},

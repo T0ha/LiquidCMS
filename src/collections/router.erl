@@ -6,10 +6,9 @@
 -include("records.hrl").
 -include("db.hrl").
 
-%% CMS Module interface {{{1
-description() -> % {{{2
-    "CMS main routing collection".
+?DESCRIPTION(CMS main routing collection).
 
+%% CMS Module interface {{{1
 functions() -> % {{{2
     [
      {page, "Default (page) router"},

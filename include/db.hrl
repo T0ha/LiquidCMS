@@ -1,4 +1,5 @@
 -define(DB_PREFIX(), liquid_cms_).
+-define(DESCRIPTION(Text), description() -> ??Text).
 -define(POSTBACK(P), #event{
                         type=click,
                         postback=P

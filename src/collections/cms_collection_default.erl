@@ -6,10 +6,9 @@
 -include("records.hrl").
 -include("db.hrl").
 
-%% CMS Module interface {{{1
-description() -> % {{{2
-    "CMS Collection Template".
+?DESCRIPTION(CMS Collection Template).
 
+%% CMS Module interface {{{1
 functions() -> % {{{2
     [
      {block, "Block (div)"}
