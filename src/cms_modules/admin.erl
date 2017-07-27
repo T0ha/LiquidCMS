@@ -601,6 +601,40 @@ get_files_from_folder(SubFolder) -> % {{{2
     {ok, TemplateFiles} = file:list_dir(SubFolder),
     lists:foreach(fun(F) -> add_template(wf:f("~s/~s", [SubFolder, F]), []) end, TemplateFiles).
 
+get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
+    Filters;
+get_filters(_) -> % {{{2
+    {"", "", ""}.
+
+maybe_clear_old(#cms_mfa{sort=new}=R) -> % {{{2
+    db:fix_sort(R);
+maybe_clear_old(R) -> % {{{2
+    db:delete(R),
+    R.
+
+rec_from_qs(R) -> % {{{2
+    M = wf:to_atom(common:q(module, "common")),
+    F = wf:to_atom(common:q(function, "template")),
+    Args = admin:get_data(M, F),
+
+    PID = common:q(add_page_select, "index"),
+    Block = common:q(add_block, "body"),
+    
+    Classes = admin:get_classes(M, wf:to_atom(F)),
+
+    Filters = wf:mq([qs_key, qs_val, role]),
+
+    R#cms_mfa{id={PID, Block}, 
+              mfa={M, F, Args ++ [Classes]},
+              settings=#{filters => Filters}}.
+
+apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
+    try apply(M, save_block, [Rec])
+    catch 
+        error:undef -> Rec;
+        error:function_clause -> Rec 
+    end.
+
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
     new_modal("Upload Static Asset",
@@ -959,6 +993,7 @@ event({block, add, Block}) -> % {{{2
 event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
     Pages = db:get_pages(),
     [#{id := P} | _] = Pages,
+    [QSKey, QSVal, Role] = get_filters(B),
     Header = [
               "Add new block to page: ",
                   #dropdown{
@@ -992,35 +1027,26 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
                  },
                #panel{
                   id=block_data,
-                  body=form_elements(M, F, [PID | A])
-                 }
+                  body=[
+                        form_elements(M, F, [PID | A]),
+                        render_fields([{"Filters", 
+                                       [
+                                        {"Query String", 
+                                         [
+                                         {"Key", {qs_key, QSKey}},
+                                         {"Value", {qs_val, QSVal}}
+                                         ]},
+                                        {"Role", {role, Role}}
+                                       ]}])
+                       ]}
               ]);
 
 event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
-    M = wf:to_atom(common:q(module, "common")),
-    F = wf:to_atom(common:q(function, "template")),
-    PID = common:q(add_page_select, "index"),
-    Block = common:q(add_block, "body"),
-    
-    Args = admin:get_data(M, F),
-    Classes = admin:get_classes(M, wf:to_atom(F)),
+    #cms_mfa{id={PID, Block}} = db:save(
+                                  apply_element_transform(
+                                    rec_from_qs(
+                                      maybe_clear_old(Old)))),
 
-
-    Rec = case {OldID, Sort} of
-              {{PID, Block}, _} when Sort /= new ->
-                  db:delete(Old),
-                  Old#cms_mfa{mfa={M, F, Args ++ [Classes]}};
-              _ ->
-                  db:fix_sort(#cms_mfa{id={PID, Block}, 
-                                       mfa={M, F, Args ++ [Classes]}})
-          end,
-
-    NewRec = try apply(M, save_block, [Rec])
-             catch 
-                 error:undef -> Rec;
-                 error:function_clause -> Rec 
-             end,
-    db:save(NewRec),
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
 event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2

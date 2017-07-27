@@ -172,7 +172,8 @@ save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1
     transaction(fun() ->
-                        mnesia:write(Record)
+                        mnesia:write(Record),
+                        Record
                 end).
 
 maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1

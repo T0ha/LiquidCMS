@@ -223,13 +223,8 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes]}}=Rec) -> % 
 
 %% Block renderers {{{1
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
-    Functions = db:get_mfa(PID, Block),
-    lists:map(fun(#cms_mfa{mfa={M, F, Args}}) ->
-                        apply(M, F, [Page | Args]);
-                   (#cms_mfa{mfa=Fun}) when is_function(Fun) ->
-                                    Fun(Page)
-                end, 
-                Functions).
+    [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)].
+
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
@@ -393,6 +388,33 @@ module_by_function(FunTuple) -> % {{{2
           F <- M:module_info(exports),
           F == FunTuple].
 
+maybe_render_block(Page, #cms_mfa{settings=#{filters := Filters}}=MFA) -> % {{{2
+    wf:info("Filters: ~p", [Filters]),
+    render_block(apply_filters(Filters), Page, MFA);
+maybe_render_block(Page, MFA) -> % {{{2
+    render_block(true, Page, MFA).
+
+render_block(false, _, _) -> % {{{2
+    wf:info("Dont't show"),
+    "";
+render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
+    apply(M, F, [Page | Args]);
+render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
+    Fun(Page).
+
+apply_filters(["", "", ""]) -> % {{{2
+    true;
+apply_filters(["", "", Role]) -> % {{{2
+    wf:info("Am I ~p - ~p", [Role, wf:role(wf:to_atom(Role))]),
+    wf:role(wf:to_atom(Role));
+apply_filters([K, V, ""]) -> % {{{2
+    D = wf:q(wf:to_atom(K)),
+    wf:info("K: ~p, V: ~p, Q: ~p", [K, V, D]),
+    D == wf:to_list(V);
+apply_filters([K, V, R]) -> % {{{2
+    wf:role(wf:to_atom(R)) and wf:q(wf:to_atom(K)) == wf:to_list(V);
+apply_filters(_) -> % {{{2
+    true.
 %% Dropdown formatters {{{1
 asset_types() -> % {{{2
     [{css, "CSS"},
