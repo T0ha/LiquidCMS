@@ -1027,18 +1027,19 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
                  },
                #panel{
                   id=block_data,
-                  body=[
-                        form_elements(M, F, [PID | A]),
-                        render_fields([{"Filters", 
+                  body=form_elements(M, F, [PID | A])
+                 },
+               #panel{
+                  body=render_fields([{"Filters", 
                                        [
                                         {"Query String", 
                                          [
-                                         {"Key", {qs_key, QSKey}},
-                                         {"Value", {qs_val, QSVal}}
+                                          {"Key", {qs_key, QSKey}},
+                                          {"Value", {qs_val, QSVal}}
                                          ]},
                                         {"Role", {role, Role}}
                                        ]}])
-                       ]}
+                 }
               ]);
 
 event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2

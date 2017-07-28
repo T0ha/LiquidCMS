@@ -404,6 +404,8 @@ render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
 
 apply_filters(["", "", ""]) -> % {{{2
     true;
+apply_filters([undefined, undefined, undefined]) -> % {{{2
+    true;
 apply_filters(["", "", Role]) -> % {{{2
     wf:info("Am I ~p - ~p", [Role, wf:role(wf:to_atom(Role))]),
     wf:role(wf:to_atom(Role));
