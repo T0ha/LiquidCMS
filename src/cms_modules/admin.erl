@@ -604,7 +604,7 @@ get_files_from_folder(SubFolder) -> % {{{2
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
     Filters;
 get_filters(_) -> % {{{2
-    {"", "", ""}.
+    ["", "", ""].
 
 maybe_clear_old(#cms_mfa{sort=new}=R) -> % {{{2
     db:fix_sort(R);
