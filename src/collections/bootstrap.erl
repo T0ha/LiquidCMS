@@ -552,13 +552,13 @@ carusel_controls(Block) -> % {{{2
         class=["left", "carousel-control"],
         data_fields=[{slide, "prev"}],
         body=[
-              #span{class=["glyphicon", "glyphicon-chevron-left"]}
+              #span{class=["icon-prev"]}
              ]},
      #link{
         url=wf:f("#~s", [common:block_to_html_id(Block)]),
         class=["right", "carousel-control"],
         data_fields=[{slide, "next"}],
         body=[
-              #span{class=["glyphicon", "glyphicon-chevron-right"]}
+              #span{class=["icon-next"]}
              ]}
     ].
