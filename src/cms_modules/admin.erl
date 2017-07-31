@@ -665,6 +665,8 @@ apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
         error:undef -> Rec;
         error:function_clause -> Rec 
     end.
+get_pages() -> % {{{2
+    [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
 event({asset, new, Type}) -> % {{{2
@@ -913,14 +915,14 @@ event({page, new}) -> % {{{2
               ]);
 
 event({page, construct}) -> % {{{2
-    Pages = db:get_pages(),
+    Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
     
 event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
-    Pages = db:get_pages(),
+    Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
@@ -1022,7 +1024,7 @@ event({block, add, Block}) -> % {{{2
            sort=new},
     event({block, edit, B});
 event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
-    Pages = db:get_pages(),
+    Pages = get_pages(),
     [#{id := P} | _] = Pages,
     [QSKey, QSVal, Role] = get_filters(B),
     Header = [
