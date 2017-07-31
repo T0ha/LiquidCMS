@@ -329,13 +329,45 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      }
                              }]).
 
-new_modal(Title, SavePoctback, UploadTag, Form) -> % {{{2
-    Bottom = #btn{
-                type=success,
-                size=md,
-                text="Save",
-                postback=SavePoctback
-               },
+render_save_button(SavePostback) -> % {{{2
+    #btn{
+       id=save_button,
+       type=success,
+       size=md,
+       text="Save",
+       postback=SavePostback
+      }.
+
+render_copy_button(undefined) -> % {{{2
+    "";
+render_copy_button(CopyPostback) -> % {{{2
+    #btn{
+       type=success,
+       size=md,
+       text="Copy",
+       postback=CopyPostback
+      }.
+
+render_move_button(MovePostback) -> % {{{2
+    #btn{
+       id=save_button,
+       type=success,
+       size=md,
+       text="Move",
+       postback=MovePostback
+      }.
+
+new_modal(Title, SavePostback, UploadTag, Form) -> % {{{2
+    new_modal(Title, SavePostback, undefined, UploadTag, Form).
+
+new_modal(Title, SavePostback, CopyPostback, UploadTag, Form) -> % {{{2
+    Bottom = #span{
+                id=modal_bottom_buttons,
+                body=[
+                      render_copy_button(CopyPostback),
+                      render_save_button(SavePostback)
+                     ]},
+
     BodyCols = case UploadTag of
                    undefined -> {lg, 12};
                    _ -> {lg, 6}
@@ -606,10 +638,9 @@ get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
 get_filters(_) -> % {{{2
     ["", "", ""].
 
-maybe_clear_old(#cms_mfa{sort=new}=R) -> % {{{2
+maybe_fix_sort(#cms_mfa{sort=new}=R) -> % {{{2
     db:fix_sort(R);
-maybe_clear_old(R) -> % {{{2
-    db:delete(R),
+maybe_fix_sort(R) -> % {{{2
     R.
 
 rec_from_qs(R) -> % {{{2
@@ -1009,7 +1040,8 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
                      }
              ],
     new_modal(Header,
-              {block, save, B},
+              {?MODULE, block, move, B},
+              {?MODULE, block, copy, B},
               undefined, 
               [
                #span{text="Elements Collection"},
@@ -1042,11 +1074,16 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
                  }
               ]);
 
-event({block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
+event({?MODULE, block, move, Old}) -> % {{{2
+    db:delete(Old),
+    event({?MODULE, block, copy, Old});
+event({?MODULE, block, copy, Old}) -> % {{{2
+    event({?MODULE, block, save, Old#cms_mfa{sort=new}});
+event({?MODULE, block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
     #cms_mfa{id={PID, Block}} = db:save(
                                   apply_element_transform(
                                     rec_from_qs(
-                                      maybe_clear_old(Old)))),
+                                      maybe_fix_sort(Old)))),
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
@@ -1187,6 +1224,7 @@ event({?MODULE, pages, import}) -> % {{{2
               {popup, close},
               backup,
               undefined);
+
 event(Ev) -> % {{{2
     wf:info("~p event ~p", [?MODULE, Ev]).
 
