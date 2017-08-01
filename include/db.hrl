@@ -1,5 +1,16 @@
 -define(DB_PREFIX(), liquid_cms_).
 -define(DESCRIPTION(Text), description() -> ??Text).
+
+%% DB helpers
+-define(V(Response), db:verify_create_table(Response)).
+-define(CREATE_TABLE(Record, Type, Indexes), 
+        ?V(mnesia:create_table(Record,
+                               [
+                                {type, Type},
+                                {disc_copies, [node()]},
+                                {index, Indexes},
+                                {attributes, record_info(fields, Record)}
+                               ]))).
 -define(POSTBACK(P), #event{
                         type=click,
                         postback=P

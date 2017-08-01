@@ -7,15 +7,6 @@
 -compile([export_all]).
 -include("db.hrl").
 
--define(V(Response), verify_create_table(Response)).
--define(CREATE_TABLE(Record, Type, Indexes), 
-        ?V(mnesia:create_table(Record,
-                               [
-                                {type, Type},
-                                {disc_copies, [node()]},
-                                {index, Indexes},
-                                {attributes, record_info(fields, Record)}
-                               ]))).
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
