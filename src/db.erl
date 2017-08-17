@@ -247,6 +247,6 @@ empty_mfa(PID, Block, Sort) -> % {{{1
     #cms_mfa{
        id={PID, Block},
        sort=Sort,
-       mfa=udefined}.
+       mfa=undefined}.
 
 
