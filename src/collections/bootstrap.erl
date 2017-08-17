@@ -125,6 +125,39 @@ form_data(modal, A) -> % {{{2
      Block,
      Classes
     };
+form_data(nav_item, A) -> % {{{2
+    [PID, NavBlock, Classes] = admin:maybe_empty(A, 3),
+    {Block, Text, URL} = get_navitem_data(PID, NavBlock),
+    {[
+      #panel{
+         id=submenu_box,
+         body=
+         #checkbox{
+            text="Dropdown",
+            id=submenu,
+            postback=submenu,
+            delegate=?MODULE,
+            checked=(URL == "")
+           }
+        },
+      #panel{
+         id=url_box,
+         show_if=(URL /= ""),
+         body=[
+               #span{text="URL"},
+               #txtbx{
+                  id=url,
+                  text=URL,
+                  placeholder="https://yourdomain.com"
+                 }
+              ]},
+      {"Text",
+       {text, Text}}
+     ],
+     [],
+     Block,
+     Classes
+    };
 form_data(navbar, A) -> % {{{2
     [_PID, UlBlock, AllClasses] = admin:maybe_empty(A, 3),
     [Classes, Inverse, Position, Alignment] = admin:maybe_empty(AllClasses, 4),
