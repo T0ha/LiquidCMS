@@ -417,6 +417,11 @@ apply_filters([K, V, R]) -> % {{{2
     wf:role(wf:to_atom(R)) and wf:q(wf:to_atom(K)) == wf:to_list(V);
 apply_filters(_) -> % {{{2
     true.
+
+maybe_list(L) when is_list(L) -> % {{{2
+    L;
+maybe_list(L) -> % {{{2
+    [L].
 %% Dropdown formatters {{{1
 asset_types() -> % {{{2
     [{css, "CSS"},

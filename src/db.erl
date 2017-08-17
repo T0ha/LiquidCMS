@@ -158,7 +158,7 @@ get_page(PID) -> % {{{1
                 end).
 
 save([]) -> % {{{1
-    ok;
+    [];
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1

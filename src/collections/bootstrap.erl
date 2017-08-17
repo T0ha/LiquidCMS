@@ -261,7 +261,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
     NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
     case URL of
-        undefined ->
+        "" ->
             
             db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
                                mfa={bootstrap, dropdown, [Block]},
@@ -271,12 +271,6 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
                                sort=1}),
             [
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes]]}}
-             %#cms_mfa{id={PID, NavItemBlock},
-             %         mfa={bootstrap, dropdown, [Block]},
-             %         sort=1},
-             %#cms_mfa{id={PID, common:sub_block(Block, "link")},
-             %         mfa={common, text, [Text ++ "<b class='caret'></b>"]},
-             %         sort=1}
             ];
         URL ->
             db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
@@ -353,7 +347,6 @@ panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
 
 dropdown(Page, Block) -> % {{{2
     LinkBlock = common:sub_block(Block, "link"),
-    ItemsBlock = common:sub_block(Block, "items"),
     [
     #link{
        %actions=Event,
@@ -364,7 +357,7 @@ dropdown(Page, Block) -> % {{{2
                     {toggle, "dropdown"}
                    ]
       },
-       common:list(Page, ItemsBlock, ["dropdown-menu"])
+       common:list(Page, Block, ["dropdown-menu"])
     ].
 
 slider(Page, Block, Classes) -> % {{{2
