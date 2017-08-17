@@ -169,7 +169,7 @@ save(Record) -> % {{{1
 
 maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
     transaction(fun() ->
-                        case mnesia:wread({cms_mfa, {PID, Block}}) of
+                        case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, _='_'}) of
                             [] ->
                                 mnesia:write(empty_mfa(PID, Block, Sort));
                             L when is_list(L) -> 
