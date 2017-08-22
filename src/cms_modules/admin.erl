@@ -1078,15 +1078,15 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{
 
 event({?MODULE, block, move, Old}) -> % {{{2
     db:delete(Old),
-    event({?MODULE, block, copy, Old});
+    event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
 event({?MODULE, block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
     [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
-                                  db:save(
-                                    apply_element_transform(
-                                      rec_from_qs(
-                                        maybe_fix_sort(Old))))),
+                                      db:save(
+                                        apply_element_transform(
+                                          rec_from_qs(
+                                            maybe_fix_sort(Old))))),
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
