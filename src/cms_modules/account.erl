@@ -19,6 +19,23 @@ functions() -> % {{{2
      {register_button, "Register Button"}
      ].
 
+form_data(register_button, A) -> % {{{2
+    [_, Block, Role, Classes] = admin:maybe_empty(A, 4),
+
+    {[ 
+      {"Role",
+       #dd{
+          id=register_role,
+          value=admin:remove_prefix(Role),
+          options=admin:cms_roles()
+         }
+      }
+     ],
+     [],
+     Block,
+     Classes
+    }.
+
 %% Module render functions {{{1
 main() -> % {{{2
     PID = case wf:q(page) of
@@ -37,25 +54,43 @@ title() -> "LiquidCMS - Log In".
 body(Page) ->  % {{{2
     index:body(Page).
 	
-email_field(_Page) -> % {{{2
+email_field(Page) -> % {{{2
+    email_field(Page, "", "").
+
+password_field(Page) -> % {{{2
+    password_field(Page, "", "").
+
+retype_password_field(Page) -> % {{{2
+    retype_password_field(Page, "", "").
+
+login_button(Page) -> % {{{2
+    login_button(Page, "", "").
+
+register_button(Page, Role) -> % {{{2
+    register_button(Page, "", Role, "").
+
+email_field(_Page, _Block, Classes) -> % {{{2
      #panel{
         class="form-group",
         body=#txtbx{
                 id=email,
+                class=Classes,
                 placeholder="E-mail"}}.
 
-password_field(_Page) -> % {{{2
+password_field(_Page, _Block, Classes) -> % {{{2
     #panel{
        class="form-group",
        body=#pass{
                id=password,
+               class=Classes,
                placeholder="Password"}}.
 
-retype_password_field(_Page) -> % {{{2
+retype_password_field(_Page, _Block, Classes) -> % {{{2
      #panel{
         class="form-group",
         body=#pass{
                 id=repassword,
+                class=Classes,
                 actions=#validate{
                            validators=#confirm_password{
                                          text="Password and confirmation are different",
@@ -64,25 +99,28 @@ retype_password_field(_Page) -> % {{{2
                           },
                 placeholder="Confirm Password"}}.
 
-login_button(_Page) -> % {{{2
+login_button(_Page, _Block, Classes) -> % {{{2
      #btn{
         type=success,
         size=lg,
-        class="btn-block",
+        class=["btn-block" | Classes],
         text="Login",
         postback={auth, login},
         delegate=?MODULE
        }.
 
-register_button(_Page, Role) -> % {{{2
+register_button(_Page, _Block, Role, Classes) -> % {{{2
     #btn{
        type=success,
        size=lg,
-       class="btn-block",
+       class=["btn-block" | Classes],
        text="Register",
        postback={auth, register, Role},
        delegate=?MODULE
       }.
+
+login_form(Page, _Block, _Classes) -> % {{{2
+    login_form(Page).
 
 login_form(Page) -> % {{{2
     [
@@ -90,6 +128,9 @@ login_form(Page) -> % {{{2
      password_field(Page),
      login_button(Page)
     ].
+
+register_form(Page, _Block, Role, _Classes) -> % {{{2
+    register_form(Page, Role).
 
 register_form(Page, Role) -> % {{{2
     [
