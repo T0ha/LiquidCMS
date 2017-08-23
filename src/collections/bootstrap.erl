@@ -41,7 +41,8 @@ format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
          [Block, RowClass, ColClass]),
     Block};
 format_block(navbar, [Block, Classes]) -> % {{{2
-    [B, _] = string:tokens(common:format_private_block(Block), "/"),
+    [B| _] = string:tokens(common:format_private_block(Block), "/"),
+
     {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
 format_block(nav_item, [Block, Classes]) -> % {{{2
     [B, _] = string:tokens(common:format_private_block(Block), "/"),
@@ -159,14 +160,12 @@ form_data(nav_item, A) -> % {{{2
      Classes
     };
 form_data(navbar, A) -> % {{{2
-    [_PID, UlBlock, AllClasses] = admin:maybe_empty(A, 3),
-    [Classes, Inverse, Position, Alignment] = admin:maybe_empty(AllClasses, 4),
-    Block = case string:tokens(UlBlock, "/") of
-         [[$+|B] | _] -> B;
-         [B | _] -> B;
-        B -> B
-    end,
+    [PID, NavItemsBlock, AllClasses] = admin:maybe_empty(A, 3),
+    [Classes, Inverse, Position] = admin:maybe_empty(AllClasses, 3),
 
+
+    {Block, Alignment} = get_navbar_alignmant(PID, NavItemsBlock),
+    wf:info("NavBar: ~p ~p", [Position, Alignment]),
     {[],
      [
       {"Position",
@@ -289,17 +288,17 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
              %         sort=1}
             ]
     end;
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes | Other]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding]]}}=Rec) -> % {{{2
     NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
-    NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse | Other])],
+    NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
+    PPadding = admin:prefix_classes(navbar, [Padding]),
+    wf:info("Prefix: ~p ~p", [NewClasses, PPadding]),
 
-    [
-     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}},
-     #cms_mfa{id={PID, NavItemsBlock},
-              mfa={bootstrap, nav_items, [Block, ["navbar-nav"]]},
-              sort=1}
-    ];
+    db:maybe_update(#cms_mfa{id={PID, NavItemsBlock},
+                             mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
+                             sort=1}),
+    Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}};
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, container, [Block, Classes]}}=Rec) -> % {{{2
     Fluid = case common:q(fluid, "") of
                 "" -> "container";
@@ -307,6 +306,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, container, [Block, Classes]}}=R
             end,
     Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
 save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
+    wf:warning("Bootstrap: ~p", [Rec]),
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
 %% Block renderers {{{1
@@ -588,3 +588,13 @@ carusel_controls(Block) -> % {{{2
               #span{class=["icon-next"]}
              ]}
     ].
+
+get_navbar_alignmant(PID, Block) -> % {{{2
+    case db:get_mfa(PID, Block) of
+        [#cms_mfa{mfa={bootstrap, nav_items, [SBlock, [_, Alignment]]}}|_] ->
+            {SBlock, Alignment};
+        [] -> {"", ""};
+        A ->
+            wf:warning("Wrong alignment: ~p", [A]),
+            {"", []}
+    end.

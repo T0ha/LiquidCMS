@@ -452,12 +452,14 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
       ].
 
 form_fields(M, F, A) -> % {{{2
-      try apply(M, form_data, [F, A])
-      catch error:E when E /= undef; 
-                         E /= function_clause -> 
-                [_, Block, Classes] = maybe_empty(A, 3),
-                {[], [], Block, Classes}
-      end.
+      %try 
+          apply(M, form_data, [F, A])
+      %catch error:E when E /= undef; 
+      %                   E /= function_clause -> 
+      %          [_, Block, Classes] = maybe_empty(A, 3),
+      %          {[], [], Block, Classes}
+      %end.
+      .
 
 form_elements(M, F, A) -> % {{{2
     render_fields(
@@ -467,13 +469,13 @@ form_elements(M, F, A) -> % {{{2
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
             Width when Width >= 4 ->
-            wf:info("Width: ~p", [Width]),
+            %wf:info("Width: ~p", [Width]),
                 [
              #bs_row{
                 body=[render_field(Col, Width) || Col <- Cols]
                }];
         Width ->
-            wf:info("Width: ~p", [Width]),
+            %wf:info("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
             
@@ -586,7 +588,7 @@ prefix_classes(Prefix, Classes) -> % {{{2
 remove_prefix([]) -> % {{{2
     "";
 remove_prefix(Class) -> % {{{2
-    lists:last(string:tokens(Class, "-")).
+    lists:last(string:split(Class, "-")).
 
 maybe_empty([], N) -> % {{{2
     lists:duplicate(N, "");
