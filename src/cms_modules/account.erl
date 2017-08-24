@@ -123,7 +123,7 @@ logout_button(Page, Block, Type, Size, Classes) -> % {{{2
      #btn{
         type=Type,
         size=Size,
-        class=["btn-block" | Classes],
+        class=[Classes],
         text=common:parallel_block(Page, Block),
         postback={auth, logout},
         delegate=?MODULE
