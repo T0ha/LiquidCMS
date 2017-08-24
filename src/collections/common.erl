@@ -407,14 +407,16 @@ apply_filters(["", "", ""]) -> % {{{2
 apply_filters([undefined, undefined, undefined]) -> % {{{2
     true;
 apply_filters(["", "", Role]) -> % {{{2
-    wf:info("Am I ~p - ~p", [Role, wf:role(wf:to_atom(Role))]),
-    wf:role(wf:to_atom(Role));
+    #cms_user{role=R} = wf:user(),
+    wf:info("Am I ~p - ~p", [Role, Role == R]),
+   wf:to_atom(Role) == R;
 apply_filters([K, V, ""]) -> % {{{2
     D = wf:q(wf:to_atom(K)),
     wf:info("K: ~p, V: ~p, Q: ~p", [K, V, D]),
     D == wf:to_list(V);
 apply_filters([K, V, R]) -> % {{{2
-    wf:role(wf:to_atom(R)) and wf:q(wf:to_atom(K)) == wf:to_list(V);
+    #cms_user{role=Role} = wf:user(),
+    (Role == wf:to_atom(R)) and wf:q(wf:to_atom(K)) == wf:to_list(V);
 apply_filters(_) -> % {{{2
     true.
 
