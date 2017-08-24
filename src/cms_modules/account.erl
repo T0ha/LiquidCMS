@@ -16,8 +16,12 @@ functions() -> % {{{2
      {password_field, "Password Field"},
      {retype_password_field, "Retype Password Field"},
      {login_button, "Login Button"},
+     {logout_button, "Logout Button"},
      {register_button, "Register Button"}
      ].
+
+format_block(F, [Block|_]=A) -> % {{{2
+    {wf:f("account:~s(~p)", [F, A]), Block}.
 
 form_data(register_button, A) -> % {{{2
     [_, Block, Role, Classes] = admin:maybe_empty(A, 4),
@@ -35,6 +39,9 @@ form_data(register_button, A) -> % {{{2
      Block,
      Classes
     }.
+
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, Role, Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={bootstrap, col, [Block, wf:to_atom(Role), Classes]}}.
 
 %% Module render functions {{{1
 main() -> % {{{2
@@ -99,13 +106,26 @@ retype_password_field(_Page, _Block, Classes) -> % {{{2
                           },
                 placeholder="Confirm Password"}}.
 
-login_button(_Page, _Block, Classes) -> % {{{2
+login_button(Page, Block, Classes) -> % {{{2
      #btn{
         type=success,
         size=lg,
         class=["btn-block" | Classes],
-        text="Login",
+        text=common:parallel_block(Page, Block),
         postback={auth, login},
+        delegate=?MODULE
+       }.
+
+logout_button(Page, Block, Classes) -> % {{{2
+    logout_button(Page, Block, link, "", Classes).
+
+logout_button(Page, Block, Type, Size, Classes) -> % {{{2
+     #btn{
+        type=Type,
+        size=Size,
+        class=["btn-block" | Classes],
+        text=common:parallel_block(Page, Block),
+        postback={auth, logout},
         delegate=?MODULE
        }.
 
@@ -227,6 +247,10 @@ event({auth, login}) -> % {{{2
             wf:info("User: ~p", [User]),
             wf:redirect_from_login("/")
     end;
+
+event({auth, logout}) -> % {{{2
+    wf:logout(),
+    wf:redirect("/");
 
 event(E) -> % {{{2
     wf:warning("Event ~p occured in module ~p", [E, ?MODULE]).
