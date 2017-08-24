@@ -14,8 +14,8 @@ functions() -> % {{{2
      {block, "Block (div)"}
      ].
 
-format_block(F, A) -> % {{{2
-    {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
+format_block(F, [Block|_]=A) -> % {{{2
+    {wf:f("account:~s(~p)", [F, A]), Block}.
 
 form_data(F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};

@@ -17,9 +17,10 @@ functions() -> % {{{2
      {submit, "Send button"}
      ].
 
-format_block(F, A) -> % {{{2
-    wf:f("bootstrap:~ts(~p)", [F, A]).
 
+
+format_block(F, [Block|_]=A) -> % {{{2
+    {wf:f("account:~s(~p)", [F, A]), Block}.
 
 form_data(submit, A) -> % {{{2
     [_, Block, ToEmail, Classes] = admin:maybe_empty(A, 4),
