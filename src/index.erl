@@ -49,3 +49,5 @@ maybe_block(Page, Block, Classes) -> % {{{2
 block(Page, Block) -> % {{{2
     common:parallel_block(Page, Block).
 
+flash() -> % {{{2
+    #flash{}.
