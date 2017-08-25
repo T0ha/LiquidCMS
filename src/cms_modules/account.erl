@@ -135,7 +135,7 @@ register_button(_Page, _Block, Role, Classes) -> % {{{2
        size=lg,
        class=["btn-block" | Classes],
        text="Register",
-       postback={auth, register, Role},
+       postback={auth, register, wf:to_atom(Role)},
        delegate=?MODULE
       }.
 
@@ -225,7 +225,7 @@ event({auth, register, Role}) -> % {{{2
                           UserRoles),
             wf:redirect_from_login("/admin?page=admin");
         Any -> 
-            wf:flash("Error occured: ~p", [Any]),
+            wf:flash(wf:f("Error occured: ~p", [Any])),
             wf:warning("Error occured: ~p", [Any])
     end;
 event({auth, login}) -> % {{{2
