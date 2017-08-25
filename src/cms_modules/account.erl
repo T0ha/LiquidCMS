@@ -224,8 +224,11 @@ event({auth, register, Role}) -> % {{{2
                           end,
                           UserRoles),
             wf:redirect_from_login("/");
-        Any -> 
+        {error, Any} -> 
             wf:flash(wf:f("Error occured: ~p", [Any])),
+            wf:info("Error occured: ~p", [Any]);
+        Any -> 
+            wf:flash(wf:f("Unhandled error occured: ~p<br>Please contact support to inform about it.", [Any])),
             wf:warning("Error occured: ~p", [Any])
     end;
 event({auth, login}) -> % {{{2
@@ -234,6 +237,7 @@ event({auth, login}) -> % {{{2
     wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:login(Email, Passwd) of
         [] ->
+            wf:flash("Wrong username or password!"),
             ok;
         [#cms_user{email=Email,
                    password=Passwd,
