@@ -223,7 +223,7 @@ event({auth, register, Role}) -> % {{{2
                                   wf:role(R, true)
                           end,
                           UserRoles),
-            wf:redirect_from_login("/admin?page=admin");
+            wf:redirect_from_login("/");
         Any -> 
             wf:flash(wf:f("Error occured: ~p", [Any])),
             wf:warning("Error occured: ~p", [Any])
