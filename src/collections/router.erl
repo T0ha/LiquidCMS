@@ -87,9 +87,12 @@ page(Page, PID) -> % {{{2
 kv_item(Page, K, PID) -> % {{{2
     common:kv_item(Page, K, PID).
 
-role_page_router(Page, Block) -> % {{{2
+role_page_router(#cms_page{id=PID}=Page, Block) when PID == undefined; % {{{2
+                                                     PID == "index" ->
     #cms_user{role=Role} = account:user(),
-    page_from_kv(Page, Block, wf:to_list(Role)).
+    page_from_kv(Page, Block, wf:to_list(Role));
+role_page_router(Page, Block) -> % {{{2
+    Page.
 
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
