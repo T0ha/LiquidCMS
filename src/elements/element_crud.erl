@@ -145,13 +145,13 @@ table_row(#crud{ % {{{1
 inplace_textbox_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
     update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value));
 inplace_textbox_event(Tag, Value) -> % {{{1
-    wf:info("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+    ?LOG("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
     update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value));
 inplace_textarea_event(Tag, Value) -> % {{{1
-    wf:info("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
+    ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
 event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1

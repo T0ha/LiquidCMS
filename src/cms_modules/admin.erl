@@ -300,7 +300,7 @@ maybe_set(Id, Val) -> % {{{2
         "" ->
             wf:set(Id, Val);
         A ->
-            wf:info("~s vaue is ~p", [Id, A])
+            ?LOG("~s vaue is ~p", [Id, A])
     end.
 
 update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
@@ -468,13 +468,13 @@ form_elements(M, F, A) -> % {{{2
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
             Width when Width >= 4 ->
-            %wf:info("Width: ~p", [Width]),
+            %?LOG("Width: ~p", [Width]),
                 [
              #bs_row{
                 body=[render_field(Col, Width) || Col <- Cols]
                }];
         Width ->
-            %wf:info("Width: ~p", [Width]),
+            %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
             
@@ -523,9 +523,9 @@ render_field(Any, Width) -> % {{{2
 
 get_classes(M, Prefix) -> % {{{2
     Fields = formatting_fields(form_fields(M, Prefix, [])),
-    wf:info("Classes fields: ~p", [Fields]),
+    ?LOG("Classes fields: ~p", [Fields]),
     AllClasses = wf:mq([classes | Fields]),
-    wf:info("Classes data: ~p", [AllClasses]),
+    ?LOG("Classes data: ~p", [AllClasses]),
     %Classes = sets:to_list(sets:from_list(AllClasses)),
    lists:map(fun(none) -> "";
                 (undefined) -> "";
@@ -536,9 +536,9 @@ get_classes(M, Prefix) -> % {{{2
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
-    wf:info("Fields: ~p", [Fields]),
+    ?LOG("Fields: ~p", [Fields]),
     Data = wf:mq([block | Fields]),
-    wf:info("Data: ~p", [Data]),
+    ?LOG("Data: ~p", [Data]),
     lists:map(fun(none) -> "";
                  (undefined) -> "";
                  ("") -> "";
@@ -558,7 +558,7 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields(Any) -> % {{{2
-    wf:info("Other fields: ~p", [Any]),
+    ?LOG("Other fields: ~p", [Any]),
     [].
 
 get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
@@ -578,7 +578,7 @@ get_fields(#panel{body=Body}) when is_list(Body) -> % {{{2
 get_fields(#panel{body=Body}) -> % {{{2
     get_fields(Body);
 get_fields(D) -> % {{{2
-    wf:info("Data: ~p", [D]),
+    ?LOG("Data: ~p", [D]),
     [].
 
 prefix_classes(Prefix, Classes) -> % {{{2
@@ -1007,7 +1007,7 @@ event({block, change, module}) -> % {{{2
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    wf:info("M: ~p, F: ~p", [M, F]),
+    ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
@@ -1230,13 +1230,13 @@ event({?MODULE, pages, import}) -> % {{{2
               undefined);
 
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
     Val = db:update(Record, Field, Value),
     Val;
 inplace_textbox_event(Tag, Value) -> % {{{2
-    wf:info("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+    ?LOG("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 start_upload_event(_Tag) -> % {{{2
     ok.
@@ -1260,10 +1260,10 @@ finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     wf:set(path, URLPath).
 
 api_event(Name, Tag, Args) -> % {{{2
-    wf:info("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
+    ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
 
 sort_event({PID, Block}, Blocks) -> % {{{2
-    wf:info("Blocks: ~p", [Blocks]),
+    ?LOG("Blocks: ~p", [Blocks]),
     lists:foreach(fun({N, {block, PID, B}}) ->
                      db:update(B, B#cms_mfa{sort=N})
              end,

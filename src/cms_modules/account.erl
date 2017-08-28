@@ -162,10 +162,10 @@ register_form(Page, Role) -> % {{{2
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
-    wf:info("Not redirect to login: ~p", [Page]),
+    ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
-    wf:info("Redirect to login: ~p", [Page]),
+    ?LOG("Redirect to login: ~p", [Page]),
     case wf:role(Role) of 
         true ->
             Page;
@@ -212,7 +212,7 @@ event({auth, register}) -> % {{{2
 event({auth, register, Role}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),
-    wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
+    ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:register(Email, Passwd, Role) of
         #cms_user{email=Email,
                   password=Passwd,
@@ -226,7 +226,7 @@ event({auth, register, Role}) -> % {{{2
             wf:redirect_from_login("/");
         {error, Any} -> 
             wf:flash(wf:f("Error occured: ~p", [Any])),
-            wf:info("Error occured: ~p", [Any]);
+            ?LOG("Error occured: ~p", [Any]);
         Any -> 
             wf:flash(wf:f("Unhandled error occured: ~p<br>Please contact support to inform about it.", [Any])),
             wf:warning("Error occured: ~p", [Any])
@@ -234,7 +234,7 @@ event({auth, register, Role}) -> % {{{2
 event({auth, login}) -> % {{{2
     Email = q(email, undefined),
     Passwd = hash(q(password, "")),
-    wf:info("Login: ~p, Pass:~p", [Email, Passwd]),
+    ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:login(Email, Passwd) of
         [] ->
             wf:flash("Wrong username or password!"),
@@ -248,7 +248,7 @@ event({auth, login}) -> % {{{2
                           end,
                           UserRoles),
             wf:user(User),
-            wf:info("User: ~p", [User]),
+            ?LOG("User: ~p", [User]),
             wf:redirect_from_login("/")
     end;
 

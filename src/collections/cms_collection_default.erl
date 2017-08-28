@@ -34,7 +34,7 @@ block(Page, Block, Classes) -> % {{{2
       }.
 %% Event handlers % {{{1
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 

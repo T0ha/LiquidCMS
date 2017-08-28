@@ -189,7 +189,7 @@ form_data(template, A) -> % {{{2
        }
     ];
 form_data(asset, A) -> % {{{2
-    wf:info("Asset: ~p", [A]),
+    ?LOG("Asset: ~p", [A]),
     [_, AID] = admin:maybe_empty(A, 2),
     Type = case db:get_asset(AID) of
                [] -> binary;
@@ -228,7 +228,7 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
-    wf:info("Waterfall: ~p", [Functions]),
+    ?LOG("Waterfall: ~p", [Functions]),
     lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{}=P) ->
                         apply(M, F, [P | Args]);
                    (#cms_mfa{mfa=Fun}, #cms_page{}=P) when is_function(Fun) ->
@@ -265,7 +265,7 @@ template(#cms_page{id=PID}=Page, TID) -> % {{{2
     template(#cms_page{id=PID}=Page, TID, []).
 
 template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
-    wf:info("Page for template: ~p, TID: ~p", [Page, TID]),
+    ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
 
@@ -349,7 +349,7 @@ event({asset, type, change}) -> % {{{2
     wf:replace(asset_id, assets_dropdown(AssetType));
 
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 block_to_html_id(Block) -> % {{{2
@@ -389,13 +389,13 @@ module_by_function(FunTuple) -> % {{{2
           F == FunTuple].
 
 maybe_render_block(Page, #cms_mfa{settings=#{filters := Filters}}=MFA) -> % {{{2
-    wf:info("Filters: ~p", [Filters]),
+    ?LOG("Filters: ~p", [Filters]),
     render_block(apply_filters(Filters), Page, MFA);
 maybe_render_block(Page, MFA) -> % {{{2
     render_block(true, Page, MFA).
 
 render_block(false, _, _) -> % {{{2
-    wf:info("Dont't show"),
+    ?PRINT("Dont't show"),
     "";
 render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
     apply(M, F, [Page | Args]);
@@ -408,11 +408,11 @@ apply_filters([undefined, undefined, undefined]) -> % {{{2
     true;
 apply_filters(["", "", Role]) -> % {{{2
     #cms_user{role=R} = account:user(),
-    wf:info("Am I ~p - ~p", [Role, Role == R]),
+    ?LOG("Am I ~p - ~p", [Role, Role == R]),
    wf:to_atom(Role) == R;
 apply_filters([K, V, ""]) -> % {{{2
     D = wf:q(wf:to_atom(K)),
-    wf:info("K: ~p, V: ~p, Q: ~p", [K, V, D]),
+    ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
     D == wf:to_list(V);
 apply_filters([K, V, R]) -> % {{{2
     #cms_user{role=Role} = account:user(),

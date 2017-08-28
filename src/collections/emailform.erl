@@ -84,7 +84,7 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
     smtp:send_html(Email, ToEmail, "Form sent from site", Text),
     coldstrap:modal(Header, Body, undefined, [{has_x_button, true}]);
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 

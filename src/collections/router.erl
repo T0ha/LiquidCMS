@@ -93,11 +93,11 @@ role_page_router(Page, Block) -> % {{{2
 
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
-    wf:info("Key: ~p", [Key]),
+    ?LOG("Key: ~p", [Key]),
     page_from_kv(Page, Block, Key).
 
 maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
-    wf:info("Change module: ~p", [Page]),
+    ?LOG("Change module: ~p", [Page]),
     case wf:page_module() of 
         Module ->
             Page;
@@ -119,15 +119,15 @@ render(Page) -> % {{{2
 
 %% Event handlers % {{{1
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 page_from_kv(#cms_page{id=Default}=Page, Block, Key) -> % {{{2
-    wf:info("Key: ~p", [Key]),
+    ?LOG("Key: ~p", [Key]),
     KV = common:parallel_block(Page, Block),
-    wf:info("KV: ~p", [KV]),
+    ?LOG("KV: ~p", [KV]),
     V = proplists:get_value(wf:to_list(Key), KV, Default),
-    wf:info("V: ~p", [V]),
+    ?LOG("V: ~p", [V]),
     page(Page, V).
 
 %% Dropdown formatters {{{1

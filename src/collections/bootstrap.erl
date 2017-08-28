@@ -165,7 +165,7 @@ form_data(navbar, A) -> % {{{2
 
 
     {Block, Alignment} = get_navbar_alignmant(PID, NavItemsBlock),
-    wf:info("NavBar: ~p ~p", [Position, Alignment]),
+    ?LOG("NavBar: ~p ~p", [Position, Alignment]),
     {[],
      [
       {"Position",
@@ -293,7 +293,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
     PPadding = admin:prefix_classes(navbar, [Padding]),
-    wf:info("Prefix: ~p ~p", [NewClasses, PPadding]),
+    ?LOG("Prefix: ~p ~p", [NewClasses, PPadding]),
 
     db:maybe_update(#cms_mfa{id={PID, NavItemsBlock},
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
@@ -472,7 +472,7 @@ event(submenu) -> % {{{2
                                     ]})
     end;
 event(Ev) -> % {{{2
-    wf:info("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Dropdown formatters {{{1
 position_classes(navbar) -> % {{{2
