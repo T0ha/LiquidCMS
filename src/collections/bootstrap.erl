@@ -538,6 +538,10 @@ get_navitem_data(PID, NavBlock) -> % {{{ 2
                   end,
     {Block, Text, URL}.
 
+column_classes("", "") -> % {{{2
+    [];
+column_classes("0", "") -> % {{{2
+    [];
 column_classes(Width, "") -> % {{{2
     W = list_to_integer(Width),
     if W > 0, W =< 12 ->
