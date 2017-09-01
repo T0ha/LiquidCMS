@@ -116,7 +116,7 @@ rating(Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes) -> % 
 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
      #btn{
-        type=success,
+        %type=success,
         size=lg,
         class=["btn-block"|Classes],
         body=common:parallel_block(Page, Block),
