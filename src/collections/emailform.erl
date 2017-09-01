@@ -14,18 +14,48 @@ functions() -> % {{{2
      {email_field, "Email field"},
      {phone_field, "Phone field"},
      {body_field, "Body text area"},
+     {rating, "Star Ratings"},
      {submit, "Send button"}
      ].
 
-
-
 format_block(F, [Block|_]=A) -> % {{{2
-    {wf:f("account:~s(~p)", [F, A]), Block}.
+    {wf:f("~p:~s(~p)", [?MODULE, F, A]), Block}.
 
+form_data(rating, A) -> % {{{2
+    [_, Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes] = admin:maybe_empty(A, 9),
+    {[
+      {"Min", {min, Min}},
+      {"Max", {max, Max}},
+      {"Step", {step, Step}},
+      {"Size",
+       #dd{
+          id=size,
+          value=Size,
+          options=["xl", "lg", "md", "sm", "xs"]
+         }
+      },
+      #checkbox{
+         text="Show caption",
+         value=true,
+         label_position=before,
+         id=show_caption,
+         checked=ShowCaption
+        },
+      #checkbox{
+         text="Show Clear",
+         value=true,
+         label_position=before,
+         id=show_clear,
+         checked=ShowClear
+        }
+     ],
+     [],
+     Block,
+     Classes};
 form_data(submit, A) -> % {{{2
     [_, Block, ToEmail, Classes] = admin:maybe_empty(A, 4),
     {[
-      {"Emain to send form", {to_email, ToEmail}}
+      {"Email to send form", {to_email, ToEmail}}
      ],
      [],
      Block,
@@ -34,6 +64,15 @@ form_data(F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
 form_data(F, []) -> % {{{2
     {[], []}.
+
+save_block(#cms_mfa{id={PID, _}, mfa={M, rating=Fun, A}}=Rec) -> % {{{2
+    %?LOG("save rating: ~p", [Rec]),
+    [Block, Min, Max, Step, Size, Classes] = admin:maybe_empty(A, 6),
+
+    ShowCaption = wf:to_atom(common:q(show_caption, false)),
+    ShowClear = wf:to_atom(common:q(show_clear, false)),
+    %?LOG("Show: ~p ~p~n", [ShowCaption, ShowClear]),
+    Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
 save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, A}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, A}}.
@@ -63,6 +102,18 @@ body_field(Page, Block, Classes) -> % {{{2
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
+rating(Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes) -> % {{{2
+    #textbox{id=common:block_to_html_id(Block),
+        class=["rating", "rating-loading"],
+        data_fields=[
+                     {min, Min},
+                     {max, Max},
+                     {step, Step},
+                     {size, Size},
+                     {"show-caption", ShowCaption},
+                     {"show-clear", ShowClear}
+                    ]}.
+
 submit(Page, Block, ToEmail, Classes) -> % {{{2
      #btn{
         type=success,
@@ -77,7 +128,16 @@ submit(Page, Block, ToEmail, Classes) -> % {{{2
 event({submit, Page, Block, ToEmail}) -> % {{{2
     Email = wf:to_list(common:q(email, "nomail@site.com")),
     Phone = wf:to_list(common:q(phone, "")),
-    Text = wf:f("Phone: ~ts~n~n~ts", [Phone, wf:to_list(common:q(text, ""))]),
+    RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
+    ?LOG("Ratings: ~p~n", [RatingsPL]),
+    Text = case RatingsPL of 
+                  [] -> "";
+                  _ ->
+                      ["Your ratings: ",
+                       %string:join(
+                         [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]]
+              end,
+    %Text = wf:f("Phone: ~ts~n~p~n~n~ts", [Phone, Ratings, wf:to_list(common:q(text, ""))]),
     Header = common:parallel_block(Page, common:sub_block(Block, "popup-header")),
     Body = common:parallel_block(Page, common:sub_block(Block, "popup")),
 
@@ -87,5 +147,18 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
+get_form_rating_ids(#cms_page{id=PID}, Block) -> % {{{2
+    db:transaction(
+      fun() ->
+              [#cms_mfa{id={PID, FormBlock}} | _] = mnesia:match_object(
+                                                      #cms_mfa{id={PID, '_'},
+                                                               mfa={emailform, submit, [Block, '_', '_']},
+                                                               _='_'}),
+              Elements = mnesia:match_object(
+                           #cms_mfa{id={PID, FormBlock}, 
+                                    mfa={emailform, rating, '_'},
+                                    _='_'}),
+              [common:block_to_html_id(B) || #cms_mfa{mfa={_, _, [B | _]}} <- Elements]
+      end).
 
 %% Dropdown formatters {{{1
