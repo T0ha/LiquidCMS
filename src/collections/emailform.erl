@@ -130,14 +130,13 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
     Phone = wf:to_list(common:q(phone, "")),
     RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
     ?LOG("Ratings: ~p~n", [RatingsPL]),
-    Text = case RatingsPL of 
-                  [] -> "";
-                  _ ->
-                      ["Your ratings: ",
-                       %string:join(
-                         [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]]
-              end,
-    %Text = wf:f("Phone: ~ts~n~p~n~n~ts", [Phone, Ratings, wf:to_list(common:q(text, ""))]),
+    Text = [
+            add_if_not_empty("E-mail: ", Email),
+            add_if_not_empty("Phone: ", Phone),
+            add_if_not_empty("Your ratings: ",
+                            [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
+            wf:to_list(common:q(text, ""))
+           ],
     Header = common:parallel_block(Page, common:sub_block(Block, "popup-header")),
     Body = common:parallel_block(Page, common:sub_block(Block, "popup")),
 
@@ -161,4 +160,10 @@ get_form_rating_ids(#cms_page{id=PID}, Block) -> % {{{2
               [common:block_to_html_id(B) || #cms_mfa{mfa={_, _, [B | _]}} <- Elements]
       end).
 
+add_if_not_empty(_Header, undefined) -> % {{{2
+    "";
+add_if_not_empty(_Header, "") -> % {{{2
+    "";
+add_if_not_empty(Header, Text) -> % {{{2
+    [Header, "\n", Text].
 %% Dropdown formatters {{{1
