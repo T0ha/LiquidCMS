@@ -62,7 +62,7 @@ register(Email, Password, Role) -> % {{{1
                 end).
 read(Table, Ids) when is_list(Ids) -> % {{{1
     transaction(fun() ->
-                        [mnesia:read(Table, Id) || Id <- Ids]
+                        [R || Id <- Ids, R <- mnesia:read(Table, Id)]
                 end);
 read(Table, Id) -> % {{{1
     read(Table, [Id]).
