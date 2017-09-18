@@ -60,6 +60,13 @@ register(Email, Password, Role) -> % {{{1
                             _ -> {error, "User already exist"}
                         end
                 end).
+read(Table, Ids) when is_list(Ids) -> % {{{1
+    transaction(fun() ->
+                        [mnesia:read(Table, Id) || Id <- Ids]
+                end);
+read(Table, Id) -> % {{{1
+    read(Table, [Id]).
+
 get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1
