@@ -149,7 +149,10 @@ update(Record, Field, Value) -> % {{{1
                 end).
 
 update_map(Map) -> % {{{1
-    save(map_to_record(Map)).
+    update_map(Map, fun fields/1).
+
+update_map(Map, FieldsFun) -> % {{{1
+    save(map_to_record(Map, FieldsFun)).
 
 
                         
