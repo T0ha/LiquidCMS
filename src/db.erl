@@ -224,15 +224,21 @@ update_record_field(Record, Field, Value) -> % {{{1
     list_to_tuple([Rec|NewList]).
 
 record_to_map(Record) -> % {{{1
+    record_to_map(Record, fun fields/1).
+
+record_to_map(Record, FieldsFun) -> % {{{1
     RecList = tuple_to_list(Record),
-    Fields = fields(hd(RecList)),
+    Fields = FieldsFun(hd(RecList)),
     RFields = [record | Fields],
     Map = maps:from_list(lists:zip(RFields, RecList)),
     Type = mnesia:table_info(maps:get(record, Map), type),
     Map#{table_type => Type}.
 
-map_to_record(#{record := Rec}=Map) -> % {{{1
-    Fields = fields(Rec),
+map_to_record(Map) -> % {{{1
+    map_to_record(Map, fun fields/1).
+
+map_to_record(#{record := Rec}=Map, FieldsFun) -> % {{{1
+    Fields = FieldsFun(Rec),
     RFields = [record | Fields],
     NewList = [maps:get(K, Map, undefined) || K <- RFields],
     list_to_tuple(NewList).
