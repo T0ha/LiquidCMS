@@ -200,14 +200,17 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
                 end).
 
 delete(#{}=Map) -> % {{{1
-    io:format("Delete map: ~p~n", [Map]),
-    delete(map_to_record(Map));
+    delete(Map, fun fields/1);
 delete(Record) -> % {{{1
     io:format("Delete: ~p~n", [Record]),
     transaction(fun() ->
                         mnesia:delete_object(Record)
                 end).
 %% For convenience in install and update process
+delete(#{}=Map, FieldsFun) -> % {{{1
+    io:format("Delete map: ~p~n", [Map]),
+    delete(map_to_record(Map, FieldsFun)).
+
 verify_create_table({atomic, ok}) -> ok; % {{{1
 verify_create_table({aborted, {already_exists, _Table}}) -> ok. % {{{1
 
