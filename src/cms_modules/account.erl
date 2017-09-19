@@ -217,13 +217,14 @@ event({auth, register, Role}) -> % {{{2
         #cms_user{email=Email,
                   password=Passwd,
                   role=Role} = User ->
-            wf:user(User),
-            UserRoles = roles(Role),
-            lists:foreach(fun(R) ->
-                                  wf:role(R, true)
-                          end,
-                          UserRoles),
-            wf:redirect_from_login("/");
+            wf:flash(wf:f("User ~s created successfully. Please, log in.", [Email]));
+            %wf:user(User),
+            %UserRoles = roles(Role),
+            %lists:foreach(fun(R) ->
+            %                      wf:role(R, true)
+            %              end,
+            %              UserRoles),
+            %wf:redirect_from_login("/");
         {error, Any} -> 
             wf:flash(wf:f("Error occured: ~p", [Any])),
             ?LOG("Error occured: ~p", [Any]);
