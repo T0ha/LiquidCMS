@@ -70,7 +70,7 @@ email_field(Page, Block, Classes) -> % {{{2
         body=#txtbx{
                 id=email,
                 class=Classes,
-                placeholder=index:parallel_block(Page, Block)}}.
+                placeholder=common:parallel_block(Page, Block)}}.
 
 password_field(Page) -> % {{{2
     password_field(Page, "", "").
@@ -81,7 +81,7 @@ password_field(Page, Block, Classes) -> % {{{2
        body=#pass{
                id=password,
                class=Classes,
-               placeholder=index:parallel_block(Page, Block)}}.
+               placeholder=common:parallel_block(Page, Block)}}.
 
 retype_password_field(Page) -> % {{{2
     retype_password_field(Page, "", "").
@@ -98,7 +98,7 @@ retype_password_field(Page, Block, Classes) -> % {{{1
                                          password=password
                                         }
                           },
-                placeholder=index:parallel_block(Page, Block)}}.
+                placeholder=common:parallel_block(Page, Block)}}.
 
 login_button(Page) -> % {{{2
     login_button(Page, "", "").
