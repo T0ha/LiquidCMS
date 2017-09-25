@@ -64,35 +64,29 @@ body(Page) ->  % {{{2
 email_field(Page) -> % {{{2
     email_field(Page, "", "").
 
-password_field(Page) -> % {{{2
-    password_field(Page, "", "").
-
-retype_password_field(Page) -> % {{{2
-    retype_password_field(Page, "", "").
-
-login_button(Page) -> % {{{2
-    login_button(Page, "", "").
-
-register_button(Page, Role) -> % {{{2
-    register_button(Page, "", Role, "").
-
-email_field(_Page, _Block, Classes) -> % {{{2
+email_field(Page, Block, Classes) -> % {{{2
      #panel{
         class="form-group",
         body=#txtbx{
                 id=email,
                 class=Classes,
-                placeholder="E-mail"}}.
+                placeholder=index:parallel_block(Page, Block)}}.
 
-password_field(_Page, _Block, Classes) -> % {{{2
+password_field(Page) -> % {{{2
+    password_field(Page, "", "").
+
+password_field(Page, Block, Classes) -> % {{{2
     #panel{
        class="form-group",
        body=#pass{
                id=password,
                class=Classes,
-               placeholder="Password"}}.
+               placeholder=index:parallel_block(Page, Block)}}.
 
-retype_password_field(_Page, _Block, Classes) -> % {{{2
+retype_password_field(Page) -> % {{{2
+    retype_password_field(Page, "", "").
+
+retype_password_field(Page, Block, Classes) -> % {{{1
      #panel{
         class="form-group",
         body=#pass{
@@ -104,7 +98,15 @@ retype_password_field(_Page, _Block, Classes) -> % {{{2
                                          password=password
                                         }
                           },
-                placeholder="Confirm Password"}}.
+                placeholder=index:parallel_block(Page, Block)}}.
+
+login_button(Page) -> % {{{2
+    login_button(Page, "", "").
+
+register_button(Page, Role) -> % {{{2
+    register_button(Page, "", Role, "").
+
+
 
 login_button(Page, Block, Classes) -> % {{{2
      #btn{
