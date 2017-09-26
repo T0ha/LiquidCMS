@@ -172,7 +172,7 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
         true ->
             Page;
         false ->
-            wf:redirect_to_login("/account")
+            wf:redirect_to_login("/account?page=login")
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
