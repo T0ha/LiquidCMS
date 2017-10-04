@@ -137,12 +137,20 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
                             [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
             wf:to_list(common:q(text, ""))
            ],
-    Flash = common:parallel_block(Page, common:sub_block(Block, "flash-message")),
+    Flash = #span{
+               class=["alert-warning"],
+               body=common:parallel_block(Page, common:sub_block(Block, "flash-message"))
+              },
 
+    FlashID = wf:temp_id(),
+    wf:defer(#event{type=timer,
+                    delay=15000, 
+                    target=FlashID,
+                    actions=#hide{effect=blind, speed=400}
+                   }),
     smtp:send_html(Email, ToEmail, "Form sent from site", Text),
 
-    wf:flash(Flash),
-    wf:update(".flash_close_button", "X");
+    wf:flash(FlashID, Flash);
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
