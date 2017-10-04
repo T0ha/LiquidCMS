@@ -137,11 +137,12 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
                             [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
             wf:to_list(common:q(text, ""))
            ],
-    Header = common:parallel_block(Page, common:sub_block(Block, "popup-header")),
-    Body = common:parallel_block(Page, common:sub_block(Block, "popup")),
+    Flash = common:parallel_block(Page, common:sub_block(Block, "flash-message")),
 
     smtp:send_html(Email, ToEmail, "Form sent from site", Text),
-    coldstrap:modal(Header, Body, undefined, [{has_x_button, true}]);
+
+    wf:flash(Flash),
+    wf:update(".flash_close_button", "X");
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
