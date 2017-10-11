@@ -15,6 +15,7 @@ functions() -> % {{{2
      {email_field, "Login /Email Field"},
      {password_field, "Password Field"},
      {retype_password_field, "Retype Password Field"},
+     {apply_agreement_cb, "Apply agreement checkbox"},
      {login_button, "Login Button"},
      {logout_button, "Logout Button"},
      {register_button, "Register Button"}
@@ -65,6 +66,13 @@ email_field(Page) -> % {{{2
     email_field(Page, "", "").
 
 email_field(Page, Block, Classes) -> % {{{2
+    wf:wire(register_button, 
+            email,
+            #validate{
+               validators=#is_email{
+                             text="Please provide a valid email address"
+                            }
+              }),
      #panel{
         class="form-group",
         body=#txtbx{
@@ -87,18 +95,32 @@ retype_password_field(Page) -> % {{{2
     retype_password_field(Page, "", "").
 
 retype_password_field(Page, Block, Classes) -> % {{{1
+
+    wf:wire(register_button, 
+            repassword,
+            #validate{
+               validators=#confirm_password{
+                             text="Password and confirmation are different",
+                             password=password
+                            }
+              }),
      #panel{
         class="form-group",
         body=#pass{
                 id=repassword,
                 class=Classes,
-                actions=#validate{
-                           validators=#confirm_password{
-                                         text="Password and confirmation are different",
-                                         password=password
-                                        }
-                          },
                 placeholder=common:parallel_block(Page, Block)}}.
+
+apply_agreement_cb(Page, Block, Classes) -> % {{{2
+    wf:wire(register_button, apply_agreement, #validate{
+                           validators=#is_required{text="You should agree with our terms before creating account"}
+               }),
+     #panel{
+        class="form-group",
+        body=#checkbox{
+                text=common:parallel_block(Page, Block),
+                id=apply_agreement
+               }}.
 
 login_button(Page) -> % {{{2
     login_button(Page, "", "").
@@ -133,6 +155,7 @@ logout_button(Page, Block, Type, Size, Classes) -> % {{{2
 
 register_button(_Page, _Block, Role, Classes) -> % {{{2
     #btn{
+       id=register_button,
        type=success,
        size=lg,
        class=["btn-block" | Classes],
