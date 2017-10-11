@@ -1241,7 +1241,7 @@ inplace_textbox_event(Tag, Value) -> % {{{2
 start_upload_event(_Tag) -> % {{{2
     ok.
 finish_upload_event(backup, _Fname, Path, _Node) -> % {{{2
-    {atomic, _}=mnesia:restore(Path, [{skip_tables, [cms_role, cms_user]}]),
+    {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
     coldstrap:close_modal(),
     file:delete(Path);
 finish_upload_event(template, Fname, Path, _Node) -> % {{{2
