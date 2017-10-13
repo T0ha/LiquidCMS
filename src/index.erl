@@ -28,6 +28,7 @@ title(#cms_page{title=Title}) ->  % {{{2
     Title.
 
 body(Page) -> % {{{2
+    wf:state(page, Page),
     common:parallel_block(Page, "body").
 	
 %% Event handlers {{{1

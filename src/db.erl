@@ -37,7 +37,16 @@ update([]) -> % {{{1
                         A = mnesia:match_object(#cms_mfa{mfa={index, maybe_redirect_to_login, '_'}, _ = '_'}),
                         B = mnesia:match_object(#cms_mfa{mfa={index, maybe_change_module, '_'}, _ = '_'}),
                         [mnesia:delete_object(O) || O <- A ++ B]
-                end).
+                end),
+    mnesia:transform_table(cms_user, fun({cms_user, E, P, R, S}) -> 
+                                             #cms_user{
+                                                email=E,
+                                                password=P,
+                                                role=R,
+                                                confirm=0,
+                                                settings=S
+                                               }
+                                     end, record_info(fields, cms_user)).
                         
 %% Getters
 login(Email, Password) -> % {{{1
@@ -48,12 +57,14 @@ login(Email, Password) -> % {{{1
                 end).
 
 register(Email, Password, Role) -> % {{{1
+    {ok, Confirm} = wf:hex_encode(crypto:strong_rand_bytes(16)),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
                                                            _='_'}) of
                             [] -> 
                                 User = #cms_user{email=Email,
                                                  password=Password,
+                                                 confirm=Confirm,
                                                  role=Role},
                                 mnesia:write(User),
                                 User;

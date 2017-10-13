@@ -68,6 +68,7 @@
           email :: string(),
           password :: binary(),
           role :: role(),
+          confirm = 0 :: integer(),
           settings = #{} :: map()
          }).
 

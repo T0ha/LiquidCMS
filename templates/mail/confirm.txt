@@ -1,0 +1,7 @@
+Hi.
+We are happy, you decided to join [[[wf:url()]]].
+Please, confirm your email by clicking on the link below.
+[[[wf:url()]]]/account?page=confirm&confirm=[[[Confirm]]]
+
+---
+Best wishes, Team.

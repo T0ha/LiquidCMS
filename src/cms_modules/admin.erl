@@ -1137,13 +1137,14 @@ event({user, show}) -> % {{{2
                                      }
                              }]);
 event({user, new}) -> % {{{2
+    Page = wf:state(page),
     new_modal("Create User", 
               {user, save},
               undefined,
               [
-               account:email_field("admin"),
-               account:password_field("admin"),
-               account:retype_password_field("admin"),
+               account:email_field(Page),
+               account:password_field(Page),
+               account:retype_password_field(Page),
                #span{text="Role"},
                #dd{
                   id=role,

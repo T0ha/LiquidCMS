@@ -146,7 +146,7 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
     wf:defer(#event{type=timer,
                     delay=15000, 
                     target=FlashID,
-                    actions=#hide{effect=blind, speed=400}
+                    actions=#hide{effect=blind, speed=40}
                    }),
     smtp:send_html(Email, ToEmail, "Form sent from site", Text),
 

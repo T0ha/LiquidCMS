@@ -63,10 +63,10 @@ body(Page) ->  % {{{2
     index:body(Page).
 	
 email_field(Page) -> % {{{2
-    email_field(Page, "", "").
+    email_field(Page, "email-field", "").
 
 email_field(Page, Block, Classes) -> % {{{2
-    wf:wire(register_button, 
+    wf:defer(register_button, 
             email,
             #validate{
                validators=#is_email{
@@ -81,7 +81,7 @@ email_field(Page, Block, Classes) -> % {{{2
                 placeholder=common:parallel_block(Page, Block)}}.
 
 password_field(Page) -> % {{{2
-    password_field(Page, "", "").
+    password_field(Page, "password-field", "").
 
 password_field(Page, Block, Classes) -> % {{{2
     #panel{
@@ -92,11 +92,10 @@ password_field(Page, Block, Classes) -> % {{{2
                placeholder=common:parallel_block(Page, Block)}}.
 
 retype_password_field(Page) -> % {{{2
-    retype_password_field(Page, "", "").
+    retype_password_field(Page, "confirm-password-field", "").
 
-retype_password_field(Page, Block, Classes) -> % {{{1
-
-    wf:wire(register_button, 
+retype_password_field(Page, Block, Classes) -> % {{{2
+    wf:defer(register_button, 
             repassword,
             #validate{
                validators=#confirm_password{
@@ -112,7 +111,7 @@ retype_password_field(Page, Block, Classes) -> % {{{1
                 placeholder=common:parallel_block(Page, Block)}}.
 
 apply_agreement_cb(Page, Block, Classes) -> % {{{2
-    wf:wire(register_button, apply_agreement, #validate{
+    wf:defer(register_button, apply_agreement, #validate{
                            validators=#is_required{text="You should agree with our terms before creating account"}
                }),
      #panel{
@@ -126,12 +125,11 @@ login_button(Page) -> % {{{2
     login_button(Page, "", "").
 
 register_button(Page, Role) -> % {{{2
-    register_button(Page, "", Role, "").
-
-
+    register_button(Page, "register-button", Role, "").
 
 login_button(Page, Block, Classes) -> % {{{2
      #btn{
+        id=login_btn,
         type=success,
         size=lg,
         class=["btn-block" | Classes],
@@ -145,6 +143,7 @@ logout_button(Page, Block, Classes) -> % {{{2
 
 logout_button(Page, Block, Type, Size, Classes) -> % {{{2
      #btn{
+        id=logout_button,
         type=Type,
         size=Size,
         class=[Classes],
@@ -241,17 +240,12 @@ event({auth, register, Role}) -> % {{{2
     case db:register(Email, Passwd, Role) of
         #cms_user{email=Email,
                   password=Passwd,
+                  confirm=Confirm,
                   role=Role} = User ->
-            wf:flash(wf:f("User ~s created successfully. Please, log in.", [Email]));
-            %wf:user(User),
-            %UserRoles = roles(Role),
-            %lists:foreach(fun(R) ->
-            %                      wf:role(R, true)
-            %              end,
-            %              UserRoles),
-            %wf:redirect_from_login("/");
+            wf:flash(wf:f("<p class='text-success'>Confirmation letter was sent to ~s.  Please, follow instructions from the letter.</p>", [Email])),
+            send_confirmation_email(Email, Confirm);
         {error, Any} -> 
-            wf:flash(wf:f("Error occured: ~p", [Any])),
+            wf:flash(wf:f("<div class='alert alert-success'>Error occured: ~p</div>", [Any])),
             ?LOG("Error occured: ~p", [Any]);
         Any -> 
             wf:flash(wf:f("Unhandled error occured: ~p<br>Please contact support to inform about it.", [Any])),
@@ -309,3 +303,12 @@ q(Id, Default) -> % {{{2
             Default;
         A -> string:strip(A)
     end.
+
+send_confirmation_email(Email, 0) -> % {{{2
+    ok;
+send_confirmation_email(Email, Confirm) -> % {{{2
+    Host = filename:dirname(wf:url()), %application:get_env(nitrogen, host, "site.com"),
+    FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("confirm@~s", [Host])),
+    {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/confirm.txt", bindings=[{'Confirm', Confirm}, {'Host', Host}]}),
+    ?LOG("Text: ~p", [Text]),
+    smtp:send_html(FromEmail, Email, ["Please, confirm registration on ", Host], Text).
