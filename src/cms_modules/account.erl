@@ -307,7 +307,7 @@ q(Id, Default) -> % {{{2
 send_confirmation_email(Email, 0) -> % {{{2
     ok;
 send_confirmation_email(Email, Confirm) -> % {{{2
-    Host = filename:dirname(wf:url()), %application:get_env(nitrogen, host, "site.com"),
+    Host = application:get_env(nitrogen, host, "site.com"),
     FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("confirm@~s", [Host])),
     {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/confirm.txt", bindings=[{'Confirm', Confirm}, {'Host', Host}]}),
     ?LOG("Text: ~p", [Text]),

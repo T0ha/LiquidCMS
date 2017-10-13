@@ -1,7 +1,12 @@
-Hi.
-We are happy, you decided to join [[[wf:url()]]].
+<div>
+Hi.<br>
+</div>
+<div>
+We are happy, you decided to join [[[Host]]].<br>
 Please, confirm your email by clicking on the link below.
-[[[wf:url()]]]/account?page=confirm&confirm=[[[Confirm]]]
-
+<a href="[[[Host]]]/account?page=confirm&confirm=[[[Confirm]]]">Click to confirm</a>
+</div>
+<div>
 ---
 Best wishes, Team.
+</div>
