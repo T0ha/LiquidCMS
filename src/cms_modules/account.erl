@@ -183,6 +183,7 @@ register_form(Page, Role) -> % {{{2
      retype_password_field(Page),
      register_button(Page, Role)
     ].
+
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
@@ -258,6 +259,9 @@ event({auth, login}) -> % {{{2
     case db:login(Email, Passwd) of
         [] ->
             wf:flash("Wrong username or password!"),
+            ok;
+        [#cms_user{confirm=C}] when C /= 0 ->
+            wf:flash("User email is not confirmed. Please, confirm it before login!"),
             ok;
         [#cms_user{email=Email,
                    password=Passwd,
