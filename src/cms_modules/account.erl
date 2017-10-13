@@ -159,7 +159,7 @@ register_button(_Page, _Block, Role, Classes) -> % {{{2
        size=lg,
        class=["btn-block" | Classes],
        text="Register",
-       postback={auth, register, wf:to_atom(Role)},
+       postback={auth, register, wf:to_atom(Role), true},
        delegate=?MODULE
       }.
 
@@ -232,12 +232,12 @@ install() -> % {{{2
 %% Event handlers {{{1
 event({auth, register}) -> % {{{2
     Role = wf:to_atom(common:q(role, undefined)),
-    event({auth, register, Role});
-event({auth, register, Role}) -> % {{{2
+    event({auth, register, Role, false});
+event({auth, register, Role, DoConfirm}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),
     ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
-    case db:register(Email, Passwd, Role) of
+    case db:register(Email, Passwd, Role, DoConfirm) of
         #cms_user{email=Email,
                   password=Passwd,
                   confirm=Confirm,

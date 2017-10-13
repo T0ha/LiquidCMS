@@ -57,7 +57,14 @@ login(Email, Password) -> % {{{1
                 end).
 
 register(Email, Password, Role) -> % {{{1
-    {ok, Confirm} = wf:hex_encode(crypto:strong_rand_bytes(16)),
+    register(Email, Password, Role, false).
+
+register(Email, Password, Role, DoConfirm) -> % {{{1
+    Confirm = if DoConfirm ->
+                     {ok, C} = wf:hex_encode(crypto:strong_rand_bytes(16)),
+                     C;
+                 true -> 0
+              end,
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
                                                            _='_'}) of
