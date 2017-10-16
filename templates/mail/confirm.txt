@@ -2,11 +2,18 @@
 Hi.<br>
 </div>
 <div>
-We are happy, you decided to join [[[Host]]].<br>
-Please, confirm your email by clicking on the link below.
-<a href="[[[Host]]]/account?page=confirm&confirm=[[[Confirm]]]">Click to confirm</a>
+Welcome to [[[Host]]].<br>
+Please, don't reply this email. It's sent automatically.
 </div>
 <div>
----
+To complete your registration and confirm your email click
+<a href="[[[Host]]]/account?page=confirm&confirm=[[[Confirm]]]">here</a>.
+</div>
+<div>
+If the link above doesn't work, copy the url below to your browser.<br>
+[[[Host]]]/account?page=confirm&confirm=[[[Confirm]]]
+</div>
+<div>
+<hl>
 Best wishes, Team.
 </div>
