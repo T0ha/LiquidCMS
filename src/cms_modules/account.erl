@@ -111,14 +111,14 @@ retype_password_field(Page, Block, Classes) -> % {{{2
                 placeholder=common:parallel_block(Page, Block)}}.
 
 apply_agreement_cb(Page, Block, Classes) -> % {{{2
-    wf:defer(register_button, apply_agreement, #validate{
-                           validators=#is_required{text="You should agree with our terms before creating account"}
-               }),
+    wf:defer(register_button, #disable{}),
      #panel{
         class="form-group",
         body=#checkbox{
                 text=common:parallel_block(Page, Block),
-                id=apply_agreement
+                id=apply_agreement,
+                postback={?MODULE, agree}, 
+                delegate=?MODULE
                }}.
 
 login_button(Page) -> % {{{2
@@ -231,6 +231,13 @@ install() -> % {{{2
     ok.
 
 %% Event handlers {{{1
+event({?MODULE, agree}) -> % {{{2
+    case common:q(apply_agreement, "off") of
+        "on" ->
+            wf:enable(register_button);
+        _ ->
+            wf:disable(register_button)
+    end;
 event({auth, register}) -> % {{{2
     Role = wf:to_atom(common:q(role, undefined)),
     event({auth, register, Role, false});
