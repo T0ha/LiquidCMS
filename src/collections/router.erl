@@ -106,8 +106,8 @@ maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
             Page;
         _Other ->
             URI = wf:uri(),
-            [_, QS] = string:tokens(URI, "?"),
-            wf:redirect(wf:f("/~s?~s", [Module, QS]))
+            QS = get_qs(URI),
+            wf:redirect(wf:f("/~s~s", [Module, QS]))
     end.
 render(Page) -> % {{{2
     try common:waterfall(Page, "page")
@@ -132,5 +132,13 @@ page_from_kv(#cms_page{id=Default}=Page, Block, Key) -> % {{{2
     V = proplists:get_value(wf:to_list(Key), KV, Default),
     ?LOG("V: ~p", [V]),
     page(Page, V).
+
+get_qs(URI) -> % {{{2
+    maybe_qs(string:tokens(URI, "?")).
+
+maybe_qs([_, QS]) -> % {{{2
+    "?" ++ QS;
+maybe_qs(_) -> % {{{2
+    "".
 
 %% Dropdown formatters {{{1
