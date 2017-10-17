@@ -6,10 +6,8 @@
 -include("records.hrl").
 -include("db.hrl").
 
+?DESCRIPTION(Account).
 %% CMS Module interface {{{1
-description() -> % {{{2
-    "Account".
-
 functions() -> % {{{2
     [
      {email_field, "Login /Email Field"},
@@ -18,31 +16,22 @@ functions() -> % {{{2
      {apply_agreement_cb, "Apply agreement checkbox"},
      {login_button, "Login Button"},
      {logout_button, "Logout Button"},
-     {register_button, "Register Button"}
+     {register_button, "Register Button"},
+     {maybe_redirect_to_login, "Redirect to login page if role is not accepted"}
      ].
 
-format_block(F, [Block|_]=A) -> % {{{2
-    {wf:f("account:~s(~p)", [F, A]), Block}.
+format_block(F, A) -> % {{{2
+    {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
 
-form_data(register_button, A) -> % {{{2
-    [_, Block, Role, Classes] = admin:maybe_empty(A, 4),
+form_data(maybe_redirect_to_login, A) -> % {{{2
+    [_, URL] = admin:maybe_empty(A, 2),
 
-    {[ 
-      {"Role",
-       #dd{
-          id=register_role,
-          value=admin:remove_prefix(Role),
-          options=admin:cms_roles()
-         }
-      }
-     ],
-     [],
-     Block,
-     Classes
-    }.
+    [ 
+     {"URL", {url, URL}}
+    ].
 
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, Role, Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={bootstrap, col, [Block, wf:to_atom(Role), Classes]}}.
+save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
 
 %% Module render functions {{{1
 main() -> % {{{2
@@ -184,18 +173,21 @@ register_form(Page, Role) -> % {{{2
      register_button(Page, Role)
     ].
 
-maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page) -> % {{{2
-    maybe_redirect_to_login(Page#cms_page{accepted_role=nobody});
-maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page) -> % {{{2
+maybe_redirect_to_login(Page) -> % {{{2
+    maybe_redirect_to_login(Page, "/account").
+
+maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
+    maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
+maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
     ?LOG("Not redirect to login: ~p", [Page]),
     Page;
-maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page) -> % {{{2
+maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
     ?LOG("Redirect to login: ~p", [Page]),
     case wf:role(Role) of 
         true ->
             Page;
         false ->
-            wf:redirect_to_login("/account")
+            wf:redirect_to_login(URL)
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
