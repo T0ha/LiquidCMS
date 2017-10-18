@@ -23,6 +23,23 @@ functions() -> % {{{2
 format_block(F, A) -> % {{{2
     {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
 
+form_data(register_button, A) -> % {{{2
+    [_, Block, Role, Classes] = admin:maybe_empty(A, 4),
+
+    {[
+      {"Role",
+       #dd{
+          id=register_role,
+          value=admin:remove_prefix(Role),
+          options=admin:cms_roles()
+         }
+      }
+     ],
+     [],
+     Block,
+     Classes
+    };
+
 form_data(maybe_redirect_to_login, A) -> % {{{2
     [_, URL] = admin:maybe_empty(A, 2),
 
@@ -31,7 +48,10 @@ form_data(maybe_redirect_to_login, A) -> % {{{2
     ].
 
 save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}};
+save_block(#cms_mfa{id={PID, _}, mfa={account, register_button, [Block, Role, Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={bootstrap, col, [Block, wf:to_atom(Role), Classes]}}.
+
 
 %% Module render functions {{{1
 main() -> % {{{2
