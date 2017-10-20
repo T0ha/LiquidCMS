@@ -8,6 +8,22 @@
 
 ?DESCRIPTION(Analytics services).
 
+default_data() -> % {{{2
+    #{cms_template => [
+                  #cms_template{
+                            file="templates/hs_analytics.html",
+                            bindings=[],
+                            name="templates/hs_analytics.html"},
+                  #cms_template{
+                            file="templates/ga_analytics.html",
+                            bindings=[],
+                            name="templates/ga_analytics.html"},
+                  #cms_template{
+                            file="templates/ya_analytics.html",
+                            bindings=[],
+                            name="templates/ya_analytics.html"}
+                  ]}.
+
 %% CMS Module interface {{{1
 functions() -> % {{{2
     [
@@ -17,21 +33,16 @@ functions() -> % {{{2
      ].
 
 format_block(F, [Block|_]=A) -> % {{{2
-    {wf:f("account:~s(~p)", [F, A]), Block}.
+    {wf:f("~p:~s(analytics_id=~p)", [?MODULE, F, A]), Block}.
 
-% form_data(F, [_, Block, Classes]) -> % {{{2
-%     {[], [], Block, Classes};
-% form_data(F, []) -> % {{{2
-%     {[], []}.
-
-form_data(F, A) -> % {{{2
+form_data(_, A) -> % {{{2
     [_, AnalyticsId] = admin:maybe_empty(A, 2),
     [
      {"AnalyticsId", {id, AnalyticsId}}
     ].
 
-save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}}.
+save_block(#cms_mfa{ mfa={?MODULE, Fun, [_Block, AnalyticsId, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, Fun, [AnalyticsId]}}.
 
 %% Block renderers {{{1
 block(Page, Block, Classes) -> % {{{2
