@@ -47,9 +47,9 @@ form_data(maybe_redirect_to_login, A) -> % {{{2
      {"URL", {url, URL}}
     ].
 
+
 save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
-
 
 %% Module render functions {{{1
 main() -> % {{{2
