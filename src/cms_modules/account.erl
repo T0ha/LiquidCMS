@@ -68,7 +68,7 @@ title() -> "LiquidCMS - Log In".
 
 body(Page) ->  % {{{2
     index:body(Page).
-	
+    
 email_field(Page) -> % {{{2
     email_field(Page, "email-field", "").
 
@@ -118,8 +118,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
                 placeholder=common:parallel_block(Page, Block)}}.
 
 apply_agreement_cb(Page, Block, Classes) -> % {{{2
-    wf:defer(register_button, #disable{}),
-    wf:defer(login_button, #disable{}),
+    wf:defer(".account-btn", #disable{}),
      #panel{
         class="form-group",
         body=#checkbox{
@@ -140,7 +139,7 @@ login_button(Page, Block, Classes) -> % {{{2
         id=login_button,
         type=success,
         size=lg,
-        class=["btn-block" | Classes],
+        class=["account-btn", "btn-block" | Classes],
         text=common:parallel_block(Page, Block),
         postback={auth, login},
         delegate=?MODULE
@@ -165,7 +164,7 @@ register_button(_Page, _Block, Role, Classes) -> % {{{2
        id=register_button,
        type=success,
        size=lg,
-       class=["btn-block" | Classes],
+       class=["account-btn", "btn-block" | Classes],
        text="Register",
        postback={auth, register, wf:to_atom(Role), true},
        delegate=?MODULE
@@ -245,11 +244,9 @@ install() -> % {{{2
 event({?MODULE, agree}) -> % {{{2
     case common:q(apply_agreement, "off") of
         "on" ->
-            wf:enable(register_button),
-            wf:enable(login_button);
+            wf:enable(".account-btn");
         _ ->
-            wf:disable(register_button),
-            wf:disable(login_button)
+            wf:disable(".account-btn")
     end;
 event({auth, register}) -> % {{{2
     Role = wf:to_atom(common:q(role, undefined)),
