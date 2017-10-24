@@ -119,6 +119,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
 
 apply_agreement_cb(Page, Block, Classes) -> % {{{2
     wf:defer(register_button, #disable{}),
+    wf:defer(login_button, #disable{}),
      #panel{
         class="form-group",
         body=#checkbox{
@@ -136,7 +137,7 @@ register_button(Page, Role) -> % {{{2
 
 login_button(Page, Block, Classes) -> % {{{2
      #btn{
-        id=login_btn,
+        id=login_button,
         type=success,
         size=lg,
         class=["btn-block" | Classes],
@@ -244,9 +245,11 @@ install() -> % {{{2
 event({?MODULE, agree}) -> % {{{2
     case common:q(apply_agreement, "off") of
         "on" ->
-            wf:enable(register_button);
+            wf:enable(register_button),
+            wf:enable(login_button);
         _ ->
-            wf:disable(register_button)
+            wf:disable(register_button),
+            wf:disable(login_button)
     end;
 event({auth, register}) -> % {{{2
     Role = wf:to_atom(common:q(role, undefined)),
