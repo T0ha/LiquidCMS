@@ -22,9 +22,9 @@ functions() -> % {{{2
      {row, "Row"},
      {col, "Column"},
      {table, "Table"},
-     {th, "Th"},
-     {tr, "Tr"},
-     {td, "Td"}
+     {th, "Table header"},
+     {tr, "Table row"},
+     {td, "Table cell"}
      %{full_block, "One Column Row"}
      ].
 
@@ -220,7 +220,7 @@ form_data(_F, [_, Block, Classes]) -> % {{{2
 form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap,
                      panel,
                      [
@@ -422,14 +422,14 @@ th(Page, Block, Classes) -> % {{{2
     #tableheader { 
       html_id=common:block_to_html_id(Block),
       class=Classes,
-      text = common:parallel_block(Page, Block)
+      body=common:parallel_block(Page, Block)
     }.
 
 td(Page, Block, Classes) -> % {{{2 
     #tablecell { 
       html_id=common:block_to_html_id(Block),
       class=Classes,
-      text = common:parallel_block(Page, Block)
+      body=common:parallel_block(Page, Block)
     }.
 
 full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
