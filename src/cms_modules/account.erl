@@ -68,7 +68,7 @@ title() -> "LiquidCMS - Log In".
 
 body(Page) ->  % {{{2
     index:body(Page).
-	
+    
 email_field(Page) -> % {{{2
     email_field(Page, "email-field", "").
 

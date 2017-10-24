@@ -13,15 +13,15 @@ default_data() -> % {{{2
                   #cms_template{
                             file="templates/hs_analytics.html",
                             bindings=[],
-                            name="templates/hs_analytics.html"},
+                            name="Hubspot Analytics"},
                   #cms_template{
                             file="templates/ga_analytics.html",
                             bindings=[],
-                            name="templates/ga_analytics.html"},
+                            name="Google Analytics"},
                   #cms_template{
                             file="templates/ya_analytics.html",
                             bindings=[],
-                            name="templates/ya_analytics.html"}
+                            name="Yandex Analytics"}
                   ]}.
 
 %% CMS Module interface {{{1

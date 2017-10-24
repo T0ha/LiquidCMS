@@ -20,7 +20,11 @@ functions() -> % {{{2
      {tabs, "Tabs"},
      {tab, "Tab"},
      {row, "Row"},
-     {col, "Column"}
+     {col, "Column"},
+     {table, "Table"},
+     {th, "Table header"},
+     {tr, "Table row"},
+     {td, "Table cell"}
      %{full_block, "One Column Row"}
      ].
 
@@ -51,6 +55,8 @@ format_block(container, [Block, AllClasses]) -> % {{{2
     [Fluid, Classes] = admin:maybe_empty(AllClasses, 2),
     IsFluid = (Fluid == "container-fluid"),
     {wf:f("Container: ~s(fluid=~p, class=~p)", [Block, IsFluid, Classes]), Block};
+format_block(F, [Block, Classes]) -> % {{{2
+    {wf:f("bootstrap:~s(id=~p, classes=~p)", [F,Block, Classes]), Block};
 format_block(F, [Block|_]=A) -> % {{{2
     {wf:f("bootstrap:~s(~p)", [F, A]), Block}.
 
@@ -209,12 +215,12 @@ form_data(container, A) -> % {{{2
      Block,
      Classes
     };
-form_data(F, [_, Block, Classes]) -> % {{{2
+form_data(_F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
-form_data(F, []) -> % {{{2
+form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap,
                      panel,
                      [
@@ -251,7 +257,7 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes]}}=
                       Classes
                      ]}}
     ];
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
 %save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
 %    ColClass = common:q(col_class, ""),
@@ -299,13 +305,13 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
                              sort=1}),
     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, container, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes]}}=Rec) -> % {{{2
     Fluid = case common:q(fluid, "") of
                 "" -> "container";
                 "fluid" -> "container-fluid"
             end,
     Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
-save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes]}}=Rec) -> % {{{2
     wf:warning("Bootstrap: ~p", [Rec]),
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
@@ -397,6 +403,34 @@ col(Page, Block, Width, Offset, Classes) -> % {{{2
        cols=column_classes(Width, Offset),
        body=common:parallel_block(Page, Block)
       }.
+
+table(Page, Block,Classes) -> % {{{2
+    #table { 
+      html_id=common:block_to_html_id(Block),
+      rows=common:parallel_block(Page, Block),
+      class=Classes
+    }.
+
+tr(Page, Block, Classes) -> % {{{2 
+    #tablerow { 
+      html_id=common:block_to_html_id(Block),
+      class=Classes,
+      cells=common:parallel_block(Page, Block)
+    }.
+
+th(Page, Block, Classes) -> % {{{2 
+    #tableheader { 
+      html_id=common:block_to_html_id(Block),
+      class=Classes,
+      body=common:parallel_block(Page, Block)
+    }.
+
+td(Page, Block, Classes) -> % {{{2 
+    #tablecell { 
+      html_id=common:block_to_html_id(Block),
+      class=Classes,
+      body=common:parallel_block(Page, Block)
+    }.
 
 full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
     #bs_row{
