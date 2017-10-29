@@ -30,6 +30,11 @@
 -type asset_type() :: 'image' | 'script' | 'css' | 'less' | binary.
 
 %% DB tables records goes here
+-record(cms_settings, {
+          key :: atom(),
+          value :: term()
+         }).
+
 -record(cms_mfa, {
           id :: {string(), string()},
           sort :: non_neg_integer(),

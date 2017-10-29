@@ -17,6 +17,7 @@ functions() -> % {{{2
      {login_button, "Login Button"},
      {logout_button, "Logout Button"},
      {register_button, "Register Button"},
+     {confirm, "Confirm registration handler"},
      {maybe_redirect_to_login, "Redirect to login page if role is not accepted"}
      ].
 
@@ -191,6 +192,19 @@ register_form(Page, Role) -> % {{{2
      register_button(Page, Role)
     ].
 
+confirm(Page, _Block, _Classes) -> % {{{2
+    Data = common:q(confirm, ""),
+    case db:confirm(wf:depickle(Data)) of
+        {error, Reason} ->
+            #panel{class=["alert", "alert-critical"],
+                   text=Reason};
+        {ok, User} ->
+            wf:user(User),
+            set_user_roles(User),
+            wf:redirect("/")
+    end.
+
+
 maybe_redirect_to_login(Page) -> % {{{2
     maybe_redirect_to_login(Page, "/account").
 
@@ -280,14 +294,8 @@ event({auth, login}) -> % {{{2
         [#cms_user{confirm=C}] when C /= 0 ->
             wf:flash("User email is not confirmed. Please, confirm it before login!"),
             ok;
-        [#cms_user{email=Email,
-                   password=Passwd,
-                   role=Role} = User] ->
-            UserRoles = roles(Role),
-            lists:foreach(fun(R) ->
-                                  wf:role(R, true)
-                          end,
-                          UserRoles),
+        [User] ->
+            set_user_roles(User),
             wf:user(User),
             ?LOG("User: ~p", [User]),
             wf:redirect_from_login("/")
@@ -307,6 +315,13 @@ user() -> % {{{2
         U -> U
     end.
 
+set_user_roles(#cms_user{role=Role}) -> % {{{2
+    UserRoles = roles(Role),
+    lists:foreach(fun(R) ->
+                          wf:role(R, true)
+                  end,
+                  UserRoles).
+
 roles(Role) -> % {{{2
     lists:dropwhile(fun(R) -> R /= Role end,
                     [R || #{role := R} <- lists:sort(
@@ -325,11 +340,11 @@ q(Id, Default) -> % {{{2
         A -> string:strip(A)
     end.
 
-send_confirmation_email(Email, 0) -> % {{{2
+send_confirmation_email(_Email, 0) -> % {{{2
     ok;
 send_confirmation_email(Email, Confirm) -> % {{{2
     Host = application:get_env(nitrogen, host, "site.com"),
     FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("confirm@~s", [Host])),
-    {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/confirm.txt", bindings=[{'Confirm', Confirm}, {'Host', Host}]}),
+    {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/confirm.txt", bindings=[{'Confirm', wf:pickle({Email, Confirm})}, {'Host', Host}]}),
     ?LOG("Text: ~p", [Text]),
     smtp:send_html(FromEmail, Email, ["Please, confirm registration on ", Host], Text).

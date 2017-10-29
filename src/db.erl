@@ -10,15 +10,18 @@
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
+    ?CREATE_TABLE(cms_settings, set, []),
     ?CREATE_TABLE(cms_mfa, bag, []),
     ?CREATE_TABLE(cms_template, set, []),
     ?CREATE_TABLE(cms_asset, bag, [type, name]),
     ?CREATE_TABLE(cms_page, set, []),
-    ?CREATE_TABLE(cms_user, bag, []),
+    ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
+    {ok, VSN} = application:get_key(nitrogen, vsn),
     DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
       fun() ->
+              mnesia:write(#cms_settings{key=vsn, value=VSN}),
               [maps:map(
                  fun(_K, V) ->
                          lists:foreach(
@@ -33,6 +36,13 @@ install([])-> % {{{1
 
 %% Don't remove! This is is used to update your Mnesia DB backend  from CLI tool
 update([]) -> % {{{1
+    {ok, VSN} = application:get_key(nitrogen, vsn),
+    case get_db_vsn() of
+        VSN -> ok;
+        _ ->
+            update(VSN)
+    end;
+update("0.1.0"=VSN) -> % {{{1
     transaction(fun() ->
                         A = mnesia:match_object(#cms_mfa{mfa={index, maybe_redirect_to_login, '_'}, _ = '_'}),
                         B = mnesia:match_object(#cms_mfa{mfa={index, maybe_change_module, '_'}, _ = '_'}),
@@ -46,8 +56,16 @@ update([]) -> % {{{1
                                                 confirm=0,
                                                 settings=S
                                                }
-                                     end, record_info(fields, cms_user)).
+                                     end, record_info(fields, cms_user)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.1"=VSN) -> % {{{1
+    mnesia:backup("mnesia.lcms"),
+    mnesia:delete_table(cms_user),
+    ?CREATE_TABLE(cms_user, set, []),
+    mnesia:restore("mnesia.lcms", []),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN}).
                         
+
 %% Getters
 login(Email, Password) -> % {{{1
     transaction(fun() ->
@@ -69,15 +87,34 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
                         case mnesia:match_object(#cms_user{email=Email,
                                                            _='_'}) of
                             [] -> 
-                                User = #cms_user{email=Email,
-                                                 password=Password,
-                                                 confirm=Confirm,
-                                                 role=Role},
+                                User = #cms_user{
+                                          email=Email,
+                                          password=Password,
+                                          confirm=Confirm,
+                                          role=Role},
                                 mnesia:write(User),
                                 User;
                             _ -> {error, "User already exist"}
                         end
                 end).
+
+confirm(undefined) -> % {{{1
+    {error, "Wrong or missing confirmation code"};
+confirm({Email, Confirm}) -> % {{{1
+    transaction(
+      fun() ->
+              case mnesia:match_object(#cms_user{
+                                          email=Email,
+                                          confirm=Confirm,
+                                          _='_'}) of
+                  [User0] ->
+                      User = User0#cms_user{confirm=0},
+                      mnesia:write(User),
+                      {ok, User};
+                  _ -> {error, "User confirmation error"}
+              end
+      end).
+
 read(Table, Ids) when is_list(Ids) -> % {{{1
     transaction(fun() ->
                         [R || Id <- Ids, R <- mnesia:read(Table, Id)]
@@ -286,4 +323,8 @@ empty_mfa(PID, Block, Sort) -> % {{{1
        sort=Sort,
        mfa=undefined}.
 
-
+get_db_vsn() -> % {{{1
+    transaction(fun() ->
+                        [VSN] = mnesia:read(cms_settings, vsn),
+                        VSN
+                end).
