@@ -16,12 +16,18 @@ functions() -> % {{{2
      {qs_page_router, "Change page by QS parameter"},
      {role_page_router, "Change page by current user main role"},
      {kv_item, "Page and some (QS or role) parameter value association pair"},
-     {render, "Render page after ruoting chain"}
+     {render, "Render page after ruoting chain"},
+     {common_redirect, "Redirect to select URL"}
      ].
 
 format_block(F, A) -> % {{{2
     {wf:f("~p:~s(~p)", [?MODULE, F, A]), undefined}.
-
+form_data(common_redirect, A) -> % {{{2
+    [_, Block, URL] = admin:maybe_empty(A, 3),
+    [ {"Block name", {block, Block}},
+      {"URL", {url, URL}}
+    ]
+    ;
 form_data(qs_page_router, A) -> % {{{2
     [_, Block, Param] = admin:maybe_empty(A, 3),
     [
@@ -48,6 +54,8 @@ save_block(#cms_mfa{mfa={?MODULE, role_page_router, [Block, Block, _Classes]}}=R
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, role_page_router, [Block]}};
 save_block(#cms_mfa{mfa={?MODULE, qs_page_router, [Block, Block, Param, _Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, qs_page_router, [Block, Param]}};
+save_block(#cms_mfa{mfa={?MODULE, common_redirect, [_, Block, Param, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, common_redirect, [Block, Param]}};
 save_block(#cms_mfa{mfa={?MODULE, kv_item, [_Block, K, V, _Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, kv_item, [K, V]}};
 save_block(#cms_mfa{mfa={?MODULE, Fun, [_, Block, Classes]}}=Rec) -> % {{{2
@@ -91,13 +99,20 @@ role_page_router(#cms_page{id=PID}=Page, Block) when PID == undefined; % {{{2
                                                      PID == "index" ->
     #cms_user{role=Role} = account:user(),
     page_from_kv(Page, Block, wf:to_list(Role));
-role_page_router(Page, Block) -> % {{{2
+role_page_router(Page, _Block) -> % {{{2
     Page.
 
 qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
     ?LOG("Key: ~p", [Key]),
     page_from_kv(Page, Block, Key).
+
+common_redirect(Page, _Block, URL) -> % {{{2
+    ?LOG("URL: ~p", [URL]),
+    case URL of
+        []  -> undefined;
+        URL -> wf:redirect(URL)
+    end.
 
 maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
     ?LOG("Change module: ~p", [Page]),

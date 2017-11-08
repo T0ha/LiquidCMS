@@ -118,7 +118,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
-apply_agreement_cb(Page, Block, Classes) -> % {{{2
+apply_agreement_cb(Page, Block, _Classes) -> % {{{2
     wf:defer(".account-btn", #disable{}),
      #panel{
         class="form-group",
@@ -192,7 +192,7 @@ register_form(Page, Role) -> % {{{2
      register_button(Page, Role)
     ].
 
-confirm(Page, _Block, _Classes) -> % {{{2
+confirm(_Page, _Block, _Classes) -> % {{{2
     Data = common:q(confirm, ""),
     case db:confirm(wf:depickle(Data)) of
         {error, Reason} ->
@@ -210,6 +210,9 @@ maybe_redirect_to_login(Page) -> % {{{2
 
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
+% maybe_redirect_to_login(#cms_page{accepted_role=admin} = Page, URL) -> % {{{2
+%     ?LOG("TTTTT redirect to login: ~p", [Page]),
+%     maybe_redirect_to_login(Page#cms_page{accepted_role=admin}, URL);
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
     ?LOG("Not redirect to login: ~p", [Page]),
     Page;
@@ -223,13 +226,20 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
+    [
     #{
      cms_role => [
                   #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
                   #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
                   #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
                   #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
-                 ]}.
+                 ]},
+    #{cms_mfa => [
+                #cms_mfa{id={"index", "body"},
+                     mfa={router, common_redirect, [["", "/?page=register"]]},
+                     sort=1}
+                 ]}
+    ].
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -297,7 +307,8 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            ?LOG("User: ~p", [User]),
+            ?LOG("User: ~p~n", [User#user.role]),
+
             wf:redirect_from_login("/")
     end;
 
