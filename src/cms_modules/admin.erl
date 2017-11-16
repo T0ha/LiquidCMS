@@ -329,14 +329,18 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      }
                              }]).
 
-render_save_button(SavePostback) -> % {{{2
+render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
+                                                  is_atom(Delegate) ->
     #btn{
        id=save_button,
        type=success,
        size=md,
        text="Save",
-       postback=SavePostback
-      }.
+       postback=SavePostback,
+       delegate=Delegate
+      };
+render_save_button(SavePostback) -> % {{{2
+    render_save_button({SavePostback, ?MODULE}).
 
 render_copy_button(undefined) -> % {{{2
     "";
@@ -670,6 +674,145 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
+
+event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
+    new_modal("Edit text", 
+              {?MODULE, block, move, MFA},
+              undefined,
+              [
+               #hidden{id=module, text=common},
+               #hidden{id=function, text=text},
+               #hidden{id=add_page_select, text=PID},
+               #hidden{id=add_block, text=Block},
+               #wysiwyg{class=["form-control"],
+                        id=text_mfa,
+                        html=Text,
+                        buttons=[
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="B",
+                                             func="bold",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i>I</i>",
+                                             func="italic",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<u>U</u>",
+                                             func="underline",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<s>S</s>",
+                                             func="strikethrough",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-left'></i>",
+                                             func="justifyleft",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-center'></i>",
+                                             func="justifycenter",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-right'></i>",
+                                             func="justifyright",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-justify'></i>",
+                                             func="justifyfull",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-undo'></i>",
+                                             func="undo",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-repeat'></i>",
+                                             func="redo",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-close'></i>",
+                                             func="removeFormat",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-list-ol'></i>",
+                                             func="insertorderedlist",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-list-ul'></i>",
+                                             func="insertunorderedlist",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-outdent'></i>",
+                                             func="outdent",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-indent'></i>",
+                                             func="indent",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #link{
+                                             class=[
+                                                    "btn",
+                                                    "btn-default",
+                                                    "dropdown-toggle"
+                                                   ],
+                                             text="H<i class='caret'></i>",
+                                             data_fields=[
+                                                          {toggle, dropdown}
+                                                         ]},
+                                          #list{
+                                             class="dropdown-menu",
+                                             numbered=flase,
+                                             body=[ 
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H1",
+                                                         func="heading h1",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H2",
+                                                         func="heading 2",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H3",
+                                                         func="heading 3",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H4",
+                                                         func="heading 4",
+                                                         class=["btn", "btn-default"]}}
+                                                  ]}
+                                         ]}
+                                ]}
+              ]);
+
 event({asset, new, Type}) -> % {{{2
     new_modal("Upload Static Asset",
               {asset, save},

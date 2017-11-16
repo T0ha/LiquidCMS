@@ -34,6 +34,7 @@ render_element(_Record = #wysiwyg{
                        id=Id,
                        html_id="wysiwyg_raw_html"},
              #panel{html_id="wysiwyg_editor",
+                    style="height: 300px;margin: 15px;",
                     body=HTML,
                     class=Class},
              preview(Preview)

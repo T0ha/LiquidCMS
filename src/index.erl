@@ -32,11 +32,12 @@ body(Page) -> % {{{2
     common:parallel_block(Page, "body").
 	
 %% Event handlers {{{1
-event(click) -> % {{{2
-    wf:replace(button, #panel { 
-        body="You clicked the button!", 
-        actions=#effect { effect=highlight }
-    }).
+event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+    Id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
+    wf:replace(Id, common:parallel_block(PID, Block));
+event(Ev) -> % {{{2
+    ?LOG("~p event ~p", [?MODULE, Ev]).
+
 
 %% Block renderers {{{1
 maybe_block(_Page, "", _Classes) -> % {{{2
