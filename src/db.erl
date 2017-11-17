@@ -6,10 +6,6 @@
 
 -compile([export_all]).
 -include("db.hrl").
-% -record(new_cms_mfa, {id,sort,mfa,settings,created_at,updated_at}).
-% -record(new_cms_asset, {id,name,description,file,minified,type,settings,created_at,updated_at}).
-% -record(new_cms_page, {id,description,module,accepted_role,title,settings,created_at,updated_at}).
-% -record(new_cms_template, {file,bindings,name,description,settings,created_at,updated_at}).
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -68,9 +64,7 @@ update("0.1.1"=VSN) -> % {{{1
     mnesia:restore("mnesia.lcms", []),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("0.1.2"=VSN) -> % {{{1
-    % Updated_tables = [cms_mfa, cms_page, cms_asset,cms_template],
     CT = calendar:universal_time(),
-    % io:format("CT: ~p", [CT]),
     mnesia:transform_table(cms_mfa, fun({cms_mfa, Id,Sort,M,S}) -> 
                                          #cms_mfa{
                                             id=Id,
@@ -158,6 +152,7 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
                      C;
                  true -> 0
               end,
+    CT = calendar:universal_time(),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
                                                            _='_'}) of
@@ -166,7 +161,10 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
                                           email=Email,
                                           password=Password,
                                           confirm=Confirm,
-                                          role=Role},
+                                          role=Role,
+                                          created_at=CT,
+                                          updated_at=CT
+                                          },
                                 mnesia:write(User),
                                 User;
                             _ -> {error, "User already exist"}
@@ -183,7 +181,8 @@ confirm({Email, Confirm}) -> % {{{1
                                           confirm=Confirm,
                                           _='_'}) of
                   [User0] ->
-                      User = User0#cms_user{confirm=0},
+                      User = User0#cms_user{confirm=0,
+                                            updated_at=calendar:universal_time()},
                       mnesia:write(User),
                       {ok, User};
                   _ -> {error, "User confirmation error"}
@@ -267,14 +266,16 @@ fix_sort(#cms_mfa{id={PID, Block}}=Rec) -> % {{{1
 update(OldRecord, NewRecord) -> % {{{1
     transaction(fun() ->
                         mnesia:delete_object(OldRecord),
-                        mnesia:write(NewRecord)
+                        UR = update_record_field(NewRecord, updated_at, calendar:universal_time()),
+                        mnesia:write(UR)
                 end).
 
 update(Record, Field, Value) -> % {{{1
     transaction(fun() ->
                         mnesia:delete_object(Record),
                         R1 = update_record_field(Record, Field, Value),
-                        mnesia:write(R1),
+                        UR = update_record_field(R1, updated_at, calendar:universal_time()),
+                        mnesia:write(UR),
                         Value
                 end).
 
@@ -302,9 +303,10 @@ save([]) -> % {{{1
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1
+    UR = update_record_field(Record, created_at, calendar:universal_time()),
     transaction(fun() ->
-                        mnesia:write(Record),
-                        Record
+                        mnesia:write(UR),
+                        UR
                 end).
 
 maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
@@ -326,7 +328,8 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
                                 
                                 [mnesia:delete_object(B1) || B1 <- L, B1#cms_mfa.sort == Sort]
                         end,
-                        mnesia:write(B)
+                        UR = update_record_field(B, updated_at, calendar:universal_time()),
+                        mnesia:write(UR)
                 end).
 
 delete(#{}=Map) -> % {{{1
@@ -356,6 +359,7 @@ update_record_field(Record, Field, Value) -> % {{{1
     Fields = mnesia:table_info(Rec, attributes),
     Map = maps:from_list(lists:zip(Fields, RecList)),
     NewMap = maps:update(Field, Value, Map),
+    % Updated_at_Map = maps:update(updated_at, calendar:universal_time(), NewMap),
     NewList = [maps:get(K, NewMap, undefined) || K <- Fields],
     list_to_tuple([Rec|NewList]).
 
@@ -393,10 +397,14 @@ fields(cms_template) -> % {{{1
     record_info(fields, cms_template).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
+    CT = calendar:universal_time(),
     #cms_mfa{
        id={PID, Block},
        sort=Sort,
-       mfa=undefined}.
+       mfa=undefined,
+       created_at=CT,
+       updated_at=CT
+       }.
 
 get_db_vsn() -> % {{{1
     transaction(fun() ->
