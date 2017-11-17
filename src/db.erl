@@ -71,18 +71,74 @@ update("0.1.2"=VSN) -> % {{{1
     % Updated_tables = [cms_mfa, cms_page, cms_asset,cms_template],
     CT = calendar:universal_time(),
     % io:format("CT: ~p", [CT]),
-    mnesia:transform_table(cms_mfa, fun({cms_mfa, I,S,M,S}) -> 
+    mnesia:transform_table(cms_mfa, fun({cms_mfa, Id,Sort,M,S}) -> 
                                          #cms_mfa{
-                                            id=I,
-                                            sort=S,
+                                            id=Id,
+                                            sort=Sort,
                                             mfa=M,
                                             settings=S,
                                             created_at=CT,
                                             updated_at=CT
                                            }
                                     end, record_info(fields, cms_mfa)),
-    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN})
-    .
+    mnesia:transform_table(cms_template, fun({cms_template, F,B,N,D,S}) -> 
+                                         #cms_template{
+                                            file=F,
+                                            bindings=B,
+                                            name=N,
+                                            description=D,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_template)),
+    mnesia:transform_table(cms_asset, fun({cms_asset, Id,N,D,F,M,T,S}) -> 
+                                         #cms_asset{
+                                            id=Id,
+                                            name=N,
+                                            description=D,
+                                            file=F,
+                                            minified=M,
+                                            type=T,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_asset)),
+    mnesia:transform_table(cms_page, fun({cms_page, Id,D,M,Ar,T,S}) -> 
+                                         #cms_page{
+                                            id=Id,
+                                            description=D,
+                                            module=M,
+                                            accepted_role=Ar,
+                                            title=T,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_page)),
+    mnesia:transform_table(cms_user, fun({cms_user, E, P, R, C, S}) -> 
+                                         #cms_user{
+                                            email=E,
+                                            password=P,
+                                            role=R,
+                                            confirm=C,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_user)),
+    mnesia:transform_table(cms_role, fun({cms_role, R,N,Sort,S}) -> 
+                                         #cms_role{
+                                            role=R,
+                                            name=N,
+                                            sort=Sort,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_role)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN}).
     
 
 %% Getters

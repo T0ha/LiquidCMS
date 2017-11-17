@@ -88,13 +88,13 @@
          }).
 
 
--record(cms_account, {
-          id :: any(),
-          user :: binary(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
-          settings = #{} :: map()
-         }).
+% -record(cms_account, {
+%           id :: any(),
+%           user :: binary(),
+%           created_at :: calendar:datetime() | undefined,
+%           updated_at :: calendar:datetime() | undefined,
+%           settings = #{} :: map()
+%          }).
           
            
 -record(cms_role, {
