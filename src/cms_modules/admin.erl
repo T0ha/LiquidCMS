@@ -105,12 +105,16 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
     %           id = {PID, "page"},
     %           mfa=F,
     %           sort=N} || {N, F} <- NFuns],
+    CT = calendar:universal_time(),
     Page = #cms_page{
               id=PID,
               title=Title,
               description=Description,
               accepted_role=Role,
               module=Module
+              % ,
+              % created_at=CT,
+              % updated_at={}
              },
     db:save(Page).
 
@@ -119,12 +123,16 @@ add_template(TemplatePath, Bindings) -> % {{{2
 
 add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
+    CT = calendar:universal_time(),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
                       name = Name,
                       description = Description,
-                      bindings = Bindings});
+                      bindings = Bindings,
+                      created_at=CT,
+                      updated_at={}
+                      });
        true ->
            {error, no_template}
     end.

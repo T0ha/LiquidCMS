@@ -6,7 +6,10 @@
 
 -compile([export_all]).
 -include("db.hrl").
-
+% -record(new_cms_mfa, {id,sort,mfa,settings,created_at,updated_at}).
+% -record(new_cms_asset, {id,name,description,file,minified,type,settings,created_at,updated_at}).
+% -record(new_cms_page, {id,description,module,accepted_role,title,settings,created_at,updated_at}).
+% -record(new_cms_template, {file,bindings,name,description,settings,created_at,updated_at}).
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -63,8 +66,24 @@ update("0.1.1"=VSN) -> % {{{1
     mnesia:delete_table(cms_user),
     ?CREATE_TABLE(cms_user, set, []),
     mnesia:restore("mnesia.lcms", []),
-    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN}).
-                        
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.2"=VSN) -> % {{{1
+    % Updated_tables = [cms_mfa, cms_page, cms_asset,cms_template],
+    CT = calendar:universal_time(),
+    % io:format("CT: ~p", [CT]),
+    mnesia:transform_table(cms_mfa, fun({cms_mfa, I,S,M,S}) -> 
+                                         #cms_mfa{
+                                            id=I,
+                                            sort=S,
+                                            mfa=M,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_mfa)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN})
+    .
+    
 
 %% Getters
 login(Email, Password) -> % {{{1
@@ -232,7 +251,7 @@ save(Record) -> % {{{1
                         Record
                 end).
 
-maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
+maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
     transaction(fun() ->
                         case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, _='_'}) of
                             [] ->

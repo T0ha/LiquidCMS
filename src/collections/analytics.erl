@@ -9,11 +9,14 @@
 ?DESCRIPTION(Analytics services).
 
 default_data() -> % {{{2
+  CT = calendar:universal_time(),
     #{cms_template => [
                   #cms_template{
                             file="templates/hs_analytics.html",
                             bindings=[],
-                            name="Hubspot Analytics"},
+                            name="Hubspot Analytics",
+                            created_at=CT,
+                      updated_at={}},
                   #cms_template{
                             file="templates/ga_analytics.html",
                             bindings=[],
