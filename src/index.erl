@@ -33,8 +33,7 @@ body(Page) -> % {{{2
 	
 %% Event handlers {{{1
 event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
-    Id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
-    wf:replace(Id, common:parallel_block(PID, Block));
+    wf:update(common:block_to_html_id(Block), common:parallel_block(wf:state(page), Block));
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
