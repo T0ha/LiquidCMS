@@ -38,6 +38,22 @@ default_data() -> % {{{2
                     #cms_mfa{id={"*", "script"},
                              mfa={common, asset, [["js", "livevalidation"]]},
                              sort=5},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                             sort=6,
+                             settings=#{filters => ["", "", "editor"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                             sort=7,
+                             settings=#{filters => ["", "", "editor"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                             sort=8,
+                             settings=#{filters => ["", "", "admin"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                             sort=9,
+                             settings=#{filters => ["", "", "admin"]}},
 
                     %CSS
                     #cms_mfa{id={"*", "css"},
@@ -674,7 +690,6 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
-
 event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
     new_modal("Edit text", 
               {?MODULE, block, move, MFA},
