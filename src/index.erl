@@ -71,32 +71,35 @@ maybe_add_editor(Page, false) -> % {{{2
     ok;
 maybe_add_editor(Page, true) -> % {{{2
     wf:insert_top("body",
-                  #bs_row{
-                     style="width: 100%;height:50px;padding:10px;background-color: #c33;",
-                     body=[
-                           #bs_col{
-                              cols=[{md, 8}]
-                             },
-                           #bs_col{
-                              cols=[{md, 2}],
-                              body=[
-                                    #checkbox{
-                                       id=disable_links,
-                                       class=["pull-left"],
-                                       label_position=none,
-                                       postback={?MODULE, links, disable}
-                                      },
-                                    #label{
-                                       text=" Disable links"
-                                      }
-                          ]},
-                           #bs_col{
-                              cols=[{md, 1}],
-                              body=#btn{
-                                      type=success,
-                                      size=xs,
-                                      text="Log Out",
-                                      postback={auth, logout},
-                                      delegate=account
-                                     }}
-                          ]}).
+                  #panel{
+                     class="container-fluid",
+                     body=#bs_row{
+                             style="height:50px;padding:10px;background-color: #c33;",
+                             body=[
+                                   #bs_col{
+                                      cols=[{md, 9}]
+                                     },
+                                   #bs_col{
+                                      cols=[{md, 2}],
+                                      body=[
+                                            #checkbox{
+                                               id=disable_links,
+                                               class=["pull-left"],
+                                               label_position=none,
+                                               postback={?MODULE, links, disable}
+                                              },
+                                            #label{
+                                               for=disable_links,
+                                               text=" Disable links"
+                                              }
+                                           ]},
+                                   #bs_col{
+                                      cols=[{md, 1}],
+                                      body=#btn{
+                                              type=success,
+                                              size=xs,
+                                              text="Log Out",
+                                              postback={auth, logout},
+                                              delegate=account
+                                             }}
+                                  ]}}).
