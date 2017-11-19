@@ -303,7 +303,8 @@ save([]) -> % {{{1
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1
-    UR = update_record_field(Record, created_at, calendar:universal_time()),
+    CR = update_record_field(Record, updated_at, calendar:universal_time()),
+    UR = update_record_field(CR, created_at, calendar:universal_time()),
     transaction(fun() ->
                         mnesia:write(UR),
                         UR
@@ -411,3 +412,123 @@ get_db_vsn() -> % {{{1
                         [VSN] = mnesia:read(cms_settings, vsn),
                         VSN
                 end).
+
+merge_backup_and_db(Source, Mod) -> % {{{1
+    View = fun(Item, Acc) ->
+                [RecType|_RecList] = tuple_to_list(Item),
+                case RecType of
+                    cms_mfa ->
+                        Id=Item#cms_mfa.id,
+                        Sort=Item#cms_mfa.sort,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_mfa{id=Id, sort=Sort, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_mfa.created_at>DbItem#cms_mfa.created_at) or (Item#cms_mfa.updated_at>DbItem#cms_mfa.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_asset ->
+                        Id=Item#cms_asset.id,
+                        File=Item#cms_asset.file,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_asset{id=Id, file=File, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_asset.created_at>DbItem#cms_asset.created_at) 
+                                        or (Item#cms_asset.updated_at>DbItem#cms_asset.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_page ->
+                        Id=Item#cms_page.id,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_page{id=Id, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_page.created_at>DbItem#cms_page.created_at) 
+                                        or (Item#cms_page.updated_at>DbItem#cms_page.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_template ->
+                        Name=Item#cms_template.name,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_template{name=Name, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_template.created_at>DbItem#cms_template.created_at) 
+                                        or (Item#cms_template.updated_at>DbItem#cms_template.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_role ->
+                        Name=Item#cms_role.name,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_role{name=Name, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_role.created_at>DbItem#cms_role.created_at) 
+                                        or (Item#cms_role.updated_at>DbItem#cms_role.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_user ->
+                        Email=Item#cms_user.email,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_user{email=Email, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_user.created_at>DbItem#cms_user.created_at) 
+                                        or (Item#cms_user.updated_at>DbItem#cms_user.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                        _Else -> false          
+                end,
+
+                {[Item], Acc + 1}
+           end,
+    mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
