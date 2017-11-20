@@ -135,12 +135,16 @@ add_template(TemplatePath, Bindings) -> % {{{2
 
 add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
+    CT = calendar:universal_time(),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
                       name = Name,
                       description = Description,
-                      bindings = Bindings});
+                      bindings = Bindings,
+                      created_at=CT,
+                      updated_at={}
+                      });
        true ->
            {error, no_template}
     end.
@@ -158,7 +162,7 @@ add_to_block(PID, Block, {M, F, A}, Sort) -> % {{{2
 
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
-    ItemSubmenuBlock = common:sub_block(ItemBlock, "submenu"),
+    _ItemSubmenuBlock = common:sub_block(ItemBlock, "submenu"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
                            mfa={common,
@@ -300,7 +304,7 @@ file_to_asset(File, Path) -> % {{{2
                    description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=image};
-            {Any, _} ->
+            {Any, _} ->  % unused ?
                 #cms_asset{
                    id=[Ext, Min | Id],
                    name=string:join(lists:reverse([Min|Id]), "."),
@@ -521,7 +525,7 @@ render_field({Label, {ID, Text}}, Width) -> % {{{2
                 text=Text
                }
             ]};
-render_field({Label, Any}, Width) when is_list(Any) -> % {{{2
+render_field({Label, Any}, _Width) when is_list(Any) -> % {{{2
     #bs_col{
        cols={lg, 12},
        body=[
@@ -1400,7 +1404,9 @@ inplace_textbox_event(Tag, Value) -> % {{{2
 start_upload_event(_Tag) -> % {{{2
     ok.
 finish_upload_event(backup, _Fname, Path, _Node) -> % {{{2
-    {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
+    ?LOG("Import backup: ~p~n ", [_Fname]),
+    db:merge_backup_and_db(Path, mnesia_backup),
+    % {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
     coldstrap:close_modal(),
     file:delete(Path);
 finish_upload_event(template, Fname, Path, _Node) -> % {{{2

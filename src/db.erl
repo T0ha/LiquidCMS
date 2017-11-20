@@ -7,7 +7,6 @@
 -compile([export_all]).
 -include("db.hrl").
 
-
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
     ?CREATE_TABLE(cms_settings, set, []),
@@ -63,8 +62,78 @@ update("0.1.1"=VSN) -> % {{{1
     mnesia:delete_table(cms_user),
     ?CREATE_TABLE(cms_user, set, []),
     mnesia:restore("mnesia.lcms", []),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.2"=VSN) -> % {{{1
+    CT = calendar:universal_time(),
+    mnesia:transform_table(cms_mfa, fun({cms_mfa, Id,Sort,M,S}) -> 
+                                         #cms_mfa{
+                                            id=Id,
+                                            sort=Sort,
+                                            mfa=M,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_mfa)),
+    mnesia:transform_table(cms_template, fun({cms_template, F,B,N,D,S}) -> 
+                                         #cms_template{
+                                            file=F,
+                                            bindings=B,
+                                            name=N,
+                                            description=D,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_template)),
+    mnesia:transform_table(cms_asset, fun({cms_asset, Id,N,D,F,M,T,S}) -> 
+                                         #cms_asset{
+                                            id=Id,
+                                            name=N,
+                                            description=D,
+                                            file=F,
+                                            minified=M,
+                                            type=T,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_asset)),
+    mnesia:transform_table(cms_page, fun({cms_page, Id,D,M,Ar,T,S}) -> 
+                                         #cms_page{
+                                            id=Id,
+                                            description=D,
+                                            module=M,
+                                            accepted_role=Ar,
+                                            title=T,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_page)),
+    mnesia:transform_table(cms_user, fun({cms_user, E, P, R, C, S}) -> 
+                                         #cms_user{
+                                            email=E,
+                                            password=P,
+                                            role=R,
+                                            confirm=C,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_user)),
+    mnesia:transform_table(cms_role, fun({cms_role, R,N,Sort,S}) -> 
+                                         #cms_role{
+                                            role=R,
+                                            name=N,
+                                            sort=Sort,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CT
+                                           }
+                                    end, record_info(fields, cms_role)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN}).
-                        
+    
 
 %% Getters
 login(Email, Password) -> % {{{1
@@ -83,6 +152,7 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
                      C;
                  true -> 0
               end,
+    CT = calendar:universal_time(),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
                                                            _='_'}) of
@@ -91,7 +161,10 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
                                           email=Email,
                                           password=Password,
                                           confirm=Confirm,
-                                          role=Role},
+                                          role=Role,
+                                          created_at=CT,
+                                          updated_at=CT
+                                          },
                                 mnesia:write(User),
                                 User;
                             _ -> {error, "User already exist"}
@@ -108,7 +181,8 @@ confirm({Email, Confirm}) -> % {{{1
                                           confirm=Confirm,
                                           _='_'}) of
                   [User0] ->
-                      User = User0#cms_user{confirm=0},
+                      User = User0#cms_user{confirm=0,
+                                            updated_at=calendar:universal_time()},
                       mnesia:write(User),
                       {ok, User};
                   _ -> {error, "User confirmation error"}
@@ -192,14 +266,16 @@ fix_sort(#cms_mfa{id={PID, Block}}=Rec) -> % {{{1
 update(OldRecord, NewRecord) -> % {{{1
     transaction(fun() ->
                         mnesia:delete_object(OldRecord),
-                        mnesia:write(NewRecord)
+                        UR = update_record_field(NewRecord, updated_at, calendar:universal_time()),
+                        mnesia:write(UR)
                 end).
 
 update(Record, Field, Value) -> % {{{1
     transaction(fun() ->
                         mnesia:delete_object(Record),
                         R1 = update_record_field(Record, Field, Value),
-                        mnesia:write(R1),
+                        UR = update_record_field(R1, updated_at, calendar:universal_time()),
+                        mnesia:write(UR),
                         Value
                 end).
 
@@ -227,12 +303,14 @@ save([]) -> % {{{1
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1
+    CR = update_record_field(Record, updated_at, calendar:universal_time()),
+    UR = update_record_field(CR, created_at, calendar:universal_time()),
     transaction(fun() ->
-                        mnesia:write(Record),
-                        Record
+                        mnesia:write(UR),
+                        UR
                 end).
 
-maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
+maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
     transaction(fun() ->
                         case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, _='_'}) of
                             [] ->
@@ -251,7 +329,8 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
                                 
                                 [mnesia:delete_object(B1) || B1 <- L, B1#cms_mfa.sort == Sort]
                         end,
-                        mnesia:write(B)
+                        UR = update_record_field(B, updated_at, calendar:universal_time()),
+                        mnesia:write(UR)
                 end).
 
 delete(#{}=Map) -> % {{{1
@@ -281,6 +360,7 @@ update_record_field(Record, Field, Value) -> % {{{1
     Fields = mnesia:table_info(Rec, attributes),
     Map = maps:from_list(lists:zip(Fields, RecList)),
     NewMap = maps:update(Field, Value, Map),
+    % Updated_at_Map = maps:update(updated_at, calendar:universal_time(), NewMap),
     NewList = [maps:get(K, NewMap, undefined) || K <- Fields],
     list_to_tuple([Rec|NewList]).
 
@@ -318,13 +398,137 @@ fields(cms_template) -> % {{{1
     record_info(fields, cms_template).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
+    CT = calendar:universal_time(),
     #cms_mfa{
        id={PID, Block},
        sort=Sort,
-       mfa=undefined}.
+       mfa=undefined,
+       created_at=CT,
+       updated_at=CT
+       }.
 
 get_db_vsn() -> % {{{1
     transaction(fun() ->
                         [VSN] = mnesia:read(cms_settings, vsn),
                         VSN
                 end).
+
+merge_backup_and_db(Source, Mod) -> % {{{1
+    View = fun(Item, Acc) ->
+                [RecType|_RecList] = tuple_to_list(Item),
+                case RecType of
+                    cms_mfa ->
+                        Id=Item#cms_mfa.id,
+                        Sort=Item#cms_mfa.sort,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_mfa{id=Id, sort=Sort, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_mfa.created_at>DbItem#cms_mfa.created_at) or (Item#cms_mfa.updated_at>DbItem#cms_mfa.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_asset ->
+                        Id=Item#cms_asset.id,
+                        File=Item#cms_asset.file,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_asset{id=Id, file=File, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_asset.created_at>DbItem#cms_asset.created_at) 
+                                        or (Item#cms_asset.updated_at>DbItem#cms_asset.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_page ->
+                        Id=Item#cms_page.id,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_page{id=Id, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_page.created_at>DbItem#cms_page.created_at) 
+                                        or (Item#cms_page.updated_at>DbItem#cms_page.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_template ->
+                        Name=Item#cms_template.name,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_template{name=Name, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_template.created_at>DbItem#cms_template.created_at) 
+                                        or (Item#cms_template.updated_at>DbItem#cms_template.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_role ->
+                        Name=Item#cms_role.name,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_role{name=Name, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_role.created_at>DbItem#cms_role.created_at) 
+                                        or (Item#cms_role.updated_at>DbItem#cms_role.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                    cms_user ->
+                        Email=Item#cms_user.email,
+                        transaction(fun() ->
+                            case mnesia:match_object(#cms_user{email=Email, _='_'}) of
+                                [] ->
+                                    mnesia:write(Item),
+                                    io:format("~nNew item: ~p",[Item]);
+                                L when is_list(L) -> 
+                                    [
+                                      if (Item#cms_user.created_at>DbItem#cms_user.created_at) 
+                                        or (Item#cms_user.updated_at>DbItem#cms_user.updated_at)  -> 
+                                        mnesia:delete_object(DbItem),
+                                        mnesia:write(Item),
+                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
+                                      end ||  DbItem <- L
+                                    ]
+                            end
+                        end);
+                        _Else -> false          
+                end,
+
+                {[Item], Acc + 1}
+           end,
+    mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).

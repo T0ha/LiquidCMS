@@ -39,6 +39,8 @@
           id :: {string(), string()},
           sort :: non_neg_integer(),
           mfa :: {module(), fun(), [any()]} | fun(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings :: map()
          }).
 
@@ -47,6 +49,8 @@
           bindings=[] :: [proplists:property()],
           name="" :: string(),
           description="" :: string(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings=#{} :: map()
          }).
 
@@ -57,6 +61,8 @@
           file :: iodata(),
           minified=false :: boolean(),
           type :: asset_type(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings=#{} :: map()
          }).
 
@@ -66,7 +72,9 @@
           module = router :: module(),
           accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
-          settings = #{}
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
+          settings = #{} :: map()
          }).
 
 -record(cms_user, {
@@ -74,21 +82,27 @@
           password :: binary(),
           role :: role(),
           confirm = 0 :: integer(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings = #{} :: map()
          }).
 
 
--record(cms_account, {
-          id :: any(),
-          user :: binary(),
-          settings = #{} :: map()
-         }).
+% -record(cms_account, {
+%           id :: any(),
+%           user :: binary(),
+%           created_at :: calendar:datetime() | undefined,
+%           updated_at :: calendar:datetime() | undefined,
+%           settings = #{} :: map()
+%          }).
           
            
 -record(cms_role, {
           role :: role(),
           name :: binary(),
           sort=1 :: integer(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings = #{} :: map()
          }).
 
