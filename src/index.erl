@@ -69,6 +69,8 @@ maybe_add_editor(Page) -> % {{{2
 
 maybe_add_editor(Page, false) -> % {{{2
     ok;
+maybe_add_editor(#cms_page{id="admin"}, true) -> % {{{2
+    ok;
 maybe_add_editor(Page, true) -> % {{{2
     wf:insert_top("body",
                   #panel{
@@ -92,7 +94,7 @@ maybe_add_editor(Page, true) -> % {{{2
                                                for=disable_links,
                                                text=" Disable links"
                                               }
-                                           ]},
+                                          ]},
                                    #bs_col{
                                       cols=[{md, 1}],
                                       body=#btn{
