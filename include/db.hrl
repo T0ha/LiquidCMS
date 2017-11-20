@@ -2,6 +2,10 @@
 -define(DESCRIPTION(Text), description() -> ??Text).
 
 %% DB helpers
+-define(TIMESTAMPS, 
+        created_at :: calendar:datetime() | undefined,
+        updated_at :: calendar:datetime() | undefined).
+
 -define(V(Response), db:verify_create_table(Response)).
 -define(CREATE_TABLE(Record, Type, Indexes), 
         ?V(mnesia:create_table(Record,
@@ -35,13 +39,13 @@
           value :: term()
          }).
 
--record(cms_mfa, {
-          id :: {string(), string()},
-          sort :: non_neg_integer(),
-          mfa :: {module(), fun(), [any()]} | fun(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
-          settings :: map()
+-record(cms_mfa, 
+        {
+         id :: {string(), string()},
+         sort :: non_neg_integer(),
+         mfa :: {module(), atom(), [any()]} | fun(),
+         ?TIMESTAMPS,
+         settings :: map()
          }).
 
 -record(cms_template, {
@@ -49,8 +53,7 @@
           bindings=[] :: [proplists:property()],
           name="" :: string(),
           description="" :: string(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
+          ?TIMESTAMPS,
           settings=#{} :: map()
          }).
 
@@ -61,8 +64,7 @@
           file :: iodata(),
           minified=false :: boolean(),
           type :: asset_type(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
+          ?TIMESTAMPS,
           settings=#{} :: map()
          }).
 
@@ -72,8 +74,7 @@
           module = router :: module(),
           accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
+          ?TIMESTAMPS,
           settings = #{} :: map()
          }).
 
@@ -82,8 +83,7 @@
           password :: binary(),
           role :: role(),
           confirm = 0 :: integer(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
+          ?TIMESTAMPS,
           settings = #{} :: map()
          }).
 
