@@ -427,7 +427,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     io:format("~nNew item: ~p",[Item]);
                                 L when is_list(L) -> 
                                     [
-                                      if (Item#cms_mfa.created_at>DbItem#cms_mfa.created_at) or (Item#cms_mfa.updated_at>DbItem#cms_mfa.updated_at)  -> 
+                                      if Item#cms_mfa.updated_at>DbItem#cms_mfa.updated_at -> 
                                         mnesia:delete_object(DbItem),
                                         mnesia:write(Item),
                                         io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
