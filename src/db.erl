@@ -302,13 +302,29 @@ save([]) -> % {{{1
     [];
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
-save(Record) -> % {{{1    
-    if Record#cms_mfa.created_at == undefined ->
+save(Record) -> % {{{1
+    [RecType|_RecList] = tuple_to_list(Record),
+    case RecType of
+        cms_mfa ->
+            Created_at=Record#cms_mfa.created_at;
+        cms_page ->
+            Created_at=Record#cms_page.created_at;
+        cms_asset ->
+            Created_at=Record#cms_asset.created_at;
+        cms_template ->
+            Created_at=Record#cms_template.created_at;
+        cms_role ->
+            Created_at=Record#cms_role.created_at;
+        cms_user ->
+            Created_at=Record#cms_user.created_at
+    end,
+    % io:format("~nCreated_at ~p~n", [Created_at]),
+    if Created_at == undefined ->
         CR = update_record_field(Record, created_at, calendar:universal_time()),
         UR = update_record_field(CR, updated_at, calendar:universal_time());
     true -> UR = update_record_field(Record, updated_at, calendar:universal_time())
     end,
-    % io:format("~nSave: ~p~n", [UR]),
+    io:format("~nSave: ~p~n", [UR]),
     transaction(fun() ->
                         mnesia:write(UR),
                         UR

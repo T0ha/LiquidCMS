@@ -121,6 +121,7 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
     %           id = {PID, "page"},
     %           mfa=F,
     %           sort=N} || {N, F} <- NFuns],
+
     Page = #cms_page{
               id=PID,
               title=Title,
@@ -128,6 +129,7 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
               accepted_role=Role,
               module=Module
              },
+    ?LOG("~nadd_page:~p", [Page]),
     db:save(Page).
 
 add_template(TemplatePath, Bindings) -> % {{{2
@@ -304,7 +306,7 @@ file_to_asset(File, Path) -> % {{{2
                    description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=image};
-            {Any, _} ->  % unused ?
+            {_Any, _} ->  % unused ?
                 #cms_asset{
                    id=[Ext, Min | Id],
                    name=string:join(lists:reverse([Min|Id]), "."),
@@ -491,13 +493,13 @@ form_elements(M, F, A) -> % {{{2
 
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
-            Width when Width >= 4 ->
-            %?LOG("Width: ~p", [Width]),
-                [
-             #bs_row{
-                body=[render_field(Col, Width) || Col <- Cols]
-               }];
-        Width ->
+        Width when Width >= 4 ->
+        %?LOG("Width: ~p", [Width]),
+            [
+         #bs_row{
+            body=[render_field(Col, Width) || Col <- Cols]
+           }];
+        _Width ->
             %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
@@ -832,7 +834,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                                 ]}
               ]);
 
-event({asset, new, Type}) -> % {{{2
+event({asset, new, _Type}) -> % {{{2
     new_modal("Upload Static Asset",
               {asset, save},
               asset, 
@@ -1084,7 +1086,7 @@ event({page, construct}) -> % {{{2
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
     
-event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+event({page, construct, PID, [Block|_]}) -> % {{{2
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
@@ -1186,9 +1188,9 @@ event({block, add, Block}) -> % {{{2
            mfa={common, template, ["templates/login.html"]},
            sort=new},
     event({block, edit, B});
-event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
+event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=_S}=B}) -> % {{{2
     Pages = get_pages(),
-    [#{id := P} | _] = Pages,
+    [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role] = get_filters(B),
     Header = [
               "Add new block to page: ",
@@ -1244,7 +1246,7 @@ event({?MODULE, block, move, Old}) -> % {{{2
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
-event({?MODULE, block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
+event({?MODULE, block, save, #cms_mfa{id=_OldID, sort=_Sort}=Old}) -> % {{{2
     [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
                                       db:save(
                                         apply_element_transform(
@@ -1396,6 +1398,7 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
+    % ?LOG("~n inplace_textbox_event ~p", [Record]),
     Val = db:update(Record, Field, Value),
     Val;
 inplace_textbox_event(Tag, Value) -> % {{{2
@@ -1429,7 +1432,7 @@ api_event(Name, Tag, Args) -> % {{{2
 
 sort_event({PID, Block}, Blocks) -> % {{{2
     ?LOG("Blocks: ~p", [Blocks]),
-    lists:foreach(fun({N, {block, PID, B}}) ->
+    lists:foreach(fun({N, {block, _PID, B}}) ->
                      db:update(B, B#cms_mfa{sort=N})
              end,
              lists:zip(lists:seq(1, length(Blocks)), Blocks)),
