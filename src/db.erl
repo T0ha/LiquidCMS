@@ -297,8 +297,7 @@ copy_page(Map) -> % {{{1
                                 mnesia:write(NewDbItem)
                                 end, L)
                     end
-                end)
-    .
+                end).
 
 update_map(Map) -> % {{{1
     update_map(Map, fun fields/1).
@@ -307,7 +306,26 @@ update_map(Map, FieldsFun) -> % {{{1
     io:format("~nDb update_map: ~p~n~p", [Map, FieldsFun]),
     save(map_to_record(Map, FieldsFun)).
 
-
+rename_page(Map, OldValue) ->  % {{{1
+    update_map(Map),
+    io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
+    NewPID = maps:get(id,Map),
+    transaction(fun() ->
+                    case mnesia:match_object(#cms_mfa{id={OldValue, '_'}, _='_'}) of
+                        [] ->
+                            ok;
+                        L -> 
+                            lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
+                                NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
+                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
+                                mnesia:write(NewDbItem),
+                                mnesia:delete_object(DbItem)
+                                end, L)
+                    end,
+                    OldPage = mnesia:match_object(#cms_page{id=OldValue, _='_'}),
+                    % io:format("~ndelete_object: ~p", [OldPage ]),
+                    [mnesia:delete_object(O) || O <- OldPage]
+                end).
                         
 get_pages() -> % {{{1
     transaction(fun() ->

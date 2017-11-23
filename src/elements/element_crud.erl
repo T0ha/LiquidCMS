@@ -26,12 +26,12 @@ reflect() -> record_info(fields, crud).
 render_element(Record = #crud{
                            id=CRUDID,
                            class=Class,
-                           table_class=TableClass,
-                           button_class=ButtonClass,
-                           cols=Cols,
+                           table_class=_TableClass,
+                           button_class=_ButtonClass,
+                           cols=_Cols,
                            funs=Funs,
-                           count=Count,
-                           start=Start
+                           count=_Count,
+                           start=_Start
                           }) ->
     List = maps:get(list, Funs, fun() -> [] end),
 
@@ -110,9 +110,10 @@ table_row(#crud{ % {{{1
               [#tablecell{
                   body=case Type of
                            tb ->
-                               #inplace_textbox{tag={update, Rec, Data, Field},
+                               OldValue = maps:get(Field, Data, " "),
+                               #inplace_textbox{tag={rename_page, Rec, Data, Field,OldValue},
                                                 delegate=?MODULE,
-                                                text=maps:get(Field, Data, " ")};
+                                                text=OldValue};
                            ta ->
                                #inplace_textarea{tag={update, Rec, Data, Field},
                                                  delegate=?MODULE,
@@ -149,10 +150,11 @@ table_row(#crud{ % {{{1
              ]}.
 
 
-inplace_textbox_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
-    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value));
+inplace_textbox_event({rename_page=Fun, Rec, Data, Field, OldValue}=_E, Value) -> % {{{1
+  ?LOG("~p inplace1 tb event ~p:  ", [?MODULE, Value]),
+    rename_page(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), OldValue);
 inplace_textbox_event(Tag, Value) -> % {{{1
-    ?LOG("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+    ?LOG("~p inplace2 tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
@@ -167,30 +169,44 @@ event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1
     wf:replace(Rec#crud.id, Rec);
 event({show, Rec}=_E) -> % {{{1
     wf:replace(Rec#crud.id, Rec);
-event({Fun, Rec, Data}=E) -> % {{{1
-    io:format("Event: ~p~n", [E]),
-    call(Fun, Rec, Data),
+event({Fun, Rec, Data}=_E) -> % {{{1
+    % io:format("Event: ~p~n", [E]),
+    call(Fun, Rec, Data, undefined),
     wf:replace(Rec#crud.id, Rec);
 event(Ev) -> % {{{1
     wf:warning("Event ~p in ~p", [Ev, ?MODULE]).
-    
-update(Fun, Rec, Data, Field, Value) -> % {{{1
-    ?LOG("~nupdate(crud): ~p", [Value]),
+
+rename_page(Fun, Rec, Data, Field, Value, OldValue) -> % {{{1
     Bag = maps:get(table_type, Data, set),
     ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
            {true, true} ->
-               call(delete, Rec, Data);
+               call(delete, Rec, Data, undefined);
            _ -> ok
        end,
     NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
-    ?LOG("~nupdate from crud:fun ~p, val:~p", [Fun,Value]),
-    call(Fun, Rec, NewData),
+    call(Fun, Rec, NewData,OldValue),
     Value.
 
-call(Fun, #crud{funs=Funs}=_Rec, Data) -> % {{{1
+update(Fun, Rec, Data, Field, Value) -> % {{{1
+        ?LOG("~nupdate(crud): ~p", [Value]),
+    Bag = maps:get(table_type, Data, set),
+    ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
+           {true, true} ->
+               call(delete, Rec, Data, undefined);
+           _ -> ok
+       end,
+    NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
+    call(Fun, Rec, NewData, undefined),
+    Value.
+
+call(Fun, #crud{funs=Funs}=_Rec, Data, OldValue) -> % {{{1
     ?LOG("~nwill call: ~p", [Fun]),
     F = maps:get(Fun, Funs, fun(D) -> D end),
-    F(Data).
+    if OldValue/=undefined ->
+      F(Data, OldValue);
+    true ->
+      F(Data)
+    end.
 
 cast(Value, Old) when is_atom(Old) -> % {{{1
     wf:to_atom(Value);
