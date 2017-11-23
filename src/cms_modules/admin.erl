@@ -1020,7 +1020,8 @@ event({page, show}) -> % {{{2
        funs=#{
          list => fun db:get_pages/0,
          update => fun db:update_map/1, 
-         delete => fun db:delete/1
+         delete => fun db:delete/1,
+         copy_page => fun db:copy_page/1
         }
       },
     wf:update(container, [
@@ -1083,6 +1084,7 @@ event({page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
+     ?LOG("~nconstruct page:~p",[PID]),
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
     
@@ -1091,6 +1093,7 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
+    ?LOG("~nconstruct page2:~p",[PID]),
 
     ShowAll = (common:q(show_all, "false") /= "false"),
 
@@ -1149,8 +1152,9 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
 
     update_container("Construct Page", "Add Block", {block, add}, Body);
 
-event({page, save}) -> % {{{2
+event({page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
+    ?LOG("~nevent savve page:~p",[PID]),
     Title = wf:q(title),
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
@@ -1398,7 +1402,7 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
-    % ?LOG("~n inplace_textbox_event ~p", [Record]),
+    ?LOG("~n inplace_textbox_event ~p", [Record]),
     Val = db:update(Record, Field, Value),
     Val;
 inplace_textbox_event(Tag, Value) -> % {{{2

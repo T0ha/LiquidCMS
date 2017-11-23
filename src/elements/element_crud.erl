@@ -118,7 +118,7 @@ table_row(#crud{ % {{{1
                                                  delegate=?MODULE,
                                                  text=maps:get(Field, Data, " ")};
                            none ->
-                               V = 
+                               _V = 
                                #span{text=wf:f("~p", [maps:get(Field, Data, " ")])};
                            {select, Values} ->
                                Id = wf:temp_id(),
@@ -137,6 +137,13 @@ table_row(#crud{ % {{{1
                           text="X",
                           class=Rec#crud.button_class,
                           actions=?POSTBACK({delete, Rec, Data})
+                         }}] ++
+              [#tablecell{
+                  % show_if=maps:is_key(copy, Funs),
+                  body=#button{
+                          text="Copy page",
+                          class=Rec#crud.button_class,
+                          actions=?POSTBACK({copy_page, Rec, Data})
                          }}]
                           
              ]}.
@@ -158,7 +165,7 @@ event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1
     Val = wf:q(ElementId),
     update(Fun, Rec, Data, Field, Val),
     wf:replace(Rec#crud.id, Rec);
-event({show, Rec}=E) -> % {{{1
+event({show, Rec}=_E) -> % {{{1
     wf:replace(Rec#crud.id, Rec);
 event({Fun, Rec, Data}=E) -> % {{{1
     io:format("Event: ~p~n", [E]),
@@ -168,6 +175,7 @@ event(Ev) -> % {{{1
     wf:warning("Event ~p in ~p", [Ev, ?MODULE]).
     
 update(Fun, Rec, Data, Field, Value) -> % {{{1
+    ?LOG("~nupdate(crud): ~p", [Value]),
     Bag = maps:get(table_type, Data, set),
     ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
            {true, true} ->
@@ -175,10 +183,12 @@ update(Fun, Rec, Data, Field, Value) -> % {{{1
            _ -> ok
        end,
     NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
+    ?LOG("~nupdate from crud:fun ~p, val:~p", [Fun,Value]),
     call(Fun, Rec, NewData),
     Value.
 
-call(Fun, #crud{funs=Funs}=Rec, Data) -> % {{{1
+call(Fun, #crud{funs=Funs}=_Rec, Data) -> % {{{1
+    ?LOG("~nwill call: ~p", [Fun]),
     F = maps:get(Fun, Funs, fun(D) -> D end),
     F(Data).
 

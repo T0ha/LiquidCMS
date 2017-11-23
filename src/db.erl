@@ -271,6 +271,7 @@ update(OldRecord, NewRecord) -> % {{{1
                 end).
 
 update(Record, Field, Value) -> % {{{1
+    % io:format("Db update: ~p~n", [Record]),
     transaction(fun() ->
                         mnesia:delete_object(Record),
                         R1 = update_record_field(Record, Field, Value),
@@ -279,10 +280,31 @@ update(Record, Field, Value) -> % {{{1
                         Value
                 end).
 
+copy_page(Map) -> % {{{1
+    PID = maps:get(id,Map),
+    NewPID = "copy_" ++ PID,
+    NewMap = maps:update(id, NewPID, Map),
+    io:format("~nDb copy PID: ~p to ~p~n", [PID, NewPID]),
+    update_map(NewMap),
+    transaction(fun() ->
+                    case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
+                        [] ->
+                            ok;
+                        L -> 
+                            lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
+                                NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
+                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
+                                mnesia:write(NewDbItem)
+                                end, L)
+                    end
+                end)
+    .
+
 update_map(Map) -> % {{{1
     update_map(Map, fun fields/1).
 
 update_map(Map, FieldsFun) -> % {{{1
+    io:format("~nDb update_map: ~p~n~p", [Map, FieldsFun]),
     save(map_to_record(Map, FieldsFun)).
 
 
