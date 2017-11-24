@@ -300,14 +300,25 @@ copy_page(Map) -> % {{{1
                 end).
 
 update_map(Map) -> % {{{1
+    try % for rename page
+        OldValue = maps:get(old_value,Map),
+        if OldValue /= undefined -> 
+            rename_page(Map, OldValue);
+        true ->
+            ok
+        end
+        % NewMap = maps:remove(old_value,Map)
+    catch error:{badkey,_} -> 
+        ok
+    end,
     update_map(Map, fun fields/1).
-
+    
 update_map(Map, FieldsFun) -> % {{{1
-    io:format("~nDb update_map: ~p~n~p", [Map, FieldsFun]),
+    io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
 
 rename_page(Map, OldValue) ->  % {{{1
-    update_map(Map),
+    % update_map(Map),
     io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
     NewPID = maps:get(id,Map),
     transaction(fun() ->

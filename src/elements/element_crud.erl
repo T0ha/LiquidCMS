@@ -111,7 +111,7 @@ table_row(#crud{ % {{{1
                   body=case Type of
                            tb ->
                                OldValue = maps:get(Field, Data, " "),
-                               #inplace_textbox{tag={rename_page, Rec, Data, Field,OldValue},
+                               #inplace_textbox{tag={update, Rec, Data, Field,OldValue},
                                                 delegate=?MODULE,
                                                 text=OldValue};
                            ta ->
@@ -128,85 +128,77 @@ table_row(#crud{ % {{{1
                                   value=maps:get(Field, Data),
                                   options=Values,
                                   delegate=?MODULE,
-                                  postback={update, Rec, Data, Field, Id}
-                                 }
+                                  postback={update, Rec, Data, Field, Id, undefined}
+                                 };
+                           button ->
+                               _V = #button{
+                                        text="Copy page",
+                                        class=Rec#crud.button_class,
+                                        body=#span{
+                                        class="glyphicon glyphicon-copy"},
+                                        actions=?POSTBACK({copy_page, Rec, Data})
+                                       }
                        end
-                 } || {Field, _, Type} <- Cols] ++ 
+                 } || {Field, _, Type} <- Cols] ++
               [#tablecell{
                   show_if=maps:is_key(delete, Funs),
                   body=#button{
-                          text="X",
-                          class=Rec#crud.button_class,
+                          text="×",
+                          class=Rec#crud.button_class++" close ",
+                          title="Delete",
                           actions=?POSTBACK({delete, Rec, Data})
-                         }}] ++
-              [#tablecell{
-                  % show_if=maps:is_key(copy, Funs),
-                  body=#button{
-                          text="Copy page",
-                          class=Rec#crud.button_class,
-                          actions=?POSTBACK({copy_page, Rec, Data})
-                         }}]
-                          
+                         }}]                           
              ]}.
 
 
-inplace_textbox_event({rename_page=Fun, Rec, Data, Field, OldValue}=_E, Value) -> % {{{1
-  ?LOG("~p inplace1 tb event ~p:  ", [?MODULE, Value]),
-    rename_page(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), OldValue);
-inplace_textbox_event(Tag, Value) -> % {{{1
-    ?LOG("~p inplace2 tb event ~p: ~p", [?MODULE, Tag, Value]),
+inplace_textbox_event({update=Fun, Rec, Data, Field, OldValue}=_E, Value) -> % {{{1
+  % ?LOG("inplace1 tb event ~p:  ", [Value]),
+    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), OldValue);
+inplace_textbox_event(_Tag, Value) -> % {{{1
+    % ?LOG("~p inplace2 tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
-    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value));
-inplace_textarea_event(Tag, Value) -> % {{{1
-    ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
+     % ?LOG("inplace textarea event ~p:", [ Value]),
+    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), undefined);
+inplace_textarea_event(_Tag, Value) -> % {{{1
+    % ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
-event({update=Fun, Rec, Data, Field, ElementId}) -> % {{{1
+event({update=Fun, Rec, Data, Field, ElementId, OldValue}) -> % {{{1
     Val = wf:q(ElementId),
-    update(Fun, Rec, Data, Field, Val),
+    % ?LOG("update event ~p: value:~p", [ ElementId, Val]),
+    update(Fun, Rec, Data, Field, Val, OldValue),
     wf:replace(Rec#crud.id, Rec);
 event({show, Rec}=_E) -> % {{{1
     wf:replace(Rec#crud.id, Rec);
 event({Fun, Rec, Data}=_E) -> % {{{1
     % io:format("Event: ~p~n", [E]),
-    call(Fun, Rec, Data, undefined),
+    call(Fun, Rec, Data),
     wf:replace(Rec#crud.id, Rec);
 event(Ev) -> % {{{1
     wf:warning("Event ~p in ~p", [Ev, ?MODULE]).
 
-rename_page(Fun, Rec, Data, Field, Value, OldValue) -> % {{{1
+update(Fun, Rec, Data, Field, Value, OldValue) -> % {{{1
+    % ?LOG("~nupdate(crud): ~p", [Value]),
     Bag = maps:get(table_type, Data, set),
     ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
            {true, true} ->
-               call(delete, Rec, Data, undefined);
+               call(delete, Rec, Data);
            _ -> ok
        end,
-    NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
-    call(Fun, Rec, NewData,OldValue),
+    % ?LOG("~nupdate(OldValue): ~p", [OldValue]),
+    Data1 = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
+    NewData = maps:put(old_value, OldValue, Data1),
+    % ?LOG("~nupdate(NewData): ~p", [NewData]),
+    call(Fun, Rec, NewData),
+    wf:defer(#event{postback={show, Rec}, delegate=?MODULE} ),
     Value.
 
-update(Fun, Rec, Data, Field, Value) -> % {{{1
-        ?LOG("~nupdate(crud): ~p", [Value]),
-    Bag = maps:get(table_type, Data, set),
-    ok=case {maps:is_key(delete, Rec#crud.funs), Bag == bag} of
-           {true, true} ->
-               call(delete, Rec, Data, undefined);
-           _ -> ok
-       end,
-    NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
-    call(Fun, Rec, NewData, undefined),
-    Value.
-
-call(Fun, #crud{funs=Funs}=_Rec, Data, OldValue) -> % {{{1
-    ?LOG("~nwill call: ~p", [Fun]),
+call(Fun, #crud{funs=Funs}=_Rec, Data) -> % {{{1
+    % ?LOG("~nwill call: ~p", [Fun]),
     F = maps:get(Fun, Funs, fun(D) -> D end),
-    if OldValue/=undefined ->
-      F(Data, OldValue);
-    true ->
-      F(Data)
-    end.
+    F(Data).
 
 cast(Value, Old) when is_atom(Old) -> % {{{1
     wf:to_atom(Value);
