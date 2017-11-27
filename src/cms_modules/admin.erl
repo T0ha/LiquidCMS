@@ -22,46 +22,46 @@ body(Page) ->% {{{2
 %% Module install routines {{{1
 default_data() -> % {{{2
     #{cms_mfa => [
-                    %Scripts
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery"]]},
-                             sort=1},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery-ui"]]},
-                             sort=2},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "bert"]]},
-                             sort=3},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "nitrogen"]]},
-                             sort=4},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "livevalidation"]]},
-                             sort=5},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
-                             sort=6,
-                             settings=#{filters => ["", "", "editor"]}},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                             sort=7,
-                             settings=#{filters => ["", "", "editor"]}},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
-                             sort=8,
-                             settings=#{filters => ["", "", "admin"]}},
-                    #cms_mfa{id={"*", "script"},
-                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                             sort=9,
-                             settings=#{filters => ["", "", "admin"]}},
+                  %Scripts
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery"]]},
+                           sort=1},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery-ui"]]},
+                           sort=2},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bert"]]},
+                           sort=3},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "nitrogen"]]},
+                           sort=4},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "livevalidation"]]},
+                           sort=5},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                           sort=6,
+                           settings=#{filters => ["", "", "editor"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                           sort=7,
+                           settings=#{filters => ["", "", "editor"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                           sort=8,
+                           settings=#{filters => ["", "", "admin"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                           sort=9,
+                           settings=#{filters => ["", "", "admin"]}},
 
-                    %CSS
-                    #cms_mfa{id={"*", "css"},
-                             mfa={common, asset, [["css", "jquery-ui"]]},
-                             sort=1},
-                    #cms_mfa{id={"*", "css"},
-                             mfa={common, asset, [["css", "bootstrap"]]},
-                             sort=2}
+                  %CSS
+                  #cms_mfa{id={"*", "css"},
+                           mfa={common, asset, [["css", "jquery-ui"]]},
+                           sort=1},
+                  #cms_mfa{id={"*", "css"},
+                           mfa={common, asset, [["css", "bootstrap"]]},
+                           sort=2}
                  ]}.
 
 install() -> % {{{2
@@ -102,7 +102,7 @@ install() -> % {{{2
 
 %% Different components adding to pages  {{{1
 add_page(PID, TemplatePath) -> % {{{2
-   add_page(PID, TemplatePath, undefined, index).
+    add_page(PID, TemplatePath, undefined, index).
 
 add_page(PID, TemplatePath, Role, Module) -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -146,7 +146,7 @@ add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
                       bindings = Bindings,
                       created_at=CT,
                       updated_at={}
-                      });
+                     });
        true ->
            {error, no_template}
     end.
@@ -263,57 +263,58 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
     ].
 
 file_to_asset(File, Path) -> % {{{2
-        [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
-        case {Ext, Min} of
-            {"js", "min"} ->
-                #cms_asset{
-                   id=[Ext | Id],
-                   name=string:join(lists:reverse(Id), "."),
-                   description=string:join(lists:reverse(Id), "."),
-                   file=filename:join([Path, File]),
-                   minified=true,
-                   type=script};
-            {"js", _} ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   name=string:join(lists:reverse([Min|Id]), "."),
-                   description=string:join(lists:reverse([Min|Id]), "."),
-                   file=filename:join([Path, File]),
-                   type=script};
-            {"css", "min"} ->
-                #cms_asset{
-                   id=[Ext | Id],
-                   name=string:join(lists:reverse(Id), "."),
-                   description=string:join(lists:reverse(Id), "."),
-                   file=filename:join([Path, File]),
-                   minified=true,
-                   type=css};
-            {"css", _} ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   name=string:join(lists:reverse([Min|Id]), "."),
-                   description=string:join(lists:reverse([Min|Id]), "."),
-                   file=filename:join([Path, File]),
-                   type=css};
-            {Any, _} when Any == "jpg";
-                          Any == "jpeg";
-                          Any == "png";
-                          Any == "gif";
-                          Any == "svg" ->
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   name=string:join(lists:reverse([Min|Id]), "."),
-                   description=string:join(lists:reverse([Min|Id]), "."),
-                   file=filename:join([Path, File]),
-                   type=image};
-            {_Any, _} ->  % unused ?
-                #cms_asset{
-                   id=[Ext, Min | Id],
-                   name=string:join(lists:reverse([Min|Id]), "."),
-                   description=string:join(lists:reverse([Min|Id]), "."),
-                   file=filename:join([Path, File]),
-                   type=binary}
-        end.
+    [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
+    case {Ext, Min} of
+        {"js", "min"} ->
+            #cms_asset{
+               id=[Ext | Id],
+               name=string:join(lists:reverse(Id), "."),
+               description=string:join(lists:reverse(Id), "."),
+               file=filename:join([Path, File]),
+               minified=true,
+               type=script};
+        {"js", _} ->
+            #cms_asset{
+               id=[Ext, Min | Id],
+               name=string:join(lists:reverse([Min|Id]), "."),
+               description=string:join(lists:reverse([Min|Id]), "."),
+               file=filename:join([Path, File]),
+               type=script};
+        {"css", "min"} ->
+            #cms_asset{
+               id=[Ext | Id],
+               name=string:join(lists:reverse(Id), "."),
+               description=string:join(lists:reverse(Id), "."),
+               file=filename:join([Path, File]),
+               minified=true,
+               type=css};
+        {"css", _} ->
+            #cms_asset{
+               id=[Ext, Min | Id],
+               name=string:join(lists:reverse([Min|Id]), "."),
+               description=string:join(lists:reverse([Min|Id]), "."),
+               file=filename:join([Path, File]),
+               type=css};
+        {Any, _} when Any == "jpg";
+                      Any == "jpeg";
+                      Any == "png";
+                      Any == "gif";
+                      Any == "svg" ->
+            #cms_asset{
+               id=[Ext, Min | Id],
+               name=string:join(lists:reverse([Min|Id]), "."),
+               description=string:join(lists:reverse([Min|Id]), "."),
+               file=filename:join([Path, File]),
+               type=image};
+
+        {_Any, _} ->  % This is any static files except images, js and css
+            #cms_asset{
+               id=[Ext, Min | Id],
+               name=string:join(lists:reverse([Min|Id]), "."),
+               description=string:join(lists:reverse([Min|Id]), "."),
+               file=filename:join([Path, File]),
+               type=binary}
+    end.
 
 maybe_set(Id, Val) -> % {{{2
     case wf:q(Id) of
@@ -327,13 +328,13 @@ maybe_set(Id, Val) -> % {{{2
 
 update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 10},
                                       body=#h1{text=Header}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text=ButtonText,
@@ -343,13 +344,13 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK(ButtonPostBack)
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=Body
-                                     }
-                             }]).
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=Body
+                                    }
+                            }]).
 
 render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
                                                   is_atom(Delegate) ->
@@ -422,9 +423,9 @@ format_block(#cms_mfa{ % {{{2$
                 mfa={M, F, A}
                }=B) ->
     {Body, Sub} = try apply(M, format_block, [F, A])
-           catch
-              _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
-           end,
+                  catch
+                      _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
+                  end,
 
     #sortitem{
        tag={block, PID, B},
@@ -475,16 +476,16 @@ add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
                | Data]},
      {"Formatting",
       Formatting ++ [{"Additional classes", {classes, Classes}}]}
-      ].
+    ].
 
 form_fields(M, F, A) -> % {{{2
-      try 
-          apply(M, form_data, [F, A])
-      catch error:E when E /= undef; 
-                         E /= function_clause -> 
-                [_, Block, Classes] = maybe_empty(A, 3),
-                {[], [], Block, Classes}
-      end.
+    try 
+        apply(M, form_data, [F, A])
+    catch error:E when E /= undef; 
+                       E /= function_clause -> 
+              [_, Block, Classes] = maybe_empty(A, 3),
+              {[], [], Block, Classes}
+    end.
 
 form_elements(M, F, A) -> % {{{2
     render_fields(
@@ -494,16 +495,16 @@ form_elements(M, F, A) -> % {{{2
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
         Width when Width >= 4 ->
-        %?LOG("Width: ~p", [Width]),
+            %?LOG("Width: ~p", [Width]),
             [
-         #bs_row{
-            body=[render_field(Col, Width) || Col <- Cols]
-           }];
+             #bs_row{
+                body=[render_field(Col, Width) || Col <- Cols]
+               }];
         _Width ->
             %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
-            
+
     catch 
         _:_ -> 
             [
@@ -538,9 +539,9 @@ render_field({Label, Any}, Width) -> % {{{2
     #bs_col{
        cols={lg, Width},
        body=[
-     #span{text=Label},
-     Any
-    ]};
+             #span{text=Label},
+             Any
+            ]};
 render_field(Any, Width) -> % {{{2
     #bs_col{
        cols={lg, Width},
@@ -553,12 +554,12 @@ get_classes(M, Prefix) -> % {{{2
     AllClasses = wf:mq([classes | Fields]),
     ?LOG("Classes data: ~p", [AllClasses]),
     %Classes = sets:to_list(sets:from_list(AllClasses)),
-   lists:map(fun(none) -> "";
-                (undefined) -> "";
-                ("") -> "";
-                (Class) -> Class
-            end,
-            AllClasses).
+    lists:map(fun(none) -> "";
+                 (undefined) -> "";
+                 ("") -> "";
+                 (Class) -> Class
+              end,
+              AllClasses).
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
@@ -677,7 +678,7 @@ rec_from_qs(R) -> % {{{2
 
     PID = common:q(add_page_select, "index"),
     Block = common:q(add_block, "body"),
-    
+
     Classes = admin:get_classes(M, wf:to_atom(F)),
 
     Filters = wf:mq([qs_key, qs_val, role]),
@@ -834,7 +835,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                                 ]}
               ]);
 
-event({asset, new, _Type}) -> % {{{2
+event({asset, new, _Type}) -> % {{{2 TODO: Check and remove _Type at all
     new_modal("Upload Static Asset",
               {asset, save},
               asset, 
@@ -874,32 +875,32 @@ event({asset, save}) -> % {{{2
     wf:wire(#event{postback={asset, show, Type}});
 event({asset, show, Type}) -> % {{{2
     CRUD = #crud{
-       pagination_class=["btn", "btn-default"],
-       button_class=["btn", "btn-link"],
-       table_class=["table-striped", "table-bordered", "table-hover"],
-       start=0,
-       count=10,
-       cols=[
-             {name, "Name", tb},
-             {description, "Description", ta},
-             {file, "Path", none},
-             {minified, "Minified", none},
-             {type, "Type", {select, common:asset_types()}}
-            ],
-       funs=#{
-         list => fun() -> db:get_assets(Type) end,
-         update => fun db:update_map/1, 
-         delete => fun db:delete/1
-        }
-      },
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {name, "Name", tb},
+                    {description, "Description", ta},
+                    {file, "Path", none},
+                    {minified, "Minified", none},
+                    {type, "Type", {select, common:asset_types()}}
+                   ],
+              funs=#{
+                list => fun() -> db:get_assets(Type) end,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 8},
                                       body=#h1{text=wf:f("Static Assets: ~s", [Type])}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Refresh filesystem",
@@ -909,7 +910,7 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({asset, refresh, Type})
                                              }},
-                                    #bs_col{
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Upload Asset",
@@ -919,13 +920,13 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({asset, new, Type})
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=CRUD
-                                     }
-                             }]);
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({template, new}) -> % {{{2
     new_modal("Upload Template",
               {template, save},
@@ -952,31 +953,31 @@ event({template, save}) -> % {{{2
     wf:wire(#event{postback={template, show}});
 event({template, show}) -> % {{{2
     CRUD = #crud{
-       pagination_class=["btn", "btn-default"],
-       button_class=["btn", "btn-link"],
-       table_class=["table-striped", "table-bordered", "table-hover"],
-       start=0,
-       count=10,
-       cols=[
-             {name, "Name", tb},
-             {description, "Description", ta},
-             {file, "Path", none}
-             %{bindings, "Bindings", none}
-            ],
-       funs=#{
-         list => fun db:get_templates/0,
-         update => fun db:update_map/1, 
-         delete => fun db:delete/1
-        }
-      },
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {name, "Name", tb},
+                    {description, "Description", ta},
+                    {file, "Path", none}
+                    %{bindings, "Bindings", none}
+                   ],
+              funs=#{
+                list => fun db:get_templates/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 8},
                                       body=#h1{text="Templates"}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Refresh filesystem",
@@ -986,7 +987,7 @@ event({template, show}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({template, refresh})
                                              }},
-                                    #bs_col{
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Upload Template",
@@ -996,44 +997,44 @@ event({template, show}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({template, new})
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=CRUD
-                                     }
-                             }]);
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({page, show}) -> % {{{2
     CRUD = #crud{
-       pagination_class=["btn", "btn-default"],
-       button_class=["btn", "btn-link"],
-       table_class=["table-striped", "table-bordered", "table-hover"],
-       start=0,
-       count=10,
-       cols=[
-             {id, "Name", tb},
-             {title, "Title", ta},
-             {description, "Description", ta},
-             {module, "Module", {select, modules()}},
-             {accepted_role, "Assess role", {select, cms_roles()}},
-             {undefined, "Actions", button}
-            ],
-       funs=#{
-         list => fun db:get_pages/0,
-         update => fun db:update_map/1, 
-         delete => fun db:delete/1,
-         copy_page => fun db:copy_page/1
-         % ,rename_page => fun db:rename_page/2
-        }
-      },
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {id, "Name", tb},
+                    {title, "Title", ta},
+                    {description, "Description", ta},
+                    {module, "Module", {select, modules()}},
+                    {accepted_role, "Assess role", {select, cms_roles()}},
+                    {undefined, "Actions", button}
+                   ],
+              funs=#{
+                list => fun db:get_pages/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1,
+                copy_page => fun db:copy_page/1
+                % ,rename_page => fun db:rename_page/2
+               }
+             },
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 10},
                                       body=#h1{text="All Pages"}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Add Page",
@@ -1043,13 +1044,13 @@ event({page, show}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({page, new})
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=CRUD
-                                     }
-                             }]);
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({page, new}) -> % {{{2
     new_modal("Create Page", 
               {page, save},
@@ -1086,10 +1087,10 @@ event({page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
-     ?LOG("~nconstruct page:~p",[PID]),
+    ?LOG("~nconstruct page:~p",[PID]),
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
-    
+
 event({page, construct, PID, [Block|_]}) -> % {{{2
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
@@ -1137,10 +1138,10 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
 
                  ],
     Sort = #sortblock{
-                  tag={PID, Block},
-                  class="panel-body", %"page-block-sort",
-                  items=Blocks,
-                  group=blocks},
+              tag={PID, Block},
+              class="panel-body", %"page-block-sort",
+              items=Blocks,
+              group=blocks},
 
     Body  = #panel{
                class=["panel", "panel-default"],
@@ -1200,17 +1201,17 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=_S}=B}) -> % {
     [QSKey, QSVal, Role] = get_filters(B),
     Header = [
               "Add new block to page: ",
-                  #dropdown{
-                     id=add_page_select,
-                     options=[{N, N} || #{id := N} <- Pages],
-                     value=PID,
-                     postback={page, construct}
-                    },
-                  " to block: ",
-                  #textbox{
-                     id=add_block,
-                     text=Block
-                     }
+              #dropdown{
+                 id=add_page_select,
+                 options=[{N, N} || #{id := N} <- Pages],
+                 value=PID,
+                 postback={page, construct}
+                },
+              " to block: ",
+              #textbox{
+                 id=add_block,
+                 text=Block
+                }
              ],
     new_modal(Header,
               {?MODULE, block, move, B},
@@ -1219,9 +1220,9 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=_S}=B}) -> % {
               [
                #span{text="Elements Collection"},
                #dd{id=module,
-                  value=M,
-                  postback={block, change, module},
-                  options=collections()},
+                   value=M,
+                   postback={block, change, module},
+                   options=collections()},
 
                #span{text="Block Type"},
                #dd{
@@ -1264,32 +1265,32 @@ event({?MODULE, block, save, #cms_mfa{id=_OldID, sort=_Sort}=Old}) -> % {{{2
 event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2
     db:maybe_delete(B),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
-    
+
 event({user, show}) -> % {{{2
     CRUD = #crud{
-       pagination_class=["btn", "btn-default"],
-       button_class=["btn", "btn-link"],
-       table_class=["table-striped", "table-bordered", "table-hover"],
-       start=0,
-       count=10,
-       cols=[
-             {email, "Email", tb},
-             {role, "User role", {select, cms_roles()}}
-            ],
-       funs=#{
-         list => fun db:get_users/0,
-         update => fun db:update_map/1, 
-         delete => fun db:delete/1
-        }
-      },
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {email, "Email", tb},
+                    {role, "User role", {select, cms_roles()}}
+                   ],
+              funs=#{
+                list => fun db:get_users/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 10},
                                       body=#h1{text="Users"}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Create User",
@@ -1299,13 +1300,13 @@ event({user, show}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({user, new})
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=CRUD
-                                     }
-                             }]);
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
@@ -1328,29 +1329,29 @@ event({user, save}) -> % {{{2
     wf:wire(#event{postback={user, show}});
 event({role, show}) -> % {{{2
     CRUD = #crud{
-       pagination_class=["btn", "btn-default"],
-       button_class=["btn", "btn-link"],
-       table_class=["table-striped", "table-bordered", "table-hover"],
-       start=0,
-       count=10,
-       cols=[
-             {name, "Role name", tb},
-             {sort, "Role priority", tb}
-            ],
-       funs=#{
-         list => fun db:get_roles/0,
-         update => fun db:update_map/1, 
-         delete => fun db:delete/1
-        }
-      },
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {name, "Role name", tb},
+                    {sort, "Role priority", tb}
+                   ],
+              funs=#{
+                list => fun db:get_roles/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
     wf:update(container, [
-                           #bs_row{
-                              body=[
-                                    #bs_col{
+                          #bs_row{
+                             body=[
+                                   #bs_col{
                                       cols={lg, 10},
                                       body=#h1{text="Roles"}
-                                              },
-                                    #bs_col{
+                                     },
+                                   #bs_col{
                                       cols={lg, 2},
                                       body=#button{
                                               text="Create Role",
@@ -1360,13 +1361,13 @@ event({role, show}) -> % {{{2
                                                      "btn-upload"],
                                               actions=?POSTBACK({role, new})
                                              }}
-                                   ]},
-                           #bs_row{
-                              body=#bs_col{
-                                      cols={lg, 12},
-                                      body=CRUD
-                                     }
-                             }]);
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({role, new}) -> % {{{2
     new_modal("Create Role", 
               {role, save},
@@ -1439,9 +1440,9 @@ api_event(Name, Tag, Args) -> % {{{2
 sort_event({PID, Block}, Blocks) -> % {{{2
     ?LOG("Blocks: ~p", [Blocks]),
     lists:foreach(fun({N, {block, _PID, B}}) ->
-                     db:update(B, B#cms_mfa{sort=N})
-             end,
-             lists:zip(lists:seq(1, length(Blocks)), Blocks)),
+                          db:update(B, B#cms_mfa{sort=N})
+                  end,
+                  lists:zip(lists:seq(1, length(Blocks)), Blocks)),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
 sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).

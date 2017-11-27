@@ -280,11 +280,10 @@ update(Record, Field, Value) -> % {{{1
                         Value
                 end).
 
-copy_page(Map) -> % {{{1
-    PID = maps:get(id,Map),
+copy_page(#{id := PID}= Map) -> % {{{1
     NewPID = "copy_" ++ PID,
     NewMap = maps:update(id, NewPID, Map),
-    io:format("~nDb copy PID: ~p to ~p~n", [PID, NewPID]),
+    %io:format("~nDb copy PID: ~p to ~p~n", [PID, NewPID]),
     update_map(NewMap),
     transaction(fun() ->
                     case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
@@ -299,28 +298,18 @@ copy_page(Map) -> % {{{1
                     end
                 end).
 
+update_map(#{old_value := OldValue} = Map) when OldValue /= undefined -> % {{{1
+    rename_page(Map, OldValue);
 update_map(Map) -> % {{{1
-    try % for rename page
-        OldValue = maps:get(old_value,Map),
-        if OldValue /= undefined -> 
-            rename_page(Map, OldValue);
-        true ->
-            ok
-        end
-        % NewMap = maps:remove(old_value,Map)
-    catch error:{badkey,_} -> 
-        ok
-    end,
     update_map(Map, fun fields/1).
     
 update_map(Map, FieldsFun) -> % {{{1
     io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
 
-rename_page(Map, OldValue) ->  % {{{1
-    % update_map(Map),
-    io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
-    NewPID = maps:get(id,Map),
+rename_page(#{id := NewPID} = Map, OldValue) ->  % {{{1
+    update_map(Map#{old_value => undefined}),
+    %io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
     transaction(fun() ->
                     case mnesia:match_object(#cms_mfa{id={OldValue, '_'}, _='_'}) of
                         [] ->
@@ -333,9 +322,9 @@ rename_page(Map, OldValue) ->  % {{{1
                                 mnesia:delete_object(DbItem)
                                 end, L)
                     end,
-                    OldPage = mnesia:match_object(#cms_page{id=OldValue, _='_'}),
+                    OldPages = mnesia:match_object(#cms_page{id=OldValue, _='_'}),
                     % io:format("~ndelete_object: ~p", [OldPage ]),
-                    [mnesia:delete_object(O) || O <- OldPage]
+                    [mnesia:delete_object(O) || O <- OldPages]
                 end).
                         
 get_pages() -> % {{{1
