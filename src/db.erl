@@ -271,6 +271,7 @@ update(OldRecord, NewRecord) -> % {{{1
                 end).
 
 update(Record, Field, Value) -> % {{{1
+    % io:format("Db update: ~p~n", [Record]),
     transaction(fun() ->
                         mnesia:delete_object(Record),
                         R1 = update_record_field(Record, Field, Value),
@@ -279,11 +280,63 @@ update(Record, Field, Value) -> % {{{1
                         Value
                 end).
 
-update_map(Map) -> % {{{1
-    update_map(Map, fun fields/1).
+copy_page(Map) -> % {{{1
+    PID = maps:get(id,Map),
+    NewPID = "copy_" ++ PID,
+    NewMap = maps:update(id, NewPID, Map),
+    io:format("~nDb copy PID: ~p to ~p~n", [PID, NewPID]),
+    update_map(NewMap),
+    transaction(fun() ->
+                    case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
+                        [] ->
+                            ok;
+                        L -> 
+                            lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
+                                NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
+                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
+                                mnesia:write(NewDbItem)
+                                end, L)
+                    end
+                end).
 
+update_map(Map) -> % {{{1
+    try % for rename page
+        OldValue = maps:get(old_value,Map),
+        if OldValue /= undefined -> 
+            rename_page(Map, OldValue);
+        true ->
+            ok
+        end
+        % NewMap = maps:remove(old_value,Map)
+    catch error:{badkey,_} -> 
+        ok
+    end,
+    update_map(Map, fun fields/1).
+    
 update_map(Map, FieldsFun) -> % {{{1
+    io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
+
+rename_page(Map, OldValue) ->  % {{{1
+    % update_map(Map),
+    io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
+    NewPID = maps:get(id,Map),
+    transaction(fun() ->
+                    case mnesia:match_object(#cms_mfa{id={OldValue, '_'}, _='_'}) of
+                        [] ->
+                            ok;
+                        L -> 
+                            lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
+                                NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
+                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
+                                mnesia:write(NewDbItem),
+                                mnesia:delete_object(DbItem)
+                                end, L)
+                    end,
+                    OldPage = mnesia:match_object(#cms_page{id=OldValue, _='_'}),
+                    % io:format("~ndelete_object: ~p", [OldPage ]),
+                    [mnesia:delete_object(O) || O <- OldPage]
+                end).
                         
 get_pages() -> % {{{1
     transaction(fun() ->
@@ -301,8 +354,28 @@ save([]) -> % {{{1
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
 save(Record) -> % {{{1
-    CR = update_record_field(Record, updated_at, calendar:universal_time()),
-    UR = update_record_field(CR, created_at, calendar:universal_time()),
+    [RecType|_RecList] = tuple_to_list(Record),
+    case RecType of
+        cms_mfa ->
+            Created_at=Record#cms_mfa.created_at;
+        cms_page ->
+            Created_at=Record#cms_page.created_at;
+        cms_asset ->
+            Created_at=Record#cms_asset.created_at;
+        cms_template ->
+            Created_at=Record#cms_template.created_at;
+        cms_role ->
+            Created_at=Record#cms_role.created_at;
+        cms_user ->
+            Created_at=Record#cms_user.created_at
+    end,
+    % io:format("~nCreated_at ~p~n", [Created_at]),
+    if Created_at == undefined ->
+        CR = update_record_field(Record, created_at, calendar:universal_time()),
+        UR = update_record_field(CR, updated_at, calendar:universal_time());
+    true -> UR = update_record_field(Record, updated_at, calendar:universal_time())
+    end,
+    io:format("~nSave: ~p~n", [UR]),
     transaction(fun() ->
                         mnesia:write(UR),
                         UR
@@ -443,8 +516,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     io:format("~nNew item: ~p",[Item]);
                                 L when is_list(L) -> 
                                     [
-                                      if (Item#cms_asset.created_at>DbItem#cms_asset.created_at) 
-                                        or (Item#cms_asset.updated_at>DbItem#cms_asset.updated_at)  -> 
+                                      if (Item#cms_asset.updated_at>DbItem#cms_asset.updated_at)  -> 
                                         mnesia:delete_object(DbItem),
                                         mnesia:write(Item),
                                         io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
@@ -461,8 +533,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     io:format("~nNew item: ~p",[Item]);
                                 L when is_list(L) -> 
                                     [
-                                      if (Item#cms_page.created_at>DbItem#cms_page.created_at) 
-                                        or (Item#cms_page.updated_at>DbItem#cms_page.updated_at)  -> 
+                                      if (Item#cms_page.updated_at>DbItem#cms_page.updated_at)  -> 
                                         mnesia:delete_object(DbItem),
                                         mnesia:write(Item),
                                         io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
@@ -479,8 +550,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     io:format("~nNew item: ~p",[Item]);
                                 L when is_list(L) -> 
                                     [
-                                      if (Item#cms_template.created_at>DbItem#cms_template.created_at) 
-                                        or (Item#cms_template.updated_at>DbItem#cms_template.updated_at)  -> 
+                                      if (Item#cms_template.updated_at>DbItem#cms_template.updated_at)  -> 
                                         mnesia:delete_object(DbItem),
                                         mnesia:write(Item),
                                         io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
@@ -497,8 +567,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     io:format("~nNew item: ~p",[Item]);
                                 L when is_list(L) -> 
                                     [
-                                      if (Item#cms_role.created_at>DbItem#cms_role.created_at) 
-                                        or (Item#cms_role.updated_at>DbItem#cms_role.updated_at)  -> 
+                                      if (Item#cms_role.updated_at>DbItem#cms_role.updated_at)  -> 
                                         mnesia:delete_object(DbItem),
                                         mnesia:write(Item),
                                         io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])

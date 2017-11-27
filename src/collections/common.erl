@@ -264,7 +264,7 @@ asset(_Page, AID) -> % {{{1 % {{{2
 template(#cms_page{id=PID}=Page, TID) -> % {{{2
     template(#cms_page{id=PID}=Page, TID, []).
 
-template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
+template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
     ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
@@ -397,11 +397,12 @@ maybe_render_block(Page, MFA) -> % {{{2
 render_block(false, _, _) -> % {{{2
     ?PRINT("Dont't show"),
     "";
-render_block(true, Page, #cms_mfa{id=Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
+render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
     apply(?MODULE, F, [Page, MFA | Args]);
 render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
     apply(M, F, [Page | Args]);
 render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
+    ?LOG("render_block: ~p fun:~p", [Page,Fun]),
     Fun(Page).
 
 apply_filters(["", "", ""]) -> % {{{2
@@ -426,7 +427,7 @@ maybe_list(L) when is_list(L) -> % {{{2
     L;
 maybe_list(L) -> % {{{2
     [L].
-maybe_wrap_to_edit(Text, Block, false) -> % {{{2
+maybe_wrap_to_edit(Text, _Block, false) -> % {{{2
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
     Text;
