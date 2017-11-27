@@ -2,6 +2,10 @@
 -define(DESCRIPTION(Text), description() -> ??Text).
 
 %% DB helpers
+-define(TIMESTAMPS, 
+        created_at :: calendar:datetime() | undefined,
+        updated_at :: calendar:datetime() | undefined).
+
 -define(V(Response), db:verify_create_table(Response)).
 -define(CREATE_TABLE(Record, Type, Indexes), 
         ?V(mnesia:create_table(Record,
@@ -35,11 +39,13 @@
           value :: term()
          }).
 
--record(cms_mfa, {
-          id :: {string(), string()},
-          sort :: non_neg_integer(),
-          mfa :: {module(), fun(), [any()]} | fun(),
-          settings :: map()
+-record(cms_mfa, 
+        {
+         id :: {string(), string()},
+         sort :: non_neg_integer(),
+         mfa :: {module(), atom(), [any()]} | fun(),
+         ?TIMESTAMPS,
+         settings :: map()
          }).
 
 -record(cms_template, {
@@ -47,6 +53,7 @@
           bindings=[] :: [proplists:property()],
           name="" :: string(),
           description="" :: string(),
+          ?TIMESTAMPS,
           settings=#{} :: map()
          }).
 
@@ -57,6 +64,7 @@
           file :: iodata(),
           minified=false :: boolean(),
           type :: asset_type(),
+          ?TIMESTAMPS,
           settings=#{} :: map()
          }).
 
@@ -66,7 +74,8 @@
           module = router :: module(),
           accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
-          settings = #{}
+          ?TIMESTAMPS,
+          settings = #{} :: map()
          }).
 
 -record(cms_user, {
@@ -74,21 +83,26 @@
           password :: binary(),
           role :: role(),
           confirm = 0 :: integer(),
+          ?TIMESTAMPS,
           settings = #{} :: map()
          }).
 
 
--record(cms_account, {
-          id :: any(),
-          user :: binary(),
-          settings = #{} :: map()
-         }).
+% -record(cms_account, {
+%           id :: any(),
+%           user :: binary(),
+%           created_at :: calendar:datetime() | undefined,
+%           updated_at :: calendar:datetime() | undefined,
+%           settings = #{} :: map()
+%          }).
           
            
 -record(cms_role, {
           role :: role(),
           name :: binary(),
           sort=1 :: integer(),
+          created_at :: calendar:datetime() | undefined,
+          updated_at :: calendar:datetime() | undefined,
           settings = #{} :: map()
          }).
 

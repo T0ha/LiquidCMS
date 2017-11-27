@@ -38,6 +38,22 @@ default_data() -> % {{{2
                     #cms_mfa{id={"*", "script"},
                              mfa={common, asset, [["js", "livevalidation"]]},
                              sort=5},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                             sort=6,
+                             settings=#{filters => ["", "", "editor"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                             sort=7,
+                             settings=#{filters => ["", "", "editor"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                             sort=8,
+                             settings=#{filters => ["", "", "admin"]}},
+                    #cms_mfa{id={"*", "script"},
+                             mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                             sort=9,
+                             settings=#{filters => ["", "", "admin"]}},
 
                     %CSS
                     #cms_mfa{id={"*", "css"},
@@ -105,6 +121,7 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
     %           id = {PID, "page"},
     %           mfa=F,
     %           sort=N} || {N, F} <- NFuns],
+
     Page = #cms_page{
               id=PID,
               title=Title,
@@ -112,6 +129,7 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
               accepted_role=Role,
               module=Module
              },
+    ?LOG("~nadd_page:~p", [Page]),
     db:save(Page).
 
 add_template(TemplatePath, Bindings) -> % {{{2
@@ -119,12 +137,16 @@ add_template(TemplatePath, Bindings) -> % {{{2
 
 add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
+    CT = calendar:universal_time(),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
                       name = Name,
                       description = Description,
-                      bindings = Bindings});
+                      bindings = Bindings,
+                      created_at=CT,
+                      updated_at={}
+                      });
        true ->
            {error, no_template}
     end.
@@ -142,7 +164,7 @@ add_to_block(PID, Block, {M, F, A}, Sort) -> % {{{2
 
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
-    ItemSubmenuBlock = common:sub_block(ItemBlock, "submenu"),
+    _ItemSubmenuBlock = common:sub_block(ItemBlock, "submenu"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
                            mfa={common,
@@ -284,7 +306,7 @@ file_to_asset(File, Path) -> % {{{2
                    description=string:join(lists:reverse([Min|Id]), "."),
                    file=filename:join([Path, File]),
                    type=image};
-            {Any, _} ->
+            {_Any, _} ->  % unused ?
                 #cms_asset{
                    id=[Ext, Min | Id],
                    name=string:join(lists:reverse([Min|Id]), "."),
@@ -329,14 +351,18 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      }
                              }]).
 
-render_save_button(SavePostback) -> % {{{2
+render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
+                                                  is_atom(Delegate) ->
     #btn{
        id=save_button,
        type=success,
        size=md,
        text="Save",
-       postback=SavePostback
-      }.
+       postback=SavePostback,
+       delegate=Delegate
+      };
+render_save_button(SavePostback) -> % {{{2
+    render_save_button({SavePostback, ?MODULE}).
 
 render_copy_button(undefined) -> % {{{2
     "";
@@ -467,13 +493,13 @@ form_elements(M, F, A) -> % {{{2
 
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
-            Width when Width >= 4 ->
-            %?LOG("Width: ~p", [Width]),
-                [
-             #bs_row{
-                body=[render_field(Col, Width) || Col <- Cols]
-               }];
-        Width ->
+        Width when Width >= 4 ->
+        %?LOG("Width: ~p", [Width]),
+            [
+         #bs_row{
+            body=[render_field(Col, Width) || Col <- Cols]
+           }];
+        _Width ->
             %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
@@ -501,7 +527,7 @@ render_field({Label, {ID, Text}}, Width) -> % {{{2
                 text=Text
                }
             ]};
-render_field({Label, Any}, Width) when is_list(Any) -> % {{{2
+render_field({Label, Any}, _Width) when is_list(Any) -> % {{{2
     #bs_col{
        cols={lg, 12},
        body=[
@@ -670,7 +696,145 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
-event({asset, new, Type}) -> % {{{2
+event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
+    new_modal("Edit text", 
+              {?MODULE, block, move, MFA},
+              undefined,
+              [
+               #hidden{id=module, text=common},
+               #hidden{id=function, text=text},
+               #hidden{id=add_page_select, text=PID},
+               #hidden{id=add_block, text=Block},
+               #wysiwyg{class=["form-control"],
+                        id=text_mfa,
+                        html=Text,
+                        buttons=[
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="B",
+                                             func="bold",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i>I</i>",
+                                             func="italic",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<u>U</u>",
+                                             func="underline",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<s>S</s>",
+                                             func="strikethrough",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-left'></i>",
+                                             func="justifyleft",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-center'></i>",
+                                             func="justifycenter",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-right'></i>",
+                                             func="justifyright",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-align-justify'></i>",
+                                             func="justifyfull",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-undo'></i>",
+                                             func="undo",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-repeat'></i>",
+                                             func="redo",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-close'></i>",
+                                             func="removeFormat",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-list-ol'></i>",
+                                             func="insertorderedlist",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-list-ul'></i>",
+                                             func="insertunorderedlist",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-outdent'></i>",
+                                             func="outdent",
+                                             class=["btn", "btn-default"]},
+                                          #wysiwyg_button{
+                                             body="<i class='fa fa-indent'></i>",
+                                             func="indent",
+                                             class=["btn", "btn-default"]}
+                                         ]},
+                                 #panel{
+                                    class="btn-group",
+                                    body=[
+                                          #link{
+                                             class=[
+                                                    "btn",
+                                                    "btn-default",
+                                                    "dropdown-toggle"
+                                                   ],
+                                             text="H<i class='caret'></i>",
+                                             data_fields=[
+                                                          {toggle, dropdown}
+                                                         ]},
+                                          #list{
+                                             class="dropdown-menu",
+                                             numbered=flase,
+                                             body=[ 
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H1",
+                                                         func="heading h1",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H2",
+                                                         func="heading 2",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H3",
+                                                         func="heading 3",
+                                                         class=["btn", "btn-default"]}
+                                                     },
+                                                   #listitem{
+                                                      body=
+                                                      #wysiwyg_button{
+                                                         body="H4",
+                                                         func="heading 4",
+                                                         class=["btn", "btn-default"]}}
+                                                  ]}
+                                         ]}
+                                ]}
+              ]);
+
+event({asset, new, _Type}) -> % {{{2
     new_modal("Upload Static Asset",
               {asset, save},
               asset, 
@@ -851,12 +1015,15 @@ event({page, show}) -> % {{{2
              {title, "Title", ta},
              {description, "Description", ta},
              {module, "Module", {select, modules()}},
-             {accepted_role, "Assess role", {select, cms_roles()}}
+             {accepted_role, "Assess role", {select, cms_roles()}},
+             {undefined, "Actions", button}
             ],
        funs=#{
          list => fun db:get_pages/0,
          update => fun db:update_map/1, 
-         delete => fun db:delete/1
+         delete => fun db:delete/1,
+         copy_page => fun db:copy_page/1
+         % ,rename_page => fun db:rename_page/2
         }
       },
     wf:update(container, [
@@ -919,14 +1086,16 @@ event({page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
+     ?LOG("~nconstruct page:~p",[PID]),
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
     
-event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+event({page, construct, PID, [Block|_]}) -> % {{{2
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
+    ?LOG("~nconstruct page2:~p",[PID]),
 
     ShowAll = (common:q(show_all, "false") /= "false"),
 
@@ -985,8 +1154,9 @@ event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
 
     update_container("Construct Page", "Add Block", {block, add}, Body);
 
-event({page, save}) -> % {{{2
+event({page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
+    ?LOG("~nevent savve page:~p",[PID]),
     Title = wf:q(title),
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
@@ -1024,9 +1194,9 @@ event({block, add, Block}) -> % {{{2
            mfa={common, template, ["templates/login.html"]},
            sort=new},
     event({block, edit, B});
-event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
+event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=_S}=B}) -> % {{{2
     Pages = get_pages(),
-    [#{id := P} | _] = Pages,
+    [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role] = get_filters(B),
     Header = [
               "Add new block to page: ",
@@ -1082,7 +1252,7 @@ event({?MODULE, block, move, Old}) -> % {{{2
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
-event({?MODULE, block, save, #cms_mfa{id=OldID, sort=Sort}=Old}) -> % {{{2
+event({?MODULE, block, save, #cms_mfa{id=_OldID, sort=_Sort}=Old}) -> % {{{2
     [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
                                       db:save(
                                         apply_element_transform(
@@ -1234,6 +1404,7 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
+    ?LOG("~n inplace_textbox_event ~p", [Record]),
     Val = db:update(Record, Field, Value),
     Val;
 inplace_textbox_event(Tag, Value) -> % {{{2
@@ -1242,7 +1413,9 @@ inplace_textbox_event(Tag, Value) -> % {{{2
 start_upload_event(_Tag) -> % {{{2
     ok.
 finish_upload_event(backup, _Fname, Path, _Node) -> % {{{2
-    {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
+    ?LOG("Import backup: ~p~n ", [_Fname]),
+    db:merge_backup_and_db(Path, mnesia_backup),
+    % {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
     coldstrap:close_modal(),
     file:delete(Path);
 finish_upload_event(template, Fname, Path, _Node) -> % {{{2
@@ -1265,7 +1438,7 @@ api_event(Name, Tag, Args) -> % {{{2
 
 sort_event({PID, Block}, Blocks) -> % {{{2
     ?LOG("Blocks: ~p", [Blocks]),
-    lists:foreach(fun({N, {block, PID, B}}) ->
+    lists:foreach(fun({N, {block, _PID, B}}) ->
                      db:update(B, B#cms_mfa{sort=N})
              end,
              lists:zip(lists:seq(1, length(Blocks)), Blocks)),

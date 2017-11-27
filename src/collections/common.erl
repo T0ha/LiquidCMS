@@ -53,7 +53,7 @@ form_data(text, A) -> % {{{2
     [_, Text] = admin:maybe_empty(A, 2),
     [
      #wysiwyg{class=["form-control"],
-              id=text,
+              id=text_mfa,
               html=Text,
               buttons=[
                        #panel{
@@ -213,7 +213,7 @@ form_data(asset, A) -> % {{{2
 save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};
 save_block(#cms_mfa{mfa={common, text, [_Block, _Classes]}}=Rec) -> % {{{2
-    HTML = q(text, ""),
+    HTML = q(text_mfa, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
 save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
@@ -264,7 +264,7 @@ asset(_Page, AID) -> % {{{1 % {{{2
 template(#cms_page{id=PID}=Page, TID) -> % {{{2
     template(#cms_page{id=PID}=Page, TID, []).
 
-template(#cms_page{id=PID}=Page, TID, AdditionalBindings) -> % {{{2
+template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
     ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
@@ -324,8 +324,8 @@ icon(Font, Name, Classes) -> % {{{2
 script(_Page, Script) -> % {{{2
     wf:wire(#script{script=Script}).
 
-text(_Page, Text) -> % {{{2
-    Text.
+text(_Page, Block, Text) -> % {{{2
+    maybe_wrap_to_edit(Text, Block, wf:role(editor)).
 
 block(Page, Block, Classes) -> % {{{2
     #panel{
@@ -397,9 +397,12 @@ maybe_render_block(Page, MFA) -> % {{{2
 render_block(false, _, _) -> % {{{2
     ?PRINT("Dont't show"),
     "";
+render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
+    apply(?MODULE, F, [Page, MFA | Args]);
 render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
     apply(M, F, [Page | Args]);
 render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
+    ?LOG("render_block: ~p fun:~p", [Page,Fun]),
     Fun(Page).
 
 apply_filters(["", "", ""]) -> % {{{2
@@ -424,6 +427,19 @@ maybe_list(L) when is_list(L) -> % {{{2
     L;
 maybe_list(L) -> % {{{2
     [L].
+maybe_wrap_to_edit(Text, _Block, false) -> % {{{2
+    Text;
+maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
+    Text;
+maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
+    #panel{
+       id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
+       body=Text,
+       style="border: #c33 1px dashed; cursor: text;padding: 10px;",
+       actions=?POSTBACK({?MODULE, edit, text, MFA, Text}, admin)
+      }.
+
+
 %% Dropdown formatters {{{1
 asset_types() -> % {{{2
     [{css, "CSS"},
