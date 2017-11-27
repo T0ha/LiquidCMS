@@ -176,6 +176,7 @@ update(Fun, Rec, Data, Field, Value) -> % {{{1
        end,
     NewData = maps:update(Field, cast(Value, maps:get(Field, Data)), Data),
     call(Fun, Rec, NewData),
+    wf:defer(#event{postback={show, Rec}, delegate=?MODULE} ),
     Value.
 
 call(Fun, #crud{funs=Funs}=Rec, Data) -> % {{{1

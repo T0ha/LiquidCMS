@@ -284,8 +284,6 @@ update_map(Map) -> % {{{1
 
 update_map(Map, FieldsFun) -> % {{{1
     save(map_to_record(Map, FieldsFun)).
-
-
                         
 get_pages() -> % {{{1
     transaction(fun() ->
