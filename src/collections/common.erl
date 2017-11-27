@@ -13,8 +13,8 @@ functions() -> % {{{2
      %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
      {template, "Template"},
-     %{list, "Items List"},
-     %{list_item, "List Item"},
+     {list, "Items List"},
+     {list_item, "List Item"},
      {link_url, "Link"},
      {block, "Block (div)"},
      %{icon, "Icon"},
@@ -25,6 +25,10 @@ functions() -> % {{{2
 
 format_block(block, [Block, Classes]) -> % {{{2
     {wf:f("Block (div): ~s(class=~p)", [Block, Classes]), Block};
+format_block(list, [Block, Numbered, Classes]) -> % {{{2
+    {wf:f("List: ~s(numbered=~s, class=~p)", [Block, Numbered, Classes]), Block};
+format_block(list_item, [Block, Classes]) -> % {{{2
+    {wf:f("List Item: ~s(class=~p)", [Block, Classes]), Block};
 format_block(link_url, [Block, URL, Classes]) -> % {{{2
     {wf:f("Link: ~s(href=~s, class=~p)", [Block, URL, Classes]), Block};
 format_block(text, [Text]) -> % {{{2
@@ -38,6 +42,18 @@ format_block(asset, [AID]) -> % {{{2
 format_block(F, A) -> % {{{2
     {wf:f("common:~s(~p)", [F, A]), undefined}.
 
+form_data(list, A) -> % {{{2
+    [_, Block, Numbered, Classes] = admin:maybe_empty(A, 4),
+    {[
+       #checkbox{
+          text="Numbered",
+          value="true",
+          label_position=before,
+          id=numbered,
+          checked=Numbered
+         }
+     ],
+     [], Block, Classes};
 form_data(link_url, A) -> % {{{2
     [_, Block, URL, Classes] = admin:maybe_empty(A, 4),
     {[
@@ -210,6 +226,9 @@ form_data(asset, A) -> % {{{2
      assets_dropdown(Type, AID)
     ].
 
+save_block(#cms_mfa{mfa={common, list, [Block, Classes]}}=Rec) -> % {{{2
+    Num = wf:to_atom(common:q(numbered, "false")),
+    Rec#cms_mfa{mfa={common, list, [Block, Num, Classes]}};
 save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};
 save_block(#cms_mfa{mfa={common, text, [_Block, _Classes]}}=Rec) -> % {{{2
@@ -283,12 +302,16 @@ list(Page, Block, Numbered, Classes) -> % {{{2
           html_id=block_to_html_id(Block)}.
 
 list_item(Page, ItemID) -> % {{{2
+    list_item(Page, ItemID, []).
+
+list_item(Page, ItemID, Classes) -> % {{{2
     %<li>
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
     #listitem{
        html_id=block_to_html_id(ItemID),
-       body=parallel_block(Page, ItemID)
+       body=parallel_block(Page, ItemID),
+       class=Classes
       }.
 
 link_url(Page, Block, URL) -> % {{{2
