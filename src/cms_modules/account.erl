@@ -307,7 +307,7 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            ?LOG("User: ~p~n", [User#user.role]),
+            ?LOG("User: ~p~n", [User#cms_user.role]),
 
             wf:redirect_from_login("/")
     end;
