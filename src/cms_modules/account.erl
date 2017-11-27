@@ -210,18 +210,18 @@ maybe_redirect_to_login(Page) -> % {{{2
 
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
-% maybe_redirect_to_login(#cms_page{accepted_role=admin} = Page, URL) -> % {{{2
-%     ?LOG("TTTTT redirect to login: ~p", [Page]),
-%     maybe_redirect_to_login(Page#cms_page{accepted_role=admin}, URL);
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
     ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
-    ?LOG("Redirect to login: ~p", [Page]),
+    % ?LOG("Redirect to login: ~p", [Page]),
+    ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
     case wf:role(Role) of 
         true ->
+            ?LOG("Role: ~p", [Role]),
             Page;
         false ->
+            ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
 %% Module install routines {{{1
@@ -236,7 +236,7 @@ default_data() -> % {{{2
                  ]},
     #{cms_mfa => [
                 #cms_mfa{id={"index", "body"},
-                     mfa={router, common_redirect, [["", "/?page=register"]]},
+                     mfa={router, common_redirect, [[], "/?page=register"]},
                      sort=1}
                  ]}
     ].
@@ -283,7 +283,7 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
         #cms_user{email=Email,
                   password=Passwd,
                   confirm=Confirm,
-                  role=Role} = User ->
+                  role=Role} = _User ->
             wf:flash(wf:f("<p class='text-success'>Confirmation letter was sent to ~s.  Please, follow instructions from the letter.</p>", [Email])),
             send_confirmation_email(Email, Confirm);
         {error, Any} -> 
@@ -296,7 +296,7 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
 event({auth, login}) -> % {{{2
     Email = q(email, undefined),
     Passwd = hash(q(password, "")),
-    ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
+    ?LOG("Login: ~p ", [Email ]),
     case db:login(Email, Passwd) of
         [] ->
             wf:flash("Wrong username or password!"),
@@ -307,13 +307,17 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            ?LOG("User: ~p~n", [User#cms_user.role]),
-
-            wf:redirect_from_login("/")
+            ?LOG("User role: ~p~n", [User#cms_user.role]),
+            if User#cms_user.role == admin ->
+                wf:redirect_from_login("/admin?page=admin");
+            true ->
+                wf:redirect_from_login("/")
+            end
     end;
 
 event({auth, logout}) -> % {{{2
-    wf:logout(),
+    % wf:logout(),
+    wf:clear_session(),
     wf:redirect("/");
 
 event(E) -> % {{{2
