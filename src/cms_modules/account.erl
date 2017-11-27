@@ -141,7 +141,7 @@ login_button(Page, Block, Classes) -> % {{{2
         type=success,
         size=lg,
         class=["account-btn", "btn-block" | Classes],
-        text=common:parallel_block(Page, Block),
+        text="Login", %common:parallel_block(Page, Block),
         postback={auth, login},
         delegate=?MODULE
        }.
@@ -175,8 +175,10 @@ login_form(Page, _Block, _Classes) -> % {{{2
     login_form(Page).
 
 login_form(Page) -> % {{{2
-    [
+    [ 
+     "Input email:",
      email_field(Page),
+     "Input password:",
      password_field(Page),
      login_button(Page)
     ].
@@ -257,10 +259,16 @@ install() -> % {{{2
     admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
     admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
     admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, email_field, []}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, password_field, []}, 2),
-    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, []}, 3),
-    admin:add_to_block("register", "admin-panel-body", {account, register_button, [admin]}, 4),
+    admin:add_to_block("register", "admin-panel-body", {common, text,["Input email:"]}, 1),
+    admin:add_to_block("register", "admin-panel-body", {account, email_field, []}, 2),
+    admin:add_to_block("register", "admin-panel-body", {common, text,["Input password:"]}, 3),
+    admin:add_to_block("register", "admin-panel-body", {account, password_field, []}, 4),
+    admin:add_to_block("register", "admin-panel-body", {common, text,["Retype password:"]}, 5),
+    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, []}, 6),
+    admin:add_to_block("register", "admin-panel-body", {account, register_button, [admin]}, 7),
+
+    ok.
+install2() -> % {{{2
 
     ok.
 
@@ -316,8 +324,8 @@ event({auth, login}) -> % {{{2
     end;
 
 event({auth, logout}) -> % {{{2
-    % wf:logout(),
-    wf:clear_session(),
+    wf:logout(),
+    % wf:clear_session(),
     wf:redirect("/");
 
 event(E) -> % {{{2
