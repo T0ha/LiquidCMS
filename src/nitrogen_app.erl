@@ -14,7 +14,9 @@ start(_StartType, _StartArgs) ->
             {ok, _}=application:ensure_all_started(mnesia),
             {atomic, _}=db:install([]),
             {ok, Files} = file:list_dir("ebin"),
-            Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+            Mods = [wf:to_atom(filename:rootname(F)) 
+                    || F <- Files,
+                       filename:extension(F) /= ".app"],
             Modules = [M || M <- Mods,
                             F <- M:module_info(exports),
                             F == {install, 0}],
