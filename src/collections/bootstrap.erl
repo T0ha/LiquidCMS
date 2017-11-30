@@ -230,7 +230,7 @@ save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Clas
                       Footer,
                       [Classes, Context]
                      ]}};
-save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], sort=Sort}}=Rec) -> % {{{2
     % Outside blocks
     HeaderBlock = common:sub_block(Block, "tab-header"),
     BodyBlock = common:sub_block(Block, "tab-body"),
@@ -247,7 +247,8 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes]}}=
              [
               HeaderBlockInside,
               Classes
-             ]}},
+             ]},
+       sort=Sort},
      #cms_mfa{
         id={PID, BodyBlock},
         mfa={bootstrap,
@@ -255,7 +256,8 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes]}}=
                      [
                       BodyBlockInside,
                       Classes
-                     ]}}
+                     ]},
+       sort=Sort}
     ];
 save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
