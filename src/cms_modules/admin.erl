@@ -1127,10 +1127,17 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
                   #btn{
                      text="Export Pages",
                      class=["pull-right"],
-                     style="margin: 0 10px;",
+                     style="",
                      type=success,
                      actions=?POSTBACK({?MODULE, pages, export})
                     },
+                  #btn{
+                   text="Merge Pages",
+                   class=["pull-right"],
+                   style="margin: 0 10px;",
+                   type=info,
+                   actions=?POSTBACK({?MODULE, pages, merge})
+                  },
                   #btn{
                      text="Import Pages",
                      class=["pull-right"],
@@ -1403,6 +1410,11 @@ event({?MODULE, pages, import}) -> % {{{2
               {popup, close},
               backup,
               undefined);
+event({?MODULE, pages, merge}) -> % {{{2
+    new_modal("Upload Backup",
+              {popup, close},
+              merge_backup,
+              undefined);
 
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
@@ -1418,8 +1430,12 @@ start_upload_event(_Tag) -> % {{{2
     ok.
 finish_upload_event(backup, _Fname, Path, _Node) -> % {{{2
     ?LOG("Import backup: ~p~n ", [_Fname]),
+    {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
+    coldstrap:close_modal(),
+    file:delete(Path);
+finish_upload_event(merge_backup, _Fname, Path, _Node) -> % {{{2
+    ?LOG("Merge backup: ~p~n ", [_Fname]),
     db:merge_backup_and_db(Path, mnesia_backup),
-    % {atomic, _}=mnesia:restore(Path, [{clear_tables, [cms_mfa, cms_template, cms_asset, cms_page]}, {default_op, skip_tables}]),
     coldstrap:close_modal(),
     file:delete(Path);
 finish_upload_event(template, Fname, Path, _Node) -> % {{{2
