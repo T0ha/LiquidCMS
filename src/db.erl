@@ -25,7 +25,8 @@ install([])-> % {{{1
                  fun(_K, V) ->
                          lists:foreach(
                            fun(R) ->
-                                   mnesia:write(R)
+                                   mnesia:write(
+                                     update_timestamps(R))
                            end,
                            V)
                  end,
@@ -344,32 +345,12 @@ save([]) -> % {{{1
     [];
 save([Record|T]) -> % {{{1
     [save(Record) | save(T)];
-save(Record) -> % {{{1
-    [RecType|_RecList] = tuple_to_list(Record),
-    case RecType of
-        cms_mfa ->
-            Created_at=Record#cms_mfa.created_at;
-        cms_page ->
-            Created_at=Record#cms_page.created_at;
-        cms_asset ->
-            Created_at=Record#cms_asset.created_at;
-        cms_template ->
-            Created_at=Record#cms_template.created_at;
-        cms_role ->
-            Created_at=Record#cms_role.created_at;
-        cms_user ->
-            Created_at=Record#cms_user.created_at
-    end,
-    % io:format("~nCreated_at ~p~n", [Created_at]),
-    if Created_at == undefined ->
-        CR = update_record_field(Record, created_at, calendar:universal_time()),
-        UR = update_record_field(CR, updated_at, calendar:universal_time());
-    true -> UR = update_record_field(Record, updated_at, calendar:universal_time())
-    end,
-    io:format("~nSave: ~p~n", [UR]),
+save(Record0) -> % {{{1
+    Record = update_timestamps(Record0),
+    io:format("~nSave: ~p~n", [Record]),
     transaction(fun() ->
-                        mnesia:write(UR),
-                        UR
+                        mnesia:write(Record),
+                        Record
                 end).
 
 maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
@@ -590,3 +571,40 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                 {[Item], Acc + 1}
            end,
     mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
+
+update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_mfa{created_at=CT, updated_at=CT};
+update_timestamps(#cms_page{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_page{created_at=CT, updated_at=CT};
+update_timestamps(#cms_user{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_user{created_at=CT, updated_at=CT};
+update_timestamps(#cms_role{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_role{created_at=CT, updated_at=CT};
+update_timestamps(#cms_asset{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_asset{created_at=CT, updated_at=CT};
+update_timestamps(#cms_template{created_at=undefined}=Rec) ->
+    CT = calendar:universal_time(),
+    Rec#cms_template{created_at=CT, updated_at=CT};
+update_timestamps(#cms_mfa{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_mfa{updated_at=CT};
+update_timestamps(#cms_page{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_page{updated_at=CT};
+update_timestamps(#cms_user{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_user{updated_at=CT};
+update_timestamps(#cms_role{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_role{updated_at=CT};
+update_timestamps(#cms_asset{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_asset{updated_at=CT};
+update_timestamps(#cms_template{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_template{updated_at=CT}.
