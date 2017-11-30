@@ -78,7 +78,7 @@ email_field(Page, Block, Classes) -> % {{{2
             email,
             #validate{
                validators=#is_email{
-                             text="Please provide a valid email address"
+                             text=common:sub_block(Block, "validate") %"Please provide a valid email address"
                             }
               }),
      #panel{
@@ -107,7 +107,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
             repassword,
             #validate{
                validators=#confirm_password{
-                             text="Password and confirmation are different",
+                             text=common:sub_block(Block, "validate"), %"Password and confirmation are different",
                              password=password
                             }
               }),
@@ -141,7 +141,7 @@ login_button(Page, Block, Classes) -> % {{{2
         type=success,
         size=lg,
         class=["account-btn", "btn-block" | Classes],
-        text="Login", %common:parallel_block(Page, Block),
+        text=common:parallel_block(Page, Block),
         postback={auth, login},
         delegate=?MODULE
        }.
@@ -160,13 +160,13 @@ logout_button(Page, Block, Type, Size, Classes) -> % {{{2
         delegate=?MODULE
        }.
 
-register_button(_Page, _Block, Role, Classes) -> % {{{2
+register_button(Page, Block, Role, Classes) -> % {{{2
     #btn{
        id=register_button,
        type=success,
        size=lg,
        class=["account-btn", "btn-block" | Classes],
-       text="Register",
+       text=common:parallel_block(Page, Block), % "Register",
        postback={auth, register, wf:to_atom(Role), true},
        delegate=?MODULE
       }.
@@ -176,9 +176,7 @@ login_form(Page, _Block, _Classes) -> % {{{2
 
 login_form(Page) -> % {{{2
     [ 
-     "Input email:",
      email_field(Page),
-     "Input password:",
      password_field(Page),
      login_button(Page)
     ].
@@ -238,8 +236,8 @@ default_data() -> % {{{2
                  ]},
     #{cms_mfa => [
                 #cms_mfa{id={"index", "body"},
-                     mfa={router, common_redirect, [[], "/?page=register"]},
-                     sort=1}
+                         mfa={router, common_redirect, [[], "/?page=register"]},
+                         sort=1}
                  ]}
     ].
 
@@ -259,13 +257,14 @@ install() -> % {{{2
     admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
     admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
     admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {common, text,["Input email:"]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, email_field, []}, 2),
-    admin:add_to_block("register", "admin-panel-body", {common, text,["Input password:"]}, 3),
-    admin:add_to_block("register", "admin-panel-body", {account, password_field, []}, 4),
-    admin:add_to_block("register", "admin-panel-body", {common, text,["Retype password:"]}, 5),
-    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, []}, 6),
-    admin:add_to_block("register", "admin-panel-body", {account, register_button, [admin]}, 7),
+    admin:add_to_block("register", "admin-panel-body", {account, email_field, ["email_plh",[[]]]}, 1),
+    admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}, 2),
+    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}, 3),
+    admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}, 4),
+    admin:add_to_block("register", "email_plh", {common, text, ["Input email"]}, 5),
+    admin:add_to_block("register", "passwd_plh", {common, text, ["Input password"]}, 6),
+    admin:add_to_block("register", "re_passwd_plh", {common, text, ["Retype password"]}, 7),
+    admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}, 8),
 
     ok.
 install2() -> % {{{2
