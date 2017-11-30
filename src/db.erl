@@ -254,14 +254,16 @@ get_assets(Type) -> % {{{1
                         [record_to_map(A) || A <- Assets]
                 end).
 
-fix_sort(#cms_mfa{id={PID, Block}}=Rec) -> % {{{1
+fix_sort(Recs) when is_list(Recs) -> % {{{1
+    [fix_sort(Rec) || Rec <- Recs];
+fix_sort(#cms_mfa{id={PID, Block}, sort=Sort0}=Rec) -> % {{{1
     Sort = case get_mfa(PID, Block) of
-               [] -> 1;
+               [] -> 0;
                MFAs ->
                    #cms_mfa{sort=S} = lists:last(MFAs),
                    S
            end,
-    Rec#cms_mfa{sort=Sort+1}.
+    Rec#cms_mfa{sort=Sort+Sort0}.
 
 update(OldRecord, NewRecord) -> % {{{1
     transaction(fun() ->

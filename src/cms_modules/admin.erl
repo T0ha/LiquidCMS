@@ -173,7 +173,7 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                            sort=1},
                   #cms_mfa{id={PID, "body"},
                            mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]},
-                           sort=20},
+                           sort=1},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 link_url,
@@ -191,7 +191,8 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                    mfa={common, icon, ["fa", "", ["arrow"]]},
                    sort=3}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
-    db:save(ButtonMFAs ++ LinkMFAs);
+    db:save(
+      db:fix_sort(ButtonMFAs ++ LinkMFAs));
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
@@ -207,7 +208,8 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> 
                            sort=1}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
-    db:save(ButtonMFAs ++ LinkMFAs);
+    db:save(
+      db:fix_sort(ButtonMFAs ++ LinkMFAs));
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {url, URL}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
@@ -223,7 +225,8 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {url, URL}) -> % {{{2
                            sort=1}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
-    db:save(ButtonMFAs ++ LinkMFAs).
+    db:save(
+      db:fix_sort(ButtonMFAs ++ LinkMFAs)).
 
 %% Helpers and private functions {{{1
 menu_item_funs(Page, MenuBlock, ItemSub, URL) -> % {{{2

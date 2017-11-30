@@ -42,7 +42,7 @@
 -record(cms_mfa, 
         {
          id :: {string(), string()},
-         sort :: non_neg_integer(),
+         sort=1 :: non_neg_integer(),
          mfa :: {module(), atom(), [any()]} | fun(),
          ?TIMESTAMPS,
          settings :: map()
