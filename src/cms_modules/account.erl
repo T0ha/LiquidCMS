@@ -78,7 +78,8 @@ email_field(Page, Block, Classes) -> % {{{2
             email,
             #validate{
                validators=#is_email{
-                             text=common:sub_block(Block, "validate") %"Please provide a valid email address"
+                             text=common:parallel_block(Page,
+                                                        common:sub_block(Block, "validate")) %
                             }
               }),
      #panel{
@@ -107,7 +108,8 @@ retype_password_field(Page, Block, Classes) -> % {{{2
             repassword,
             #validate{
                validators=#confirm_password{
-                             text=common:sub_block(Block, "validate"), %"Password and confirmation are different",
+                             text=common:parallel_block(Page,
+                                                        common:sub_block(Block, "validate")), 
                              password=password
                             }
               }),
@@ -226,20 +228,18 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
-    [
     #{
-     cms_role => [
+  cms_role => [
                   #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
                   #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
                   #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
                   #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
-                 ]},
-    #{cms_mfa => [
+                 ],
+    cms_mfa => [
                 #cms_mfa{id={"index", "body"},
                          mfa={router, common_redirect, [[], "/?page=register"]},
                          sort=1}
-                 ]}
-    ].
+                 ]}.
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -261,13 +261,12 @@ install() -> % {{{2
     admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}, 2),
     admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}, 3),
     admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}, 4),
-    admin:add_to_block("register", "email_plh", {common, text, ["Input email"]}, 5),
-    admin:add_to_block("register", "passwd_plh", {common, text, ["Input password"]}, 6),
-    admin:add_to_block("register", "re_passwd_plh", {common, text, ["Retype password"]}, 7),
+    admin:add_to_block("register", "email_plh", {common, text, ["Email"]}, 5),
+    admin:add_to_block("register", "passwd_plh", {common, text, ["Password"]}, 6),
+    admin:add_to_block("register", "re_passwd_plh", {common, text, ["Confirm password"]}, 7),
     admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}, 8),
-
-    ok.
-install2() -> % {{{2
+    admin:add_to_block("register", "email_plh/validate", {common, text, ["Please provide a valid email address"]}, 5),
+    admin:add_to_block("register", "re_passwd_plh/validate", {common, text, ["Password and confirmation are different"]}, 7),
 
     ok.
 
