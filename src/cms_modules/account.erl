@@ -78,7 +78,7 @@ email_field(Page, Block, Classes) -> % {{{2
             email,
             #validate{
                validators=#is_email{
-                             text="Please provide a valid email address"
+                             text=common:sub_block(Block, "validate") %"Please provide a valid email address"
                             }
               }),
      #panel{
@@ -107,7 +107,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
             repassword,
             #validate{
                validators=#confirm_password{
-                             text="Password and confirmation are different",
+                             text=common:sub_block(Block, "validate"), %"Password and confirmation are different",
                              password=password
                             }
               }),
@@ -118,7 +118,7 @@ retype_password_field(Page, Block, Classes) -> % {{{2
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
-apply_agreement_cb(Page, Block, Classes) -> % {{{2
+apply_agreement_cb(Page, Block, _Classes) -> % {{{2
     wf:defer(".account-btn", #disable{}),
      #panel{
         class="form-group",
@@ -160,13 +160,13 @@ logout_button(Page, Block, Type, Size, Classes) -> % {{{2
         delegate=?MODULE
        }.
 
-register_button(_Page, _Block, Role, Classes) -> % {{{2
+register_button(Page, Block, Role, Classes) -> % {{{2
     #btn{
        id=register_button,
        type=success,
        size=lg,
        class=["account-btn", "btn-block" | Classes],
-       text="Register",
+       text=common:parallel_block(Page, Block), % "Register",
        postback={auth, register, wf:to_atom(Role), true},
        delegate=?MODULE
       }.
@@ -175,7 +175,7 @@ login_form(Page, _Block, _Classes) -> % {{{2
     login_form(Page).
 
 login_form(Page) -> % {{{2
-    [
+    [ 
      email_field(Page),
      password_field(Page),
      login_button(Page)
@@ -192,7 +192,7 @@ register_form(Page, Role) -> % {{{2
      register_button(Page, Role)
     ].
 
-confirm(Page, _Block, _Classes) -> % {{{2
+confirm(_Page, _Block, _Classes) -> % {{{2
     Data = common:q(confirm, ""),
     case db:confirm(wf:depickle(Data)) of
         {error, Reason} ->
@@ -214,22 +214,32 @@ maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
     ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
-    ?LOG("Redirect to login: ~p", [Page]),
+    % ?LOG("Redirect to login: ~p", [Page]),
+    ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
     case wf:role(Role) of 
         true ->
+            ?LOG("Role: ~p", [Role]),
             Page;
         false ->
+            ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
 %% Module install routines {{{1
 default_data() -> % {{{2
+    [
     #{
      cms_role => [
                   #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
                   #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
                   #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
                   #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
-                 ]}.
+                 ]},
+    #{cms_mfa => [
+                #cms_mfa{id={"index", "body"},
+                         mfa={router, common_redirect, [[], "/?page=register"]},
+                         sort=1}
+                 ]}
+    ].
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -247,10 +257,17 @@ install() -> % {{{2
     admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
     admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
     admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, email_field, []}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, password_field, []}, 2),
-    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, []}, 3),
-    admin:add_to_block("register", "admin-panel-body", {account, register_button, [admin]}, 4),
+    admin:add_to_block("register", "admin-panel-body", {account, email_field, ["email_plh",[[]]]}, 1),
+    admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}, 2),
+    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}, 3),
+    admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}, 4),
+    admin:add_to_block("register", "email_plh", {common, text, ["Input email"]}, 5),
+    admin:add_to_block("register", "passwd_plh", {common, text, ["Input password"]}, 6),
+    admin:add_to_block("register", "re_passwd_plh", {common, text, ["Retype password"]}, 7),
+    admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}, 8),
+
+    ok.
+install2() -> % {{{2
 
     ok.
 
@@ -273,7 +290,7 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
         #cms_user{email=Email,
                   password=Passwd,
                   confirm=Confirm,
-                  role=Role} = User ->
+                  role=Role} = _User ->
             wf:flash(wf:f("<p class='text-success'>Confirmation letter was sent to ~s.  Please, follow instructions from the letter.</p>", [Email])),
             send_confirmation_email(Email, Confirm);
         {error, Any} -> 
@@ -286,7 +303,7 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
 event({auth, login}) -> % {{{2
     Email = q(email, undefined),
     Passwd = hash(q(password, "")),
-    ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
+    ?LOG("Login: ~p ", [Email ]),
     case db:login(Email, Passwd) of
         [] ->
             wf:flash("Wrong username or password!"),
@@ -297,12 +314,17 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            ?LOG("User: ~p", [User]),
-            wf:redirect_from_login("/")
+            ?LOG("User role: ~p~n", [User#cms_user.role]),
+            if User#cms_user.role == admin ->
+                wf:redirect_from_login("/admin?page=admin");
+            true ->
+                wf:redirect_from_login("/")
+            end
     end;
 
 event({auth, logout}) -> % {{{2
     wf:logout(),
+    % wf:clear_session(),
     wf:redirect("/");
 
 event(E) -> % {{{2

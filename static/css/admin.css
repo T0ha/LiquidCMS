@@ -56,3 +56,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+#flash {
+    width: fit-content;
+    margin: auto;
+}
