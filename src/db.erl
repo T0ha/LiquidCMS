@@ -257,6 +257,8 @@ get_assets(Type) -> % {{{1
 
 fix_sort(Recs) when is_list(Recs) -> % {{{1
     [fix_sort(Rec) || Rec <- Recs];
+fix_sort(#cms_mfa{sort=new}=Rec) -> % {{{1
+    fix_sort(Rec#cms_mfa{sort=0});
 fix_sort(#cms_mfa{id={PID, Block}, sort=Sort0}=Rec) -> % {{{1
     Sort = case get_mfa(PID, Block) of
                [] -> 0;
