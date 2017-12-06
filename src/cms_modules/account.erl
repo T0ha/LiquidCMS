@@ -132,7 +132,7 @@ apply_agreement_cb(Page, Block, _Classes) -> % {{{2
                }}.
 
 login_button(Page) -> % {{{2
-    login_button(Page, "", "").
+    login_button(Page, "login-button", "").
 
 register_button(Page, Role) -> % {{{2
     register_button(Page, "register-button", Role, "").
@@ -251,6 +251,12 @@ install() -> % {{{2
     admin:add_page("index", "templates/setup.html", undefined, index),
     admin:add_to_block("index", "router", {router, page, ["register"]}, 1),
 
+    % Login page
+    admin:add_to_block("login", "login-button", {common, text, ["Log In"]}, 5),
+    admin:add_to_block("login", "email-field", {common, text, ["Email"]}, 5),
+    admin:add_to_block("login", "password-field", {common, text, ["Password"]}, 6),
+
+
     % Register page
     admin:add_page("register", "templates/setup.html", undefined, index),
 
@@ -289,7 +295,7 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
         #cms_user{email=Email,
                   password=Passwd,
                   confirm=Confirm,
-                  role=Role} = _User ->
+                  role=Role} ->
             wf:flash(wf:f("<p class='text-success'>Confirmation letter was sent to ~s.  Please, follow instructions from the letter.</p>", [Email])),
             send_confirmation_email(Email, Confirm);
         {error, Any} -> 

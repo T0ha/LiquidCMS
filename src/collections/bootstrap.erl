@@ -239,26 +239,26 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], s
     HeaderBlockInside = common:sub_block(TabBlock, "header"),
     BodyBlockInside = common:sub_block(TabBlock, "body"),
 
-    [
-     #cms_mfa{
-        id={PID, HeaderBlock},
-        mfa={bootstrap,
-             tab_header,
-             [
-              HeaderBlockInside,
-              Classes
-             ]},
-       sort=Sort},
-     #cms_mfa{
-        id={PID, BodyBlock},
-        mfa={bootstrap,
-                     tab_body,
-                     [
-                      BodyBlockInside,
-                      Classes
-                     ]},
-       sort=Sort}
-    ];
+    db:fix_sort([
+                 #cms_mfa{
+                    id={PID, HeaderBlock},
+                    mfa={bootstrap,
+                         tab_header,
+                         [
+                          HeaderBlockInside,
+                          Classes
+                         ]},
+                    sort=Sort},
+                 #cms_mfa{
+                    id={PID, BodyBlock},
+                    mfa={bootstrap,
+                         tab_body,
+                         [
+                          BodyBlockInside,
+                          Classes
+                         ]},
+                    sort=Sort}
+                ]);
 save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
 %save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
