@@ -151,7 +151,7 @@ table_row(#crud{ % {{{1
              ]}.
 
 
-inplace_textbox_event({update=Fun, Rec, Data, Field, OldValue}=_E, Value) -> % {{{1
+inplace_textbox_event({update=Fun, Rec, Data, Field, OldValue}, Value) -> % {{{1
   % ?LOG("inplace1 tb event ~p:  ", [Value]),
     update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), OldValue);
 inplace_textbox_event(_Tag, Value) -> % {{{1
@@ -160,7 +160,7 @@ inplace_textbox_event(_Tag, Value) -> % {{{1
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
      % ?LOG("inplace textarea event ~p:", [ Value]),
-    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), undefined);
+    update(Fun, Rec, Data, Field, Value, undefined);
 inplace_textarea_event(_Tag, Value) -> % {{{1
     % ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
