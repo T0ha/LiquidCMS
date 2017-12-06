@@ -303,8 +303,6 @@ copy_page(#{id := PID}= Map) -> % {{{1
                     end
                 end).
 
-update_map(#{old_value := OldValue} = Map) when OldValue /= undefined -> % {{{1
-    rename_page(Map, OldValue);
 update_map(Map) -> % {{{1
     update_map(Map, fun fields/1).
     
@@ -312,8 +310,8 @@ update_map(Map, FieldsFun) -> % {{{1
     io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
 
-rename_page(#{id := NewPID} = Map, OldValue) ->  % {{{1
-    update_map(Map#{old_value => undefined}),
+rename_page(#{id := NewPID, old_value := OldValue} = Map) ->  % {{{1
+    update_map(Map),
     %io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
     transaction(fun() ->
                     case mnesia:match_object(#cms_mfa{id={OldValue, '_'}, _='_'}) of

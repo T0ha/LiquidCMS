@@ -1024,10 +1024,9 @@ event({page, show}) -> % {{{2
                    ],
               funs=#{
                 list => fun db:get_pages/0,
-                update => fun db:update_map/1, 
+                update => fun db:rename_page/1, 
                 delete => fun db:delete/1,
                 copy_page => fun db:copy_page/1
-                % ,rename_page => fun db:rename_page/2
                }
              },
     wf:update(container, [
