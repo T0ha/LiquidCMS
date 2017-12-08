@@ -133,7 +133,33 @@ update("0.1.2"=VSN) -> % {{{1
                                             updated_at=CT
                                            }
                                     end, record_info(fields, cms_role)),
-    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN}).
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("fix_sort") ->
+    F = fun() ->
+      FoldFun = 
+          fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
+                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
+                      [] ->
+                          ok;
+                      L when ((is_list(L)) and (length(L)>1)) ->
+                          [
+                          if Cur_mfa#cms_mfa.mfa /= Mfa ->
+                            New_sort = Sort -1 + string:str(L, [Cur_mfa]),
+                            io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
+                            New_mfa = update_record_field(Cur_mfa, sort, New_sort),
+                            io:format("~nupdate [~p]~p", [Sort, New_mfa]),
+                            mnesia:delete_object(Cur_mfa),
+                            mnesia:write(New_mfa);
+                          true -> ok
+                          end                          
+                          || Cur_mfa <- L, Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID];
+                      _Else -> ok
+                  end,
+              ok
+          end,
+      mnesia:foldl(FoldFun, ok, cms_mfa)
+    end,
+    {atomic, ok} = mnesia:transaction(F).
     
 
 %% Getters
