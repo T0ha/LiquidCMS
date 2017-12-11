@@ -404,6 +404,17 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
 
 delete(#{}=Map) -> % {{{1
     delete(Map, fun fields/1);
+delete(#cms_page{id=PID}=Record) ->
+            transaction(fun() ->
+                        case mnesia:match_object(#cms_mfa{id={PID, _Block='_'}, _='_'}) of
+                            [] ->
+                                ok;
+                            L when is_list(L) -> 
+                                [mnesia:delete_object(B1) || B1 <- L]
+                        end,
+                        mnesia:delete_object(Record)
+            end),
+            io:format("Delete: ~p:~n", [Record]);
 delete(Record) -> % {{{1
     io:format("Delete: ~p~n", [Record]),
     transaction(fun() ->
