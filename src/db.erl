@@ -134,7 +134,8 @@ update("0.1.2"=VSN) -> % {{{1
                                            }
                                     end, record_info(fields, cms_role)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("fix_sort") ->
+
+update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
           fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
@@ -145,9 +146,9 @@ update("fix_sort") ->
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
                             New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
+                            %io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
                             New_mfa = update_record_field(Cur_mfa, sort, New_sort),
-                            io:format("~nupdate [~p]~p", [Sort, New_mfa]),
+                            %io:format("~nupdate [~p]~p", [Sort, New_mfa]),
                             mnesia:delete_object(Cur_mfa),
                             mnesia:write(New_mfa);
                           true -> ok
@@ -404,9 +405,9 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
 
 delete(#{}=Map) -> % {{{1
     delete(Map, fun fields/1);
-delete(#cms_page{id=PID}=Record) ->
+delete(#cms_page{id=PID}=Record) -> % {{{1
             transaction(fun() ->
-                        case mnesia:match_object(#cms_mfa{id={PID, _Block='_'}, _='_'}) of
+                        case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
                             [] ->
                                 ok;
                             L when is_list(L) -> 
