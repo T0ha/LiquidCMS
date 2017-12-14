@@ -216,6 +216,24 @@ confirm({Email, Confirm}) -> % {{{1
               end
       end).
 
+confirm_change_password({Email, OldPassw}, NewPassw) -> % {{{1
+    transaction(
+      fun() ->
+              case mnesia:match_object(#cms_user{
+                                          email=Email,
+                                          password=OldPassw,
+                                          _='_'}) of
+                  [User0] ->
+                      User = User0#cms_user{password=NewPassw,
+                                            updated_at=calendar:universal_time()},
+                      mnesia:write(User),
+                      {ok, User};
+                  _ -> Mess = "Changing password error",
+                      wf:flash(wf:f("<div class='alert alert-error'>~s</div>",[Mess])),
+                      {error, Mess}
+              end
+      end).
+
 read(Table, Ids) when is_list(Ids) -> % {{{1
     transaction(fun() ->
                         [R || Id <- Ids, R <- mnesia:read(Table, Id)]
@@ -251,6 +269,11 @@ get_users() -> % {{{1
     transaction(fun() ->
                         Users = mnesia:match_object(#cms_user{_='_'}),
                         [record_to_map(A) || A <- Users]
+                end).
+
+get_user(Email) -> % {{{1
+    transaction(fun() ->
+                        mnesia:read(cms_user, Email)
                 end).
 
 get_roles() -> % {{{1

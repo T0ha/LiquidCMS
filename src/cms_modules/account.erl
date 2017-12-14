@@ -17,8 +17,11 @@ functions() -> % {{{2
      {login_button, "Login Button"},
      {logout_button, "Logout Button"},
      {register_button, "Register Button"},
+     {change_password_button, "Change password button"},
      {confirm, "Confirm registration handler"},
-     {maybe_redirect_to_login, "Redirect to login page if role is not accepted"}
+     {confirm_change_password, "Confirm change password"},
+     {maybe_redirect_to_login, "Redirect to login page if role is not accepted"},
+     {forget_password_modal_btn, "forget password button(open modal)"}
      ].
 
 format_block(F, A) -> % {{{2
@@ -173,6 +176,42 @@ register_button(Page, Block, Role, Classes) -> % {{{2
        delegate=?MODULE
       }.
 
+change_password_button(Page) -> % {{{2
+    change_password_button(Page, "restore_password_button", "").
+change_password_button(_Page, _Block, Classes) -> % {{{2
+    #btn{
+       id=change_password_button,
+       type=success,
+       size=lg,
+       class=["account-btn", "btn-block" | Classes],
+       text="Change password", %common:parallel_block(Page, Block), 
+       postback={auth, change_password},
+       delegate=?MODULE
+      }.
+
+restore_password_button(Page) -> % {{{2
+    restore_password_button(Page, "restore_password_button", "").
+restore_password_button(Page, Block, Classes) -> % {{{2
+    #btn{
+       id=call_restore_password_button,
+       type=success,
+       size=lg,
+       class=["account-btn", "btn-block" | Classes],
+       text=common:parallel_block(Page, Block), 
+       postback={auth, call_restore_password},
+       delegate=?MODULE
+      }.
+forget_password_modal_btn(Page, Block, Classes)-> % {{{2
+    ?LOG("page:~p,~n,block:~p~ncom+block:~p",[Page, Block,common:parallel_block(Page, Block)]),
+    #btn{
+       id=forget_password_modal_btn,
+       % type=success,
+       size=lg,
+       class=["btn-link" | Classes],
+       text=common:parallel_block(Page, Block), 
+       postback={auth, forget_password_open_modal},
+       delegate=?MODULE
+      }.
 login_form(Page, _Block, _Classes) -> % {{{2
     login_form(Page).
 
@@ -196,6 +235,7 @@ register_form(Page, Role) -> % {{{2
 
 confirm(_Page, _Block, _Classes) -> % {{{2
     Data = common:q(confirm, ""),
+    ?LOG("confirm pagE: ~p", [Data]),
     case db:confirm(wf:depickle(Data)) of
         {error, Reason} ->
             #panel{class=["alert", "alert-critical"],
@@ -206,6 +246,39 @@ confirm(_Page, _Block, _Classes) -> % {{{2
             wf:redirect("/")
     end.
 
+% confirm_change_password(_Page, _Block, _Classes) -> % {{{2
+%     Data = common:q(hex, ""),
+%     ?LOG("confirm_change_password pagE: ~p", [Data]),
+%     if Data /= "" ->
+%         change_password(Data);
+%     true ->
+%       wf:flash("<div class='alert alert-error'>Nothing to happened!</div>")
+%     end.
+
+change_password() -> % {{{2
+    Data = common:q(hex, ""),
+    NewPassw = common:q(password, ""),
+    ReNewPassw = common:q(repassword, ""),
+    ?LOG("NewPassw: ~p", [NewPassw]),
+    if Data /= "" ->
+        if (NewPassw /= "") and (NewPassw == ReNewPassw) -> 
+            case db:confirm_change_password(wf:depickle(Data), hash(unicode:characters_to_binary(NewPassw))) of
+                {error, Reason} ->
+                    #panel{class=["alert", "alert-critical"],
+                           text=Reason};
+                {ok, User} ->
+                    ?LOG("User: ~p", [User]),
+                    wf:user(User),
+                    % set_user_roles(User),
+                    wf:flash("<div class='alert alert-error'>Password was successfully changed!</div>"),
+                    wf:redirect("/")
+            end;
+        true ->
+          wf:flash("<div class='alert alert-error'>Passwords do not match!</div>")
+        end;
+    true ->
+      wf:flash("<div class='alert alert-error'>URL is not actual now.</div>")
+    end.
 
 maybe_redirect_to_login(Page) -> % {{{2
     maybe_redirect_to_login(Page, "/account").
@@ -230,16 +303,19 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
 default_data() -> % {{{2
     #{
   cms_role => [
-                  #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
-                  #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
-                  #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
-                  #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
-                 ],
+                #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
+                #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
+                #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
+                #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
+              ],
     cms_mfa => [
                 #cms_mfa{id={"index", "body"},
                          mfa={router, common_redirect, [[], "/?page=register"]},
+                         sort=1},
+                #cms_mfa{id={"confirm", "body"},
+                         mfa={account, confirm, [[],[[]]]},
                          sort=1}
-                 ]}.
+               ]}.
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -331,7 +407,20 @@ event({auth, logout}) -> % {{{2
     wf:logout(),
     % wf:clear_session(),
     wf:redirect("/");
-
+event({auth, forget_password_open_modal}) -> % {{{2
+    admin:new_modal("Restore Password Form",
+              {auth, call_restore_password},
+              undefined,
+              [#panel{
+                class="form-group",
+                body=#txtbx{
+                        id=restore_email,
+                        class="",
+                        placeholder="Enter your email"}}
+              ]
+    );
+event({auth,change_password}) -> % {{{2
+    change_password();
 event(E) -> % {{{2
     wf:warning("Event ~p occured in module ~p", [E, ?MODULE]).
 
@@ -367,6 +456,24 @@ q(Id, Default) -> % {{{2
         A -> string:strip(A)
     end.
 
+call_restore_password() -> % {{{2
+    Email = common:q(restore_email, undefined),
+    ?LOG("Email: ~p~n", [Email]),
+    coldstrap:close_modal(),
+    case db:get_user(Email) of
+        [#cms_user{email=Email,
+                  password=Passwd 
+                  }] ->
+            wf:flash(wf:f("<p class='text-success'>The password recovery letter was sent to ~s.  Please, follow instructions from the letter.</p>", [Email])),
+            send_restore_password_email(Email, Passwd);
+        {error, Any} -> 
+            wf:flash(wf:f("<div class='alert alert-success'>Error occured: ~p</div>", [Any])),
+            ?LOG("Error occured: ~p", [Any]);
+        Any -> 
+            wf:flash("User with this email address was not found!"),
+            wf:warning("User with this email did not found! ~p", [Any])
+    end.
+
 send_confirmation_email(_Email, 0) -> % {{{2
     ok;
 send_confirmation_email(Email, Confirm) -> % {{{2
@@ -375,3 +482,11 @@ send_confirmation_email(Email, Confirm) -> % {{{2
     {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/confirm.txt", bindings=[{'Confirm', wf:pickle({Email, Confirm})}, {'Host', Host}]}),
     ?LOG("Text: ~p", [Text]),
     smtp:send_html(FromEmail, Email, ["Please, confirm registration on ", Host], Text).
+
+send_restore_password_email(Email, Passwd) -> % {{{2
+    Host = application:get_env(nitrogen, host, "nitrogen-site.com"),
+    FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("restore@~s", [Host])),
+    {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/restore.txt", bindings=[{'Confirm', wf:pickle({Email, Passwd})}, {'Host', Host}]}),
+    ?LOG("Text: ~p", [Text]),
+    smtp:send_html(FromEmail, Email, ["Please, confirm restore password on ", Host], Text),
+    ?LOG("send_restore_password_email: ~p", [Email]).

@@ -1414,7 +1414,8 @@ event({?MODULE, pages, merge}) -> % {{{2
               {popup, close},
               merge_backup,
               undefined);
-
+event({auth, call_restore_password}) -> % {{{2
+    account:call_restore_password();
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
