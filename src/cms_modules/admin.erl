@@ -1204,7 +1204,7 @@ event({block, add, Block}) -> % {{{2
            mfa={common, template, ["templates/login.html"]},
            sort=new},
     event({block, edit, B});
-event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=_S}=B}) -> % {{{2
+event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role] = get_filters(B),
@@ -1262,12 +1262,12 @@ event({?MODULE, block, move, Old}) -> % {{{2
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
-event({?MODULE, block, save, #cms_mfa{id=_OldID, sort=_Sort}=Old}) -> % {{{2
+event({?MODULE, block, save, OldMFA}) -> % {{{2
     [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
                                       db:save(
                                         apply_element_transform(
                                           rec_from_qs(
-                                            maybe_fix_sort(Old))))),
+                                            maybe_fix_sort(OldMFA))))),
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
