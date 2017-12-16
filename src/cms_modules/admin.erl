@@ -39,7 +39,7 @@ default_data() -> % {{{2
                            mfa={common, asset, [["js", "livevalidation"]]},
                            sort=5},
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery.hotkeys"]]},
+                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
                            sort=6,
                            settings=#{filters => ["", "", "editor"]}},
                   #cms_mfa{id={"*", "script"},

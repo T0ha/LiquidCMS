@@ -142,7 +142,7 @@ update("fix_sort") -> % {{{1
                   case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
                       [] ->
                           ok;
-                      L when ((is_list(L)) and (length(L)>1)) ->
+                      L when is_list(L), length(L) > 1 ->
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
                             New_sort = Sort -1 + string:str(L, [Cur_mfa]),
