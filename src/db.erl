@@ -134,20 +134,21 @@ update("0.1.2"=VSN) -> % {{{1
                                            }
                                     end, record_info(fields, cms_role)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("fix_sort") ->
+
+update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
           fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
                   case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
                       [] ->
                           ok;
-                      L when ((is_list(L)) and (length(L)>1)) ->
+                      L when is_list(L), length(L) > 1 ->
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
                             New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
+                            %io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
                             New_mfa = update_record_field(Cur_mfa, sort, New_sort),
-                            io:format("~nupdate [~p]~p", [Sort, New_mfa]),
+                            %io:format("~nupdate [~p]~p", [Sort, New_mfa]),
                             mnesia:delete_object(Cur_mfa),
                             mnesia:write(New_mfa);
                           true -> ok
@@ -307,12 +308,13 @@ get_assets(Type) -> % {{{1
 fix_sort(Recs) when is_list(Recs) -> % {{{1
     [fix_sort(Rec) || Rec <- Recs];
 fix_sort(#cms_mfa{sort=new}=Rec) -> % {{{1
-    fix_sort(Rec#cms_mfa{sort=0});
+    fix_sort(Rec#cms_mfa{sort=1});
 fix_sort(#cms_mfa{id={PID, Block}, sort=Sort0}=Rec) -> % {{{1
     Sort = case get_mfa(PID, Block) of
                [] -> 0;
                MFAs ->
-                   #cms_mfa{sort=S} = lists:last(MFAs),
+                   #cms_mfa{sort=S} = lists:last(
+                                        lists:keysort(#cms_mfa.sort, MFAs)),
                    S
            end,
     Rec#cms_mfa{sort=Sort+Sort0}.
@@ -427,9 +429,9 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
 
 delete(#{}=Map) -> % {{{1
     delete(Map, fun fields/1);
-delete(#cms_page{id=PID}=Record) ->
+delete(#cms_page{id=PID}=Record) -> % {{{1
             transaction(fun() ->
-                        case mnesia:match_object(#cms_mfa{id={PID, _Block='_'}, _='_'}) of
+                        case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
                             [] ->
                                 ok;
                             L when is_list(L) -> 
