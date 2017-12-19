@@ -1,0 +1,19 @@
+<div>
+Hi.<br>
+</div>
+<div>
+Welcome to [[[Host]]].<br>
+Please, don't reply this email. It's sent automatically.
+</div>
+<div>
+To restore your password click 
+<a href="[[[Host]]]/account?page=restore&hex=[[[Confirm]]]">here</a>.
+</div>
+<div>
+If the link above doesn't work, copy the url below to your browser.<br>
+[[[Host]]]/account?page=restore&hex=[[[Confirm]]]
+</div>
+<div>
+<hl>
+Best wishes, Team.
+</div>

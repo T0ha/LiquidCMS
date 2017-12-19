@@ -43,7 +43,14 @@ form_data(register_button, A) -> % {{{2
      Block,
      Classes
     };
-
+form_data(forget_password_modal_btn, A) -> % {{{2
+    [_, Block, Param, Classes] = admin:maybe_empty(A, 4),
+    {[
+       {"Placeholder", {param, Param}}
+     ],
+     [],
+     Block,
+     Classes};
 form_data(maybe_redirect_to_login, A) -> % {{{2
     [_, URL] = admin:maybe_empty(A, 2),
 
@@ -53,7 +60,9 @@ form_data(maybe_redirect_to_login, A) -> % {{{2
 
 
 save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}};
+save_block(#cms_mfa{mfa={?MODULE, forget_password_modal_btn, [Block, Param, Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, forget_password_modal_btn, [Block, Param, Classes]}}.
 
 %% Module render functions {{{1
 main() -> % {{{2
@@ -77,7 +86,7 @@ email_field(Page) -> % {{{2
     email_field(Page, "email-field", "").
 
 email_field(Page, Block, Classes) -> % {{{2
-    wf:defer(register_button, 
+      wf:defer(register_button, 
             email,
             #validate{
                validators=#is_email{
@@ -85,6 +94,14 @@ email_field(Page, Block, Classes) -> % {{{2
                                                         common:sub_block(Block, "validate")) %
                             }
               }),
+      % wf:defer(login_button, 
+      %       email,
+      %       #validate{
+      %          validators=#is_email{
+      %                        text=common:parallel_block(Page,
+      %                                                   common:sub_block(Block, "validate")) %
+      %                       }
+      %         }),
      #panel{
         class="form-group",
         body=#txtbx{
@@ -108,6 +125,15 @@ retype_password_field(Page) -> % {{{2
 
 retype_password_field(Page, Block, Classes) -> % {{{2
     wf:defer(register_button, 
+            repassword,
+            #validate{
+               validators=#confirm_password{
+                             text=common:parallel_block(Page,
+                                                        common:sub_block(Block, "validate")), 
+                             password=password
+                            }
+              }),
+    wf:defer(change_password_button, 
             repassword,
             #validate{
                validators=#confirm_password{
@@ -178,13 +204,13 @@ register_button(Page, Block, Role, Classes) -> % {{{2
 
 change_password_button(Page) -> % {{{2
     change_password_button(Page, "restore_password_button", "").
-change_password_button(_Page, _Block, Classes) -> % {{{2
+change_password_button(Page, Block, Classes) -> % {{{2
     #btn{
        id=change_password_button,
        type=success,
        size=lg,
        class=["account-btn", "btn-block" | Classes],
-       text="Change password", %common:parallel_block(Page, Block), 
+       text=common:parallel_block(Page, Block), 
        postback={auth, change_password},
        delegate=?MODULE
       }.
@@ -201,15 +227,14 @@ restore_password_button(Page, Block, Classes) -> % {{{2
        postback={auth, call_restore_password},
        delegate=?MODULE
       }.
-forget_password_modal_btn(Page, Block, Classes)-> % {{{2
-    ?LOG("page:~p,~n,block:~p~ncom+block:~p",[Page, Block,common:parallel_block(Page, Block)]),
+forget_password_modal_btn(Page, Block, Param, Classes)-> % {{{2
+    % ?LOG("page:~p,~n,block:~p~ncom+block:~p",[Page, Block,common:parallel_block(Page, Block)]),
     #btn{
        id=forget_password_modal_btn,
-       % type=success,
        size=lg,
        class=["btn-link" | Classes],
        text=common:parallel_block(Page, Block), 
-       postback={auth, forget_password_open_modal},
+       postback={auth, forget_password_open_modal, Param},
        delegate=?MODULE
       }.
 login_form(Page, _Block, _Classes) -> % {{{2
@@ -235,7 +260,6 @@ register_form(Page, Role) -> % {{{2
 
 confirm(_Page, _Block, _Classes) -> % {{{2
     Data = common:q(confirm, ""),
-    ?LOG("confirm pagE: ~p", [Data]),
     case db:confirm(wf:depickle(Data)) of
         {error, Reason} ->
             #panel{class=["alert", "alert-critical"],
@@ -246,35 +270,19 @@ confirm(_Page, _Block, _Classes) -> % {{{2
             wf:redirect("/")
     end.
 
-% confirm_change_password(_Page, _Block, _Classes) -> % {{{2
-%     Data = common:q(hex, ""),
-%     ?LOG("confirm_change_password pagE: ~p", [Data]),
-%     if Data /= "" ->
-%         change_password(Data);
-%     true ->
-%       wf:flash("<div class='alert alert-error'>Nothing to happened!</div>")
-%     end.
-
 change_password() -> % {{{2
     Data = common:q(hex, ""),
     NewPassw = common:q(password, ""),
-    ReNewPassw = common:q(repassword, ""),
-    ?LOG("NewPassw: ~p", [NewPassw]),
+    % ?LOG("NewPassw: ~p", [NewPassw]),
     if Data /= "" ->
-        if (NewPassw /= "") and (NewPassw == ReNewPassw) -> 
-            case db:confirm_change_password(wf:depickle(Data), hash(unicode:characters_to_binary(NewPassw))) of
-                {error, Reason} ->
-                    #panel{class=["alert", "alert-critical"],
-                           text=Reason};
-                {ok, User} ->
-                    ?LOG("User: ~p", [User]),
-                    wf:user(User),
-                    % set_user_roles(User),
-                    wf:flash("<div class='alert alert-error'>Password was successfully changed!</div>"),
-                    wf:redirect("/")
-            end;
-        true ->
-          wf:flash("<div class='alert alert-error'>Passwords do not match!</div>")
+        case db:confirm_change_password(wf:depickle(Data), hash(unicode:characters_to_binary(NewPassw))) of
+            {error, Reason} ->
+                #panel{class=["alert", "alert-critical"],
+                       text=Reason};
+            {ok, User} ->
+                wf:user(User),
+                wf:flash("<div class='alert alert-error'>Password was successfully changed!</div>"),
+                wf:redirect("/")
         end;
     true ->
       wf:flash("<div class='alert alert-error'>URL is not actual now.</div>")
@@ -299,14 +307,19 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
             ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
+
 %% Module install routines {{{1
 default_data() -> % {{{2
     #{
-  cms_role => [
+    cms_role => [
                 #cms_role{role = nobody, sort=?ROLE_NOBODY_SORT, name="Nobody"},
                 #cms_role{role = admin, sort=?ROLE_ADMIN_SORT, name="Admin"},
                 #cms_role{role = root, sort=?ROLE_ROOT_SORT, name="Root"},
                 #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
+              ],
+    cms_page => [
+                #cms_page{id="confirm", description=[], module=index, accepted_role=nobody, title="LiquidCMS"},
+                #cms_page{id="restore", description=[], module=index, accepted_role=nobody, title="LiquidCMS"}
               ],
     cms_mfa => [
                 #cms_mfa{id={"index", "body"},
@@ -314,6 +327,42 @@ default_data() -> % {{{2
                          sort=1},
                 #cms_mfa{id={"confirm", "body"},
                          mfa={account, confirm, [[],[[]]]},
+                         sort=1},
+                #cms_mfa{id={"login", "css"},
+                         mfa={common, asset,[["css","sb-admin-2"]]},
+                         sort=3},            
+                #cms_mfa{id={"login", "body"},
+                         mfa={common, block,["container",["container"]]},
+                         sort=2},         
+                #cms_mfa{id={"login", "container"},
+                         mfa={account, forget_password_modal_btn,  ["open-modal-button","Enter your email",["pull-right"]]},
+                         sort=1},
+                #cms_mfa{id={"login", "open-modal-button"},
+                         mfa={common, text,["Forgot password?"]},
+                         sort=1},
+                #cms_mfa{id={"restore", "body"},
+                         mfa={common, block,["container",["container panel-body"]]},
+                         sort=1},
+                #cms_mfa{id={"restore", "container"},
+                         mfa={account, password_field,["password",[]]},
+                         sort=1},
+                #cms_mfa{id={"restore", "container"},
+                         mfa={account, retype_password_field,["retype_password",[]]},
+                         sort=2},
+                #cms_mfa{id={"restore", "container"},
+                         mfa={account, change_password_button,["chb",[[]]]},
+                         sort=3},
+                #cms_mfa{id={"restore", "chb"},
+                         mfa={common, text,["Change password"]},
+                         sort=1},
+                #cms_mfa{id={"restore", "password"},
+                         mfa={common, text,["New password"]},
+                         sort=1},
+                #cms_mfa{id={"restore", "retype_password"},
+                         mfa={common, text,["Retype new password"]},
+                         sort=1},
+                #cms_mfa{id={"restore", "retype_password/validate"},
+                         mfa={common, text,["Passwords do not match!"]},
                          sort=1}
                ]}.
 
@@ -366,7 +415,7 @@ event({auth, register}) -> % {{{2
 event({auth, register, Role, DoConfirm}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),
-    ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
+    % ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:register(Email, Passwd, Role, DoConfirm) of
         #cms_user{email=Email,
                   password=Passwd,
@@ -384,7 +433,6 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
 event({auth, login}) -> % {{{2
     Email = q(email, undefined),
     Passwd = hash(q(password, "")),
-    ?LOG("Login: ~p ", [Email ]),
     case db:login(Email, Passwd) of
         [] ->
             wf:flash("Wrong username or password!"),
@@ -395,7 +443,6 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            ?LOG("User role: ~p~n", [User#cms_user.role]),
             if User#cms_user.role == admin ->
                 wf:redirect_from_login("/admin?page=admin");
             true ->
@@ -407,18 +454,21 @@ event({auth, logout}) -> % {{{2
     wf:logout(),
     % wf:clear_session(),
     wf:redirect("/");
-event({auth, forget_password_open_modal}) -> % {{{2
-    admin:new_modal("Restore Password Form",
+event({auth, forget_password_open_modal, Param}) -> % {{{2
+    admin:new_modal("Password restore form",
               {auth, call_restore_password},
               undefined,
-              [#panel{
+              [
+              #panel{
                 class="form-group",
                 body=#txtbx{
                         id=restore_email,
                         class="",
-                        placeholder="Enter your email"}}
+                        placeholder=Param
+                        }}
               ]
-    );
+    )
+   ;
 event({auth,change_password}) -> % {{{2
     change_password();
 event(E) -> % {{{2
@@ -458,7 +508,6 @@ q(Id, Default) -> % {{{2
 
 call_restore_password() -> % {{{2
     Email = common:q(restore_email, undefined),
-    ?LOG("Email: ~p~n", [Email]),
     coldstrap:close_modal(),
     case db:get_user(Email) of
         [#cms_user{email=Email,
@@ -487,6 +536,6 @@ send_restore_password_email(Email, Passwd) -> % {{{2
     Host = application:get_env(nitrogen, host, "nitrogen-site.com"),
     FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("restore@~s", [Host])),
     {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/restore.txt", bindings=[{'Confirm', wf:pickle({Email, Passwd})}, {'Host', Host}]}),
-    ?LOG("Text: ~p", [Text]),
+    % ?LOG("Text: ~p", [Text]),
     smtp:send_html(FromEmail, Email, ["Please, confirm restore password on ", Host], Text),
     ?LOG("send_restore_password_email: ~p", [Email]).
