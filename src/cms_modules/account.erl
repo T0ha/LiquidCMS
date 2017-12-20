@@ -450,10 +450,13 @@ event({auth, logout}) -> % {{{2
 event({auth, forget_password_open_modal, Param}) -> % {{{2
     admin:new_modal("Password restore form",
               {auth, call_restore_password},
-              undefined,
               [
+              #label{
+                text="Input your email for a password recovery",
+                class="container"
+              },
               #panel{
-                class="form-group",
+                class="form-group panel-body",
                 body=#txtbx{
                         id=restore_email,
                         class="",
@@ -464,6 +467,8 @@ event({auth, forget_password_open_modal, Param}) -> % {{{2
    ;
 event({auth,change_password}) -> % {{{2
     change_password();
+event(close_modal) ->
+  coldstrap:close_modal();    
 event(E) -> % {{{2
     wf:warning("Event ~p occured in module ~p", [E, ?MODULE]).
 
