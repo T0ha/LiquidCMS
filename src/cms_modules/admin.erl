@@ -1306,14 +1306,15 @@ event({?MODULE, block, save, OldMFA}) -> % {{{2
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
-event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2
+event({block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
-        {block, remove_block, B, PID, Block},
+        {block, remove_block, B},
         []
     );
 
-event({block, remove_block, B, PID, Block}) -> % {{{2
+event({block, remove_block, B}) -> % {{{2
+    {PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
     wf:wire(#event{postback={page, construct, PID, [Block]}}),
     coldstrap:close_modal();
