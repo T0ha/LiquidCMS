@@ -94,14 +94,6 @@ email_field(Page, Block, Classes) -> % {{{2
                                                         common:sub_block(Block, "validate")) %
                             }
               }),
-      % wf:defer(login_button, 
-      %       email,
-      %       #validate{
-      %          validators=#is_email{
-      %                        text=common:parallel_block(Page,
-      %                                                   common:sub_block(Block, "validate")) %
-      %                       }
-      %         }),
      #panel{
         class="form-group",
         body=#txtbx{
@@ -276,9 +268,10 @@ change_password() -> % {{{2
     % ?LOG("NewPassw: ~p", [NewPassw]),
     if Data /= "" ->
         case db:confirm_change_password(wf:depickle(Data), hash(unicode:characters_to_binary(NewPassw))) of
-            {error, Reason} ->
-                #panel{class=["alert", "alert-critical"],
-                       text=Reason};
+            {error, Mess} ->
+                wf:flash(wf:f("<div class='alert alert-error'>~s</div>",[Mess]));
+                % #panel{class=["alert", "alert-critical"],
+                %        text=Reason};
             {ok, User} ->
                 wf:user(User),
                 wf:flash("<div class='alert alert-error'>Password was successfully changed!</div>"),
