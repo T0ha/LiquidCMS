@@ -19,9 +19,8 @@ functions() -> % {{{2
      {register_button, "Register Button"},
      {change_password_button, "Change password button"},
      {confirm, "Confirm registration handler"},
-     {confirm_change_password, "Confirm change password"},
      {maybe_redirect_to_login, "Redirect to login page if role is not accepted"},
-     {forget_password_modal_btn, "forget password button(open modal)"}
+     {restore_password_button, "Restore password button (send email)"}
      ].
 
 format_block(F, A) -> % {{{2
@@ -43,14 +42,7 @@ form_data(register_button, A) -> % {{{2
      Block,
      Classes
     };
-form_data(forget_password_modal_btn, A) -> % {{{2
-    [_, Block, Param, Classes] = admin:maybe_empty(A, 4),
-    {[
-       {"Placeholder", {param, Param}}
-     ],
-     [],
-     Block,
-     Classes};
+
 form_data(maybe_redirect_to_login, A) -> % {{{2
     [_, URL] = admin:maybe_empty(A, 2),
 
@@ -201,7 +193,7 @@ register_button(Page, Block, Role, Classes) -> % {{{2
       }.
 
 change_password_button(Page) -> % {{{2
-    change_password_button(Page, "restore_password_button", "").
+    change_password_button(Page, "change_password_button", "").
 change_password_button(Page, Block, Classes) -> % {{{2
     #btn{
        id=change_password_button,
@@ -217,22 +209,11 @@ restore_password_button(Page) -> % {{{2
     restore_password_button(Page, "restore_password_button", "").
 restore_password_button(Page, Block, Classes) -> % {{{2
     #btn{
-       id=call_restore_password_button,
-       type=success,
-       size=lg,
-       class=["account-btn", "btn-block" | Classes],
+       id=restore_password_button,
+       % size=lg,
+       class=[Classes],
        text=common:parallel_block(Page, Block), 
        postback={auth, call_restore_password},
-       delegate=?MODULE
-      }.
-forget_password_modal_btn(Page, Block, Param, Classes)-> % {{{2
-    % ?LOG("page:~p,~n,block:~p~ncom+block:~p",[Page, Block,common:parallel_block(Page, Block)]),
-    #btn{
-       id=forget_password_modal_btn,
-       size=lg,
-       class=["btn-link" | Classes],
-       text=common:parallel_block(Page, Block), 
-       postback={auth, forget_password_open_modal, Param},
        delegate=?MODULE
       }.
 login_form(Page, _Block, _Classes) -> % {{{2
@@ -329,16 +310,7 @@ default_data() -> % {{{2
                          sort=1},
                 #cms_mfa{id={"login", "css"},
                          mfa={common, asset,[["css","sb-admin-2"]]},
-                         sort=3},            
-                #cms_mfa{id={"login", "body"},
-                         mfa={common, block,["container",["container"]]},
-                         sort=2},         
-                #cms_mfa{id={"login", "container"},
-                         mfa={account, forget_password_modal_btn,  ["open-modal-button","Enter your email",["pull-right"]]},
-                         sort=1},
-                #cms_mfa{id={"login", "open-modal-button"},
-                         mfa={common, text,["Forgot password?"]},
-                         sort=1},
+                         sort=3}
                 #cms_mfa{id={"restore", "body"},
                          mfa={common, block,["container",["container panel-body"]]},
                          sort=1},
@@ -448,26 +420,12 @@ event({auth, login}) -> % {{{2
                 wf:redirect_from_login("/")
             end
     end;
-
+event({auth, call_restore_password}) -> % {{{2
+  call_restore_password();
 event({auth, logout}) -> % {{{2
     wf:logout(),
     % wf:clear_session(),
     wf:redirect("/");
-event({auth, forget_password_open_modal, Placeholder}) -> % {{{2
-    admin:new_modal("Password restore form",
-              {auth, call_restore_password},
-              undefined,
-              [
-              #panel{
-                class="form-group",
-                body=#txtbx{
-                        id=restore_email,
-                        class="",
-                        placeholder=Placeholder
-                        }}
-              ]
-    )
-   ;
 event({auth,change_password}) -> % {{{2
     change_password();
 event(E) -> % {{{2
@@ -506,7 +464,7 @@ q(Id, Default) -> % {{{2
     end.
 
 call_restore_password() -> % {{{2
-    Email = common:q(restore_email, undefined),
+    Email = common:q(email, undefined),
     coldstrap:close_modal(),
     case db:get_user(Email) of
         [#cms_user{email=Email,
