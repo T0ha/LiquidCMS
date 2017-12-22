@@ -229,8 +229,9 @@ confirm_change_password({Email, OldPassw}, NewPassw) -> % {{{1
                                             updated_at=calendar:universal_time()},
                       mnesia:write(User),
                       {ok, User};
-                  _ -> Mess = "Changing password error",
-                      wf:flash(wf:f("<div class='alert alert-error'>~s</div>",[Mess])),
+
+                  _ -> 
+                      Mess = "Changing password error",
                       {error, Mess}
               end
       end).

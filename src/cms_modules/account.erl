@@ -60,9 +60,7 @@ form_data(maybe_redirect_to_login, A) -> % {{{2
 
 
 save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}};
-save_block(#cms_mfa{mfa={?MODULE, forget_password_modal_btn, [Block, Param, Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, forget_password_modal_btn, [Block, Param, Classes]}}.
+    Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
 
 %% Module render functions {{{1
 main() -> % {{{2
@@ -275,7 +273,8 @@ change_password() -> % {{{2
     NewPassw = common:q(password, ""),
     % ?LOG("NewPassw: ~p", [NewPassw]),
     if Data /= "" ->
-        case db:confirm_change_password(wf:depickle(Data), hash(unicode:characters_to_binary(NewPassw))) of
+        case db:confirm_change_password(wf:depickle(Data),
+                                        hash(unicode:characters_to_binary(NewPassw))) of
             {error, Reason} ->
                 #panel{class=["alert", "alert-critical"],
                        text=Reason};
@@ -454,7 +453,7 @@ event({auth, logout}) -> % {{{2
     wf:logout(),
     % wf:clear_session(),
     wf:redirect("/");
-event({auth, forget_password_open_modal, Param}) -> % {{{2
+event({auth, forget_password_open_modal, Placeholder}) -> % {{{2
     admin:new_modal("Password restore form",
               {auth, call_restore_password},
               undefined,
@@ -464,7 +463,7 @@ event({auth, forget_password_open_modal, Param}) -> % {{{2
                 body=#txtbx{
                         id=restore_email,
                         class="",
-                        placeholder=Param
+                        placeholder=Placeholder
                         }}
               ]
     )
