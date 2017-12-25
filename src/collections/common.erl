@@ -12,6 +12,7 @@ functions() -> % {{{2
      %{parallel_block, "Parallell Group of Blocks"},
      %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
+     {img, "Image"},
      {template, "Template"},
      {list, "Items List"},
      {list_item, "List Item"},
@@ -36,6 +37,9 @@ format_block(text, [Text]) -> % {{{2
 format_block(template, [TID]) -> % {{{2
     [#cms_template{name=Name}] = db:get_template(TID),
     {wf:f("Template: ~s(~p)", [Name, TID]), undefined};
+format_block(img, [AID, Classes]) -> % {{{2
+    [#cms_asset{type=image, file=File, name=Name}|_] = db:get_asset(AID),
+    {wf:f("Image: ~s(file=~p, classes=~p)", [Name, File, Classes]), undefined};
 format_block(asset, [AID]) -> % {{{2
     [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
     {wf:f("Asset ~s: ~s(~p)", [Type, Name, File]), undefined};
@@ -204,6 +208,16 @@ form_data(template, A) -> % {{{2
         options=DropdDown
        }
     ];
+form_data(img, A) -> % {{{2
+    ?LOG("Image: ~p", [A]),
+    [_, AID, Classes] = admin:maybe_empty(A, 3),
+
+    {[
+      {"Image",
+       assets_dropdown(image, AID)}
+    ],
+    [], "", Classes};
+
 form_data(asset, A) -> % {{{2
     ?LOG("Asset: ~p", [A]),
     [_, AID] = admin:maybe_empty(A, 2),
@@ -212,19 +226,20 @@ form_data(asset, A) -> % {{{2
                [#cms_asset{type=T}|_] -> T
            end,
 
-    [
-     #span{text="Asset Type"},
-     #dd{
-        id=asset_type,
-        value=Type,
-        postback={asset, type, change},
-        delegate=?MODULE,
-        options=asset_types()
-       },
+    {[
+      {"Asset Type",
+       #dd{
+          id=asset_type,
+          value=Type,
+          postback={asset, type, change},
+          delegate=?MODULE,
+          options=asset_types()
+         }},
 
-     #span{text="Asset"},
-     assets_dropdown(Type, AID)
-    ].
+      {"Asset",
+       assets_dropdown(Type, AID)}
+    ],
+    []}.
 
 save_block(#cms_mfa{mfa={common, list, [Block, Classes]}}=Rec) -> % {{{2
     Num = wf:to_atom(common:q(numbered, "false")),
@@ -234,6 +249,12 @@ save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{
 save_block(#cms_mfa{mfa={common, text, [_Block, _Classes]}}=Rec) -> % {{{2
     HTML = q(text_mfa, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
+save_block(#cms_mfa{mfa={common, img, [_Block, StringId, Classes]}}=Rec) -> % {{{2
+    Id = string:tokens(StringId, "."),
+    Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
+save_block(#cms_mfa{mfa={common, asset, [_Block, "image", StringId, Classes]}}=Rec) -> % {{{2
+    Id = string:tokens(StringId, "."),
+    Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
 save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
     Rec#cms_mfa{mfa={common, asset, [Id]}};
@@ -279,6 +300,15 @@ asset(_Page, AID) -> % {{{1 % {{{2
         _ -> []
     end.
 
+img(_Page, AID, Classes) -> % {{{1 % {{{2
+    case db:get_asset(AID) of
+        [#cms_asset{file=Path,
+                    type=image}|_] ->
+            #image{class=Classes,
+                   image=wf:to_list(Path)};
+        none -> wf:f("No image: ~p: ~p", [AID]);
+        _ -> []
+    end.
 
 template(#cms_page{id=PID}=Page, TID) -> % {{{2
     template(#cms_page{id=PID}=Page, TID, []).
