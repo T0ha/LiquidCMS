@@ -1135,7 +1135,7 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
-    ?LOG("~nconstruct page2:~p",[PID]),
+    ?LOG("~nconstruct page(2):~p",[PID]),
 
     ShowAll = (common:q(show_all, "false") /= "false"),
 
