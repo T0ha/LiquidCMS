@@ -43,7 +43,7 @@ event({?MODULE, links, disable}) -> % {{{2
     end;
 
 event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
-    wf:update(common:block_to_html_id(Block), common:parallel_block(wf:state(page), Block));
+    wf:update("body", common:parallel_block(wf:state(page), "body"));
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 

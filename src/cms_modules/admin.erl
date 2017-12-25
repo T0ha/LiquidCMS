@@ -704,10 +704,12 @@ get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
 get_filters(_) -> % {{{2
     ["", "", ""].
 
-maybe_fix_sort(#cms_mfa{sort=new}=R) -> % {{{2
+maybe_fix_sort(#cms_mfa{sort=new}=R, _) -> % {{{2
     db:fix_sort(R);
-maybe_fix_sort(R) -> % {{{2
-    R.
+maybe_fix_sort(#cms_mfa{id=Id}=R, #cms_mfa{id=Id}) -> % {{{2
+    R;
+maybe_fix_sort(R, _) -> % {{{2
+    db:fix_sort(R).
 
 rec_from_qs(R) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),
@@ -1300,9 +1302,10 @@ event({?MODULE, block, copy, Old}) -> % {{{2
 event({?MODULE, block, save, OldMFA}) -> % {{{2
     [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
                                       db:save(
-                                        apply_element_transform(
-                                          rec_from_qs(
-                                            maybe_fix_sort(OldMFA))))),
+                                        maybe_fix_sort(
+                                          apply_element_transform(
+                                            rec_from_qs(OldMFA)),
+                                          OldMFA))),
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});

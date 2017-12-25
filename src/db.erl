@@ -229,7 +229,13 @@ confirm_change_password({Email, OldPassw}, NewPassw) -> % {{{1
                                             updated_at=calendar:universal_time()},
                       mnesia:write(User),
                       {ok, User};
+<<<<<<< HEAD
                   _ -> Mess = "Changing password error",
+=======
+
+                  _ -> 
+                      Mess = "Changing password error",
+>>>>>>> master
                       {error, Mess}
               end
       end).
