@@ -83,6 +83,7 @@ email_field(Page, Block, Classes) -> % {{{2
         class="form-group",
         body=#txtbx{
                 id=email,
+        html_id=common:block_to_html_id(Block),
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
@@ -91,6 +92,7 @@ phone_field(Page, Block, Classes) -> % {{{2
         class="form-group",
         body=#txtbx{
                 id=phone,
+                html_id=common:block_to_html_id(Block),
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
@@ -99,11 +101,13 @@ body_field(Page, Block, Classes) -> % {{{2
         class="form-group",
         body=#txtarea{
                 id=text,
+                html_id=common:block_to_html_id(Block),
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
 rating(Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes) -> % {{{2
     #textbox{id=common:block_to_html_id(Block),
+        html_id=common:block_to_html_id(Block),
         class=["rating", "rating-loading"],
         data_fields=[
                      {min, Min},
@@ -118,6 +122,7 @@ submit(Page, Block, ToEmail, Classes) -> % {{{2
      #btn{
         %type=success,
         size=lg,
+        html_id=common:block_to_html_id(Block),
         class=["btn-block"|Classes],
         body=common:parallel_block(Page, Block),
         postback={submit, Page, Block, ToEmail},
