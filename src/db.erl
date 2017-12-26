@@ -625,7 +625,7 @@ empty_mfa(PID, Block, Sort) -> % {{{1
 
 get_db_vsn() -> % {{{1
     transaction(fun() ->
-                        [VSN] = mnesia:read(cms_settings, vsn),
+                        [#cms_settings{value=VSN}|_] = mnesia:read(cms_settings, vsn),
                         VSN
                 end).
 
