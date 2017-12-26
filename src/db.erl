@@ -135,34 +135,8 @@ update("0.1.2"=VSN) -> % {{{1
                                     end, record_info(fields, cms_role)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 
-update("fix_sort") -> % {{{1
-    F = fun() ->
-      FoldFun = 
-          fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
-                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
-                      [] ->
-                          ok;
-                      L when is_list(L), length(L) > 1 ->
-                          [
-                          if Cur_mfa#cms_mfa.mfa /= Mfa ->
-                            New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            %io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
-                            New_mfa = update_record_field(Cur_mfa, sort, New_sort),
-                            %io:format("~nupdate [~p]~p", [Sort, New_mfa]),
-                            mnesia:delete_object(Cur_mfa),
-                            mnesia:write(New_mfa);
-                          true -> ok
-                          end                          
-                          || Cur_mfa <- L, Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID];
-                      _Else -> ok
-                  end,
-              ok
-          end,
-      mnesia:foldl(FoldFun, ok, cms_mfa)
-    end,
-    {atomic, ok} = mnesia:transaction(F);
-
-update("add_active") -> % {{{1  
+update("0.1.3"=VSN) -> % {{{1
+  io:format("~nUpdate to ~p~n",[VSN]),
   CurTime = calendar:universal_time(),
   mnesia:transform_table(cms_mfa, fun({cms_mfa, Id,Sort,M,CT,_UT,S}) -> 
                                          #cms_mfa{
@@ -214,6 +188,17 @@ update("add_active") -> % {{{1
                                             active=true
                                            }
                                     end, record_info(fields, cms_page)),
+    mnesia:transform_table(cms_role, fun({cms_role, R,N,Sort,CT,_UT,S}) -> 
+                                         #cms_role{
+                                            role=R,
+                                            name=N,
+                                            sort=Sort,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CurTime,
+                                            active=true
+                                           }
+                                    end, record_info(fields, cms_role)),
     mnesia:transform_table(cms_user, fun({cms_user, E, P, R, C,CT,_UT,S}) -> 
                                          #cms_user{
                                             email=E,
@@ -226,18 +211,33 @@ update("add_active") -> % {{{1
                                             active=true
                                            }
                                     end, record_info(fields, cms_user)),
-    mnesia:transform_table(cms_role, fun({cms_role, R,N,Sort,CT,_UT,S}) -> 
-                                         #cms_role{
-                                            role=R,
-                                            name=N,
-                                            sort=Sort,
-                                            settings=S,
-                                            created_at=CT,
-                                            updated_at=CurTime,
-                                            active=true
-                                           }
-                                    end, record_info(fields, cms_role))
-.
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("fix_sort") -> % {{{1
+    F = fun() ->
+      FoldFun = 
+          fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
+                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
+                      [] ->
+                          ok;
+                      L when is_list(L), length(L) > 1 ->
+                          [
+                          if Cur_mfa#cms_mfa.mfa /= Mfa ->
+                            New_sort = Sort -1 + string:str(L, [Cur_mfa]),
+                            %io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
+                            New_mfa = update_record_field(Cur_mfa, sort, New_sort),
+                            %io:format("~nupdate [~p]~p", [Sort, New_mfa]),
+                            mnesia:delete_object(Cur_mfa),
+                            mnesia:write(New_mfa);
+                          true -> ok
+                          end                          
+                          || Cur_mfa <- L, Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID];
+                      _Else -> ok
+                  end,
+              ok
+          end,
+      mnesia:foldl(FoldFun, ok, cms_mfa)
+    end,
+    {atomic, ok} = mnesia:transaction(F).
     
 
 %% Getters
@@ -541,8 +541,8 @@ delete(#cms_page{id=PID}=Record) -> % {{{1
                         mnesia:write(DP)
             end),
             io:format("Delete page: ~p:~n", [Record]);
-delete(#cms_mfa{sort=new}=Record) -> % {{{1
-    full_delete(Record);
+% delete(#cms_mfa{sort=new}=Record) -> % {{{1
+%     full_delete(Record);
 delete(Record) -> % {{{1
     io:format("~nUnactive record: ~p~n", [Record]),
     transaction(fun() ->
@@ -637,7 +637,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                         Id=Item#cms_mfa.id,
                         Sort=Item#cms_mfa.sort,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_mfa{id=Id, sort=Sort, active=true, _='_'}) of
+                            case mnesia:match_object(#cms_mfa{id=Id, sort=Sort, _='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);
@@ -655,7 +655,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                         Id=Item#cms_asset.id,
                         File=Item#cms_asset.file,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_asset{id=Id, file=File, active=true,_='_'}) of
+                            case mnesia:match_object(#cms_asset{id=Id, file=File,_='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);
@@ -672,7 +672,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                     cms_page ->
                         Id=Item#cms_page.id,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_page{id=Id, active=true,_='_'}) of
+                            case mnesia:match_object(#cms_page{id=Id,_='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);
@@ -689,7 +689,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                     cms_template ->
                         Name=Item#cms_template.name,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_template{name=Name, active=true,_='_'}) of
+                            case mnesia:match_object(#cms_template{name=Name,_='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);
@@ -706,7 +706,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                     cms_role ->
                         Name=Item#cms_role.name,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_role{name=Name, active=true,_='_'}) of
+                            case mnesia:match_object(#cms_role{name=Name,_='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);
@@ -723,7 +723,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                     cms_user ->
                         Email=Item#cms_user.email,
                         transaction(fun() ->
-                            case mnesia:match_object(#cms_user{email=Email, active=true,_='_'}) of
+                            case mnesia:match_object(#cms_user{email=Email,_='_'}) of
                                 [] ->
                                     mnesia:write(Item),
                                     io:format("~nNew item: ~p",[Item]);

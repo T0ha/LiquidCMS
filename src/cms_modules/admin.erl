@@ -1295,7 +1295,7 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
               ]);
 
 event({?MODULE, block, move, Old}) -> % {{{2
-    db:delete(Old),
+    db:full_delete(Old),
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
