@@ -368,6 +368,28 @@ render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
 render_save_button(SavePostback) -> % {{{2
     render_save_button({SavePostback, ?MODULE}).
 
+render_ok_button({OkPostback, Delegate}) when is_tuple(OkPostback), % {{{2
+                                              is_atom(Delegate) ->
+    #btn{
+       id=ok_button,
+       type=success,
+       size=md,
+       text="Ok",
+       postback=OkPostback,
+       delegate=Delegate
+      };
+render_ok_button(OkPostback) -> % {{{2
+    render_ok_button({OkPostback, ?MODULE}).
+
+render_cancel_button() -> % {{{2
+    #btn{
+       id=cancel_button,
+       type=warning,
+       size=md,
+       text="Cancel",
+       postback=close_modal
+      }.
+
 render_copy_button(undefined) -> % {{{2
     "";
 render_copy_button(CopyPostback) -> % {{{2
@@ -386,6 +408,20 @@ render_move_button(MovePostback) -> % {{{2
        text="Move",
        postback=MovePostback
       }.
+
+new_modal(Title, OkPostback, Form) -> % {{{2
+    Bottom = #span{
+            id=modal_bottom_button,
+            body=[
+                  render_ok_button(OkPostback),
+                  render_cancel_button()
+                 ]},
+    Body = #bs_row{
+            body=[
+                #bs_col{
+                   body=Form}
+               ]},
+    coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]).
 
 new_modal(Title, SavePostback, UploadTag, Form) -> % {{{2
     new_modal(Title, SavePostback, undefined, UploadTag, Form).
@@ -419,7 +455,6 @@ new_modal(Title, SavePostback, CopyPostback, UploadTag, Form) -> % {{{2
                        body=Form}
                    ]},
     coldstrap:modal(Title, Body, Bottom, [{has_x_button, true}]).
-
 
 format_block(#cms_mfa{ % {{{2$
                 id={PID, Name},
@@ -1100,7 +1135,7 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
-    ?LOG("~nconstruct page2:~p",[PID]),
+    ?LOG("~nconstruct page(2):~p",[PID]),
 
     ShowAll = (common:q(show_all, "false") /= "false"),
 
@@ -1260,7 +1295,7 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
               ]);
 
 event({?MODULE, block, move, Old}) -> % {{{2
-    db:delete(Old),
+    db:full_delete(Old),
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
@@ -1274,10 +1309,18 @@ event({?MODULE, block, save, OldMFA}) -> % {{{2
 
     coldstrap:close_modal(),
     wf:wire(#event{postback={page, construct, PID, [Block]}});
-event({block, remove, #cms_mfa{id={PID, Block}}=B}) -> % {{{2
-    db:maybe_delete(B),
-    wf:wire(#event{postback={page, construct, PID, [Block]}});
+event({block, remove, B}) -> % {{{2
+    admin:new_modal(
+        "Are you sure to delete?", 
+        {block, remove_block, B},
+        []
+    );
 
+event({block, remove_block, B}) -> % {{{2
+    {PID, Block} = B#cms_mfa.id,
+    db:maybe_delete(B),
+    wf:wire(#event{postback={page, construct, PID, [Block]}}),
+    coldstrap:close_modal();
 event({user, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1419,6 +1462,8 @@ event({?MODULE, pages, merge}) -> % {{{2
               undefined);
 event({auth, call_restore_password}) -> % {{{2
     account:call_restore_password();
+event(close_modal) ->
+  coldstrap:close_modal();
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
@@ -1460,7 +1505,7 @@ api_event(Name, Tag, Args) -> % {{{2
     ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
 
 sort_event({PID, Block}, Blocks) -> % {{{2
-    ?LOG("Blocks: ~p", [Blocks]),
+    % ?LOG("Blocks: ~p", [Blocks]),
     lists:foreach(fun({N, {block, _PID, B}}) ->
                           db:update(B, B#cms_mfa{sort=N})
                   end,

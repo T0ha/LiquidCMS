@@ -45,6 +45,7 @@
          sort=1 :: non_neg_integer(),
          mfa :: {module(), atom(), [any()]} | fun(),
          ?TIMESTAMPS,
+         active=true :: boolean(),
          settings :: map()
          }).
 
@@ -54,6 +55,7 @@
           name="" :: string(),
           description="" :: string(),
           ?TIMESTAMPS,
+          active=true :: boolean(),
           settings=#{} :: map()
          }).
 
@@ -65,6 +67,7 @@
           minified=false :: boolean(),
           type :: asset_type(),
           ?TIMESTAMPS,
+          active=true :: boolean(),
           settings=#{} :: map()
          }).
 
@@ -75,6 +78,7 @@
           accepted_role = nobody :: atom(),
           title = <<"LiquidCMS">> :: binary(),
           ?TIMESTAMPS,
+          active=true :: boolean(),
           settings = #{} :: map()
          }).
 
@@ -84,6 +88,7 @@
           role :: role(),
           confirm = 0 :: integer(),
           ?TIMESTAMPS,
+          active=true :: boolean(),
           settings = #{} :: map()
          }).
 
@@ -91,8 +96,8 @@
 % -record(cms_account, {
 %           id :: any(),
 %           user :: binary(),
-%           created_at :: calendar:datetime() | undefined,
-%           updated_at :: calendar:datetime() | undefined,
+%           ?TIMESTAMPS,
+%           active=true :: boolean(),
 %           settings = #{} :: map()
 %          }).
           
@@ -101,8 +106,8 @@
           role :: role(),
           name :: binary(),
           sort=1 :: integer(),
-          created_at :: calendar:datetime() | undefined,
-          updated_at :: calendar:datetime() | undefined,
+          ?TIMESTAMPS,
+          active=true :: boolean(),
           settings = #{} :: map()
          }).
 

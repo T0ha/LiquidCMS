@@ -84,14 +84,6 @@ email_field(Page, Block, Classes) -> % {{{2
                                                         common:sub_block(Block, "validate")) %
                             }
               }),
-      % wf:defer(login_button, 
-      %       email,
-      %       #validate{
-      %          validators=#is_email{
-      %                        text=common:parallel_block(Page,
-      %                                                   common:sub_block(Block, "validate")) %
-      %                       }
-      %         }),
      #panel{
         class="form-group",
         body=#txtbx{
@@ -426,8 +418,28 @@ event({auth, logout}) -> % {{{2
     wf:logout(),
     % wf:clear_session(),
     wf:redirect("/");
+event({auth, forget_password_open_modal, Param}) -> % {{{2
+    admin:new_modal("Password restore form",
+              {auth, call_restore_password},
+              [
+              #label{
+                text="Input your email for a password recovery",
+                class="container"
+              },
+              #panel{
+                class="form-group panel-body",
+                body=#txtbx{
+                        id=restore_email,
+                        class="",
+                        placeholder=Param
+                        }}
+              ]
+    )
+   ;
 event({auth,change_password}) -> % {{{2
     change_password();
+event(close_modal) ->
+  coldstrap:close_modal();    
 event(E) -> % {{{2
     wf:warning("Event ~p occured in module ~p", [E, ?MODULE]).
 
