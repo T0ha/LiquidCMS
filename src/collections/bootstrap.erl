@@ -235,7 +235,9 @@ save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Clas
                       [Classes, Context],
                       DataAttr
                      ]}};
-save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], sort=Sort}}) -> % {{{2
+save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes, _DataAttr]}}=Rec) -> % {{{2
+    ?LOG("~nsave_tab: ~p", [Rec]),
+    Sort = Rec#cms_mfa.sort,
     % Outside blocks
     HeaderBlock = common:sub_block(Block, "tab-header"),
     BodyBlock = common:sub_block(Block, "tab-body"),
@@ -264,7 +266,7 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], s
                          ]},
                     sort=Sort}
                 ]);
-save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ], _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
 %save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
 %    ColClass = common:q(col_class, ""),
@@ -318,10 +320,6 @@ save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes, _D
                 "fluid" -> "container-fluid"
             end,
     Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
-save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, tab, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2 
-    ?LOG("~nsave_tab: ~p", [Rec]),
-    wf:warning("Bootstrap: ~p", [Rec]),
-    Rec#cms_mfa{mfa={bootstrap, tab, [Block, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2 
     ?LOG("~nsave_block: ~p", [Rec]),
     wf:warning("Bootstrap: ~p", [Rec]),
@@ -612,9 +610,7 @@ column_classes(Width, Offset) -> % {{{2
       if O > 0, O =< 12 ->
              [wf:f("col-~s-offset-~s", [Screen, Offset]) || Screen <- ["xs", "sm", "md", "lg"]] ++ column_classes(Width, "");
          true -> column_classes(Width, "")
-      end;
-column_classes(_, _) -> % {{{2
-    column_classes("12", "").
+      end.
 
 carusel_indicators(Block, NSlides) when NSlides > 0 -> % {{{2
     #list{
