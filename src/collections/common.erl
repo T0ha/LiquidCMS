@@ -266,6 +266,7 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 
 %% Block renderers {{{1
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
+    % ?LOG("~nparallel_block333: ~p ",[Block]),
     [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)].
 
 
@@ -368,7 +369,6 @@ link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
 
 link_event(Page, Block, Event) -> % {{{2
     link_event(Page, Block, Event, []).
-
 link_event(Page, Block, Event, Classes) -> % {{{2
     #link{
        html_id=block_to_html_id(Block),

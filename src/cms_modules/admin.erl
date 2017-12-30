@@ -521,12 +521,14 @@ add_default_fields(Data, Formatting, Block, Classes, DataAttrs) -> % {{{2
     ].
 
 form_fields(M, F, A) -> % {{{2
-    ?LOG("~nQQQ:~p~n~p~n~p", [M,F,A]),
+    % ?LOG("~nQQQ:~p~n~p~n~p", [M,F,A]),
     try 
-        apply(M, form_data, [F, A])
+        apply(M, form_data, [F, A]),
+        % ?LOG("~napplied: ",[]),
     catch error:E when E /= undef; 
                        E /= function_clause -> 
               [_, Block, Classes, DataAttrs] = maybe_empty(A, 4),
+              ?LOG("~nErorr: ~p",[Block]),
               {[], [], Block, Classes, DataAttrs}
     end.
 
