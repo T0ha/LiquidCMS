@@ -8,6 +8,14 @@
 
 ?DESCRIPTION(Analytics services).
 
+%% CMS Module interface {{{1
+functions() -> % {{{2
+    [
+     {metric_ga, "Google"},
+     {metric_ya, "Yandex"},
+     {metric_hs, "Hubspot"}
+    ].
+
 default_data() -> % {{{2
     #{cms_template => [
                   #cms_template{
@@ -24,16 +32,8 @@ default_data() -> % {{{2
                             name="Yandex Analytics"}
                   ]}.
 
-%% CMS Module interface {{{1
-functions() -> % {{{2
-    [
-     {metric_ga, "Google"},
-     {metric_ya, "Yandex"},
-     {metric_hs, "Hubspot"}
-     ].
-
-format_block(F, [Block|_]=A) -> % {{{2
-    {wf:f("~p:~s(analytics_id=~p)", [?MODULE, F, A]), Block}.
+format_block(F, A) -> % {{{2
+     {wf:f("~s(analytics_id:~s)", [F, A]), undefined}.
 
 form_data(_, A) -> % {{{2
     [_, AnalyticsId] = admin:maybe_empty(A, 2),
@@ -41,19 +41,8 @@ form_data(_, A) -> % {{{2
      {"AnalyticsId", {id, AnalyticsId}}
     ].
 
-save_block(#cms_mfa{ mfa={?MODULE, Fun, [_Block, AnalyticsId, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{ mfa={?MODULE, Fun, [_,AnalyticsId,_,_]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [AnalyticsId]}}.
-
-%% Block renderers {{{1
-block(Page, Block, Classes) -> % {{{2
-    #panel{
-       html_id=common:block_to_html_id(Block),
-       class=Classes,
-       body=common:parallel_block(Page, Block)
-      }.
-%% Event handlers % {{{1
-event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
 
 metric_hs(Page, AnalyticsId) -> % {{{2
     common:template(Page,
@@ -72,6 +61,3 @@ metric_ga(Page, AnalyticsId) -> % {{{2
       "templates/ga_analytics.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).
-%% Helpers {{{1
-
-%% Dropdown formatters {{{1
