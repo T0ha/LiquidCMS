@@ -50,16 +50,16 @@ form_data(kv_item, A) -> % {{{2
 form_data(f, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{mfa={?MODULE, role_page_router, [Block, Block, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, role_page_router, [Block, Block, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, role_page_router, [Block]}};
-save_block(#cms_mfa{mfa={?MODULE, qs_page_router, [Block, Block, Param, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, qs_page_router, [Block, Block, Param, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, qs_page_router, [Block, Param]}};
-save_block(#cms_mfa{mfa={?MODULE, common_redirect, [_, Block, Param, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, common_redirect, [_, Block, Param, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, common_redirect, [Block, Param]}};
-save_block(#cms_mfa{mfa={?MODULE, kv_item, [_Block, K, V, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, kv_item, [_Block, K, V, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, kv_item, [K, V]}};
-save_block(#cms_mfa{mfa={?MODULE, Fun, [_, Block, Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}}.
+save_block(#cms_mfa{mfa={?MODULE, Fun, [Block, _Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, Fun, [Block]}}.
 
 %% Module install routines {{{1
 default_data() -> % {{{2
@@ -102,20 +102,21 @@ role_page_router(#cms_page{id=PID}=Page, Block) when PID == undefined; % {{{2
 role_page_router(Page, _Block) -> % {{{2
     Page.
 
-qs_page_router(#cms_page{id=Default}=Page, Block, Param) -> % {{{2
+qs_page_router(#cms_page{id=_Default}=Page, Block, Param) -> % {{{2
     Key = wf:q(Param),
-    ?LOG("Key: ~p", [Key]),
+    ?LOG("~nKey: ~p", [Key]),
     page_from_kv(Page, Block, Key).
 
-common_redirect(Page, _Block, URL) -> % {{{2
+common_redirect(_Page, _Block, URL) -> % {{{2
     ?LOG("URL: ~p", [URL]),
     case URL of
         []  -> undefined;
         URL -> wf:redirect(URL)
     end.
-
 maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
-    ?LOG("Change module: ~p", [Page]),
+    maybe_change_module(#cms_page{module=Module} = Page, []).
+maybe_change_module(#cms_page{module=Module} = Page, _) -> % {{{2
+    ?LOG("Change module: ~p(~p)", [Page, Module]),
     case wf:page_module() of 
         Module ->
             Page;
@@ -124,7 +125,10 @@ maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
             QS = get_qs(URI),
             wf:redirect(wf:f("/~s~s", [Module, QS]))
     end.
+render(Page, _) -> % {{{2
+    render(Page).
 render(Page) -> % {{{2
+    ?LOG("render:: ~p", [Page]),
     try common:waterfall(Page, "page")
     catch
         error:unauthorized -> 
