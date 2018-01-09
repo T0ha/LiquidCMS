@@ -499,21 +499,25 @@ format_block(#cms_mfa{ % {{{2$
             ]}.
 
 add_default_fields({Data, Formatting}) -> % {{{2
-    add_default_fields(Data, Formatting, "", "");
+    add_default_fields(Data, Formatting, "", "", "");
 add_default_fields({Data, Formatting, Block, Classes}) -> % {{{2
-    add_default_fields(Data, Formatting, Block, Classes);
+    add_default_fields(Data, Formatting, Block, Classes, "");
+add_default_fields({Data, Formatting, Block, Classes, DataAttrs}) -> % {{{2
+    add_default_fields(Data, Formatting, Block, Classes, DataAttrs);
 add_default_fields(Any) when is_list(Any) -> % {{{2
     [{"", Any}, {"", []}];
 add_default_fields(Any) -> % {{{2
     [{"", Any}, {"", []}].
 
-add_default_fields(Data, Formatting, Block, Classes) -> % {{{2
+add_default_fields(Data, Formatting, Block, Classes, DataAttrs) -> % {{{2
     [ 
      {"Data", [
                {"Block name", {block, Block}}
                | Data]},
      {"Formatting",
-      Formatting ++ [{"Additional classes", {classes, Classes}}]}
+      Formatting ++ [{"Additional classes", {classes, Classes}}]
+       ++ [{"Data-attributes", {data_fields, DataAttrs}}]
+     }
     ].
 
 form_fields(M, F, A) -> % {{{2
@@ -521,8 +525,9 @@ form_fields(M, F, A) -> % {{{2
         apply(M, form_data, [F, A])
     catch error:E when E /= undef; 
                        E /= function_clause -> 
-              [_, Block, Classes] = maybe_empty(A, 3),
-              {[], [], Block, Classes}
+              [_, Block, Classes, DataAttrs] = maybe_empty(A, 4),
+              ?LOG("~nErorr: ~p",[Block]),
+              {[], [], Block, Classes, DataAttrs}
     end.
 
 form_elements(M, F, A) -> % {{{2
@@ -598,6 +603,44 @@ get_classes(M, Prefix) -> % {{{2
                  (Class) -> Class
               end,
               AllClasses).
+get_data_attrs(M, Prefix) -> % {{{2
+    Fields = formatting_fields(form_fields(M, Prefix, [])),
+    AllData = wf:mq([data_fields | Fields]),
+    lists:map(fun(none) -> "";
+                 (undefined) -> "";
+                 ("") -> "";
+                 (Attr) -> Attr
+              end,
+              AllData).
+
+extract_data_attrs(DataAttrs)  -> % {{{2
+    S=string:replace(lists:concat(DataAttrs),"data-","",all),
+    case S of 
+      Lt when is_list(Lt), length(Lt) > 1 ->
+        R=lists:concat(Lt);
+      [R] ->
+        ok
+    end,
+    L=string:tokens(R," =,"),
+    {L1,L2}=lists:partition(fun(A) -> index_of(A,L) rem 2 == 1 end, L),
+    if (length(L1)==length(L2)) ->
+      T=lists:zip(L1,L2);
+    true ->
+      T=[]
+    end,
+    ?LOG("handled data_attrs: ~p", [T]),
+    T.
+
+index_of(Item, List) -> index_of(Item, List, 1).
+index_of(_, [], _)  -> not_found;
+index_of(Item, [Item|_], Index) -> Index;
+index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).
+    % lists:map(fun(none) -> "";
+    %              (undefined) -> "";
+    %              ("") -> "";
+    %              (Data) -> Data
+    %           end,
+    %           AllData).
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
@@ -613,6 +656,8 @@ get_data(M, F) -> % {{{2
 
 data_fields({Data, _, _, _}) -> % {{{2
     data_fields(Data);
+data_fields({Data, _, _, _,_}) -> % {{{2
+    data_fields(Data);
 data_fields({Data, _}) -> % {{{2
     data_fields(Data);
 data_fields(Data) when is_list(Data) -> % {{{2
@@ -622,8 +667,8 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
-formatting_fields(Any) -> % {{{2
-    ?LOG("Other fields: ~p", [Any]),
+formatting_fields(_Any) -> % {{{2
+    ?LOG("Other fields", []), %?LOG("Other fields: ~p", [Any]),
     [].
 
 get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
@@ -720,14 +765,16 @@ rec_from_qs(R) -> % {{{2
     Block = common:q(add_block, "body"),
 
     Classes = admin:get_classes(M, wf:to_atom(F)),
+    DataAttrs = admin:get_data_attrs(M, wf:to_atom(F)),
 
     Filters = wf:mq([qs_key, qs_val, role]),
 
     R#cms_mfa{id={PID, Block}, 
-              mfa={M, F, Args ++ [Classes]},
+              mfa={M, F, Args ++ [Classes] ++ [DataAttrs]},
               settings=#{filters => Filters}}.
 
 apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
+     % ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
@@ -1203,7 +1250,6 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
 
 event({page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
-    ?LOG("~nevent savve page:~p",[PID]),
     Title = wf:q(title),
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
@@ -1224,7 +1270,7 @@ event({block, change, module}) -> % {{{2
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    ?LOG("M: ~p, F: ~p", [M, F]),
+    % ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
@@ -1468,11 +1514,9 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
-    ?LOG("~n inplace_textbox_event ~p", [Record]),
     Val = db:update(Record, Field, Value),
     Val;
-inplace_textbox_event(Tag, Value) -> % {{{2
-    ?LOG("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+inplace_textbox_event(_Tag, Value) -> % {{{2
     Value.
 start_upload_event(_Tag) -> % {{{2
     ok.

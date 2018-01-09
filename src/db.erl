@@ -321,7 +321,7 @@ read(Table, Id) -> % {{{1
 
 get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
-get_mfa(Page, Block, Replaced) -> % {{{1
+get_mfa(Page, Block, Replaced) -> % {{{1 
     Funs = transaction(fun() ->
                         G = mnesia:read(cms_mfa, {"*", Block}),
                         T = mnesia:read(cms_mfa, {Page, Block}),

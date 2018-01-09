@@ -32,11 +32,11 @@ format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
     {wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
          [Block, Width, Offset, Classes]),
     Block};
-format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
-    {wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p)",
-         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]),
+format_block(panel, [BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
+    {wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p, attr:~p)",
+         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr]),
      BodyBlock};
-format_block(modal, [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]) -> % {{{2
+format_block(modal, [Block, HeaderBlock, BodyBlock, FooterBlock, Classes, _DataAttr]) -> % {{{2
     {wf:f("Modal(link_block=~p, title_block=~p, body_block=~p, footer_block=~p, classes=~p)",
          [Block, HeaderBlock, BodyBlock, FooterBlock, Classes]),
      Block};
@@ -48,9 +48,9 @@ format_block(navbar, [Block, Classes]) -> % {{{2
     [B| _] = string:tokens(common:format_private_block(Block), "/"),
 
     {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
-format_block(nav_item, [Block, Classes]) -> % {{{2
+format_block(nav_item, [Block, Classes, DataAttr]) -> % {{{2
     [B, _] = string:tokens(common:format_private_block(Block), "/"),
-    {wf:f("NavBarButton: ~s(class=~p)", [B, Classes]), B};
+    {wf:f("NavBarButton: ~s(class=~p, attr:~p)", [B, Classes, DataAttr]), B};
 format_block(container, [Block, AllClasses]) -> % {{{2
     [Fluid, Classes] = admin:maybe_empty(AllClasses, 2),
     IsFluid = (Fluid == "container-fluid"),
@@ -72,7 +72,7 @@ form_data(col, A) -> % {{{2
      Classes
     };
 form_data(panel, A) -> % {{{2
-    [_, HeaderBlock, Block, AddonsBlock, FooterBlock, C] = admin:maybe_empty(A, 6),
+    [_, Block, HeaderBlock,  AddonsBlock, FooterBlock, C, DataAttr] = admin:maybe_empty(A, 7),
     [Classes, Context] = admin:maybe_empty(C, 2),
     {[
       {"Block for panel header",
@@ -103,10 +103,11 @@ form_data(panel, A) -> % {{{2
          }}
      ],
      Block,
-     Classes
+     Classes,
+     DataAttr
     };
 form_data(modal, A) -> % {{{2
-    [_, Block, HeaderBlock, BodyBlock, FooterBlock, Classes] = admin:maybe_empty(A, 6),
+    [_, Block, HeaderBlock, BodyBlock, FooterBlock, Classes, DataAttr] = admin:maybe_empty(A, 7),
     %[Classes, Context] = admin:maybe_empty(C, 2),
     {[
       {"Block for modal title",
@@ -131,9 +132,11 @@ form_data(modal, A) -> % {{{2
      [],
      Block,
      Classes
+     ,
+     DataAttr
     };
 form_data(nav_item, A) -> % {{{2
-    [PID, NavBlock, Classes] = admin:maybe_empty(A, 3),
+    [PID, NavBlock, Classes, DataAttr] = admin:maybe_empty(A, 4),
     {Block, Text, URL} = get_navitem_data(PID, NavBlock),
     {[
       #panel{
@@ -163,7 +166,8 @@ form_data(nav_item, A) -> % {{{2
      ],
      [],
      Block,
-     Classes
+     Classes,
+     DataAttr
     };
 form_data(navbar, A) -> % {{{2
     [PID, NavItemsBlock, AllClasses] = admin:maybe_empty(A, 3),
@@ -220,7 +224,7 @@ form_data(_F, [_, Block, Classes]) -> % {{{2
 form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes, Context]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes, Context], DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap,
                      panel,
                      [
@@ -228,9 +232,12 @@ save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Clas
                       Block,
                       Addons,
                       Footer,
-                      [Classes, Context]
+                      [Classes, Context],
+                      DataAttr
                      ]}};
-save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], sort=Sort}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes, _DataAttr]}}=Rec) -> % {{{2
+    ?LOG("~nsave_tab: ~p", [Rec]),
+    Sort = Rec#cms_mfa.sort,
     % Outside blocks
     HeaderBlock = common:sub_block(Block, "tab-header"),
     BodyBlock = common:sub_block(Block, "tab-body"),
@@ -259,12 +266,12 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes], s
                          ]},
                     sort=Sort}
                 ]);
-save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ], _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
 %save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
 %    ColClass = common:q(col_class, ""),
 %    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
     NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
     case URL of
@@ -277,7 +284,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
                                mfa={common, text, [Text ++ "<b class='caret'></b>"]},
                                sort=1}),
             [
-             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes]]}}
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes], DataAttr]}}
             ];
         URL ->
             db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
@@ -287,7 +294,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
                                mfa={common, text, [Text]},
                                sort=1}),
             [
-             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes]}}
+             Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes, DataAttr]}}
              %#cms_mfa{id={PID, NavItemBlock},
              %         mfa={common, link_url, [Block, URL]},
              %         sort=1},
@@ -296,7 +303,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
              %         sort=1}
             ]
     end;
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding]]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
     NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
@@ -307,13 +314,14 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
                              sort=1}),
     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}};
-save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2
     Fluid = case common:q(fluid, "") of
                 "" -> "container";
                 "fluid" -> "container-fluid"
             end,
     Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2 
+    ?LOG("~nsave_block: ~p", [Rec]),
     wf:warning("Bootstrap: ~p", [Rec]),
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
@@ -325,23 +333,29 @@ navbar(Page, Block, Classes) -> % {{{2
                ],
     common:template(Page, "templates/navbar.html", Bindings).
 
+
+
 nav_items(Page, Block, Classes) -> % {{{2
     common:list(Page, Block, ["nav" | Classes]).
 
 nav_item(Page, ItemID) -> % {{{2
     nav_item(Page, ItemID, []).
-
 nav_item(Page, ItemID, Classes) -> % {{{2
+    nav_item(Page, ItemID, Classes, []).
+nav_item(Page, ItemID, Classes, DataAttr) -> % {{{2
     %<li>
     %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
     %</li>
     #listitem{
        html_id=common:block_to_html_id(ItemID),
        class=Classes, 
-       body=common:parallel_block(Page, ItemID)
+       body=common:parallel_block(Page, ItemID),
+       data_fields = admin:extract_data_attrs(DataAttr)
       }.
-
-panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
+panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes) -> % {{{2
+    panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, []).
+panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, DataAttr) -> % {{{2
+    % ?LOG("~nATTRS:~p~p~p~p~p~p",[ HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr]),
     #panel{
        %html_id=common:block_to_html_id(BodyBlock),
        class=["panel" | Classes],
@@ -350,7 +364,8 @@ panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
              index:maybe_block(Page, BodyBlock, ["panel-body"]),
              index:maybe_block(Page, AddonsBlock, []),
              index:maybe_block(Page, FooterBlock, ["panel-footer"])
-            ]
+            ],
+       data_fields = admin:extract_data_attrs(DataAttr)
       }.
 
 dropdown(Page, Block) -> % {{{2
@@ -445,6 +460,8 @@ full_block(Page, Block, RowClasses, ColClasses) -> % {{{2
               }}.
 
 tabs(Page, Block, Classes) -> % {{{2
+    tabs(Page, Block, Classes, []).
+tabs(Page, Block, Classes, DataAttr) -> % {{{2
     HeaderBlock = common:sub_block(Block, "tab-header"),
     BodyBlock = common:sub_block(Block, "tab-body"),
 
@@ -454,11 +471,13 @@ tabs(Page, Block, Classes) -> % {{{2
              common:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
              #panel{
                 class=["tab-content"|Classes],
-                body=common:parallel_block(Page, BodyBlock)
+                body=common:parallel_block(Page, BodyBlock),
+                data_fields = admin:extract_data_attrs(DataAttr)
                }
             ]}.
-
 tab_header(Page, Block, Classes) -> % {{{2
+    tab_header(Page, Block, Classes, []).
+tab_header(Page, Block, Classes, _DataAttr) -> % {{{2
     [BaseBlock|_] = string:tokens(Block, "/"),
     BodyBlock = common:sub_block(BaseBlock, "body"),
     #listitem{
@@ -483,9 +502,11 @@ tab_body(Page, Block, Classes) -> % {{{2
       }.
 
 modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes) -> % {{{2
+    modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes, []).
+modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes, _DataAttr) -> % {{{2
     common:link_event(Page, Block, ?POSTBACK({modal, Page, TitleBlock, BodyBlock, FooterBlock}, ?MODULE), Classes).
 
-%% Event handlers % {{{1
+%% Event handlers % {
 event({modal, Page, TitleBlock, BodyBlock, FooterBlock}) -> % {{{2
     Title = common:parallel_block(Page, TitleBlock),
     Body = common:parallel_block(Page, BodyBlock),
@@ -589,9 +610,7 @@ column_classes(Width, Offset) -> % {{{2
       if O > 0, O =< 12 ->
              [wf:f("col-~s-offset-~s", [Screen, Offset]) || Screen <- ["xs", "sm", "md", "lg"]] ++ column_classes(Width, "");
          true -> column_classes(Width, "")
-      end;
-column_classes(_, _) -> % {{{2
-    column_classes("12", "").
+      end.
 
 carusel_indicators(Block, NSlides) when NSlides > 0 -> % {{{2
     #list{

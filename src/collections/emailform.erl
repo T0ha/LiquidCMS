@@ -60,22 +60,23 @@ form_data(submit, A) -> % {{{2
      [],
      Block,
      Classes};
-form_data(F, [_, Block, Classes]) -> % {{{2
+form_data(_F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
-form_data(F, []) -> % {{{2
+form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{id={PID, _}, mfa={M, rating=Fun, A}}=Rec) -> % {{{2
-    %?LOG("save rating: ~p", [Rec]),
-    [Block, Min, Max, Step, Size, Classes] = admin:maybe_empty(A, 6),
-
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
+    % ?LOG("save rating: ~p", [Rec]),
+    [Block, Min, Max, Step, Size, Classes, _DataAttr] = admin:maybe_empty(A, 7),
     ShowCaption = wf:to_atom(common:q(show_caption, false)),
     ShowClear = wf:to_atom(common:q(show_clear, false)),
-    %?LOG("Show: ~p ~p~n", [ShowCaption, ShowClear]),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
-save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, A}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, A}}.
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B,Email, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
+
 
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
@@ -105,7 +106,7 @@ body_field(Page, Block, Classes) -> % {{{2
                 class=Classes,
                 placeholder=common:parallel_block(Page, Block)}}.
 
-rating(Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes) -> % {{{2
+rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> % {{{2
     #textbox{id=common:block_to_html_id(Block),
         html_id=common:block_to_html_id(Block),
         class=["rating", "rating-loading"],

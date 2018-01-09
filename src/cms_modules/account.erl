@@ -10,7 +10,7 @@
 %% CMS Module interface {{{1
 functions() -> % {{{2
     [
-     {email_field, "Login /Email Field"},
+     {email_field, "Login/Email Field"},
      {password_field, "Password Field"},
      {retype_password_field, "Retype Password Field"},
      {apply_agreement_cb, "Apply agreement checkbox"},
@@ -50,8 +50,11 @@ form_data(maybe_redirect_to_login, A) -> % {{{2
      {"URL", {url, URL}}
     ].
 
-
-save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={?MODULE, F, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, F, [Block, Classes]}};
+save_block(#cms_mfa{mfa={?MODULE, register_button, [Block, Role, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, register_button, [Block, Role, Classes]}};
+save_block(#cms_mfa{id={_, _}, mfa={?MODULE, maybe_redirect_to_login, [_Block, URL, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{id={"*", "router"}, mfa={?MODULE, maybe_redirect_to_login, [URL]}}.
 
 %% Module render functions {{{1
@@ -244,7 +247,6 @@ confirm(_Page, _Block, _Classes) -> % {{{2
 change_password() -> % {{{2
     Data = common:q(hex, ""),
     NewPassw = common:q(password, ""),
-    % ?LOG("NewPassw: ~p", [NewPassw]),
     if Data /= "" ->
         case db:confirm_change_password(wf:depickle(Data),
                                         hash(unicode:characters_to_binary(NewPassw))) of
@@ -269,7 +271,6 @@ maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
     ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
-    % ?LOG("Redirect to login: ~p", [Page]),
     ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
     case wf:role(Role) of 
         true ->
@@ -378,7 +379,6 @@ event({auth, register}) -> % {{{2
 event({auth, register, Role, DoConfirm}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),
-    % ?LOG("Login: ~p, Pass:~p", [Email, Passwd]),
     case db:register(Email, Passwd, Role, DoConfirm) of
         #cms_user{email=Email,
                   password=Passwd,
@@ -505,6 +505,5 @@ send_restore_password_email(Email, Passwd) -> % {{{2
     Host = application:get_env(nitrogen, host, "nitrogen-site.com"),
     FromEmail = application:get_env(nitrogen, confirmation_email, wf:f("restore@~s", [Host])),
     {ok, Text} = wf_render_elements:render_elements(#template{file="templates/mail/restore.txt", bindings=[{'Confirm', wf:pickle({Email, Passwd})}, {'Host', Host}]}),
-    % ?LOG("Text: ~p", [Text]),
     smtp:send_html(FromEmail, Email, ["Please, confirm restore password on ", Host], Text),
     ?LOG("send_restore_password_email: ~p", [Email]).

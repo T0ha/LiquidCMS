@@ -24,14 +24,15 @@ functions() -> % {{{2
      %{full_block, "One Column Row"}
      ].
 
-format_block(block, [Block, Classes]) -> % {{{2
-    {wf:f("Block (div): ~s(class=~p)", [Block, Classes]), Block};
-format_block(list, [Block, Numbered, Classes]) -> % {{{2
-    {wf:f("List: ~s(numbered=~s, class=~p)", [Block, Numbered, Classes]), Block};
-format_block(list_item, [Block, Classes]) -> % {{{2
-    {wf:f("List Item: ~s(class=~p)", [Block, Classes]), Block};
-format_block(link_url, [Block, URL, Classes]) -> % {{{2
-    {wf:f("Link: ~s(href=~s, class=~p)", [Block, URL, Classes]), Block};
+
+format_block(block, [Block, Classes, DataAttr]) -> % {{{2
+    {wf:f("Block (div): ~s(class=~p) (attr:~p)", [Block, Classes, DataAttr]), Block};
+format_block(list, [Block, Numbered, Classes, DataAttr]) -> % {{{2
+    {wf:f("List: ~s(numbered=~s, class=~p, attr:~p)", [Block, Numbered, Classes, DataAttr]), Block};
+format_block(list_item, [Block, Classes, DataAttr]) -> % {{{2
+    {wf:f("List Item: ~s(class=~p, attr:~p)", [Block, Classes, DataAttr]), Block};
+format_block(link_url, [Block, URL, Classes, DataAttr]) -> % {{{2
+    {wf:f("Link: ~s(href=~s, class=~p, attr:~p)", [Block, URL, Classes, DataAttr]), Block};
 format_block(text, [Text]) -> % {{{2
     {#panel{body=Text}, undefined};
 format_block(template, [TID]) -> % {{{2
@@ -44,10 +45,12 @@ format_block(asset, [AID]) -> % {{{2
     [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
     {wf:f("Asset ~s: ~s(~p)", [Type, Name, File]), undefined};
 format_block(F, A) -> % {{{2
+    % ?LOG("format_block: F:~p, A:~p",[F,A]),
     {wf:f("common:~s(~p)", [F, A]), undefined}.
 
+
 form_data(list, A) -> % {{{2
-    [_, Block, Numbered, Classes] = admin:maybe_empty(A, 4),
+    [_, Block, Numbered, Classes, DataAttr] = admin:maybe_empty(A, 5),
     {[
        #checkbox{
           text="Numbered",
@@ -57,9 +60,9 @@ form_data(list, A) -> % {{{2
           checked=Numbered
          }
      ],
-     [], Block, Classes};
+     [], Block, Classes, DataAttr};
 form_data(link_url, A) -> % {{{2
-    [_, Block, URL, Classes] = admin:maybe_empty(A, 4),
+    [_, Block, URL, Classes, DataAttr] = admin:maybe_empty(A, 5),
     {[
       {"URL",
        #txtbx{
@@ -68,7 +71,7 @@ form_data(link_url, A) -> % {{{2
           placeholder="http://yoursite.com"
          }}
      ],
-     [], Block, Classes};
+     [], Block, Classes, DataAttr};
 form_data(text, A) -> % {{{2
     [_, Text] = admin:maybe_empty(A, 2),
     [
@@ -241,28 +244,29 @@ form_data(asset, A) -> % {{{2
     ],
     []}.
 
-save_block(#cms_mfa{mfa={common, list, [Block, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
     Num = wf:to_atom(common:q(numbered, "false")),
-    Rec#cms_mfa{mfa={common, list, [Block, Num, Classes]}};
-save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes]}};
-save_block(#cms_mfa{mfa={common, text, [_Block, _Classes]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={common, list, [Block, Num, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={common, text, [_Block, _Classes, _DataAttr]}}=Rec) -> % {{{2
     HTML = q(text_mfa, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
-save_block(#cms_mfa{mfa={common, img, [_Block, StringId, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, img, [_Block, StringId, Classes, _DataAttr]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
     Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
-save_block(#cms_mfa{mfa={common, asset, [_Block, "image", StringId, Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, asset, [_Block, "image", StringId, Classes, _DataAttr]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
     Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
-save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Id = string:tokens(StringId, "."),
     Rec#cms_mfa{mfa={common, asset, [Id]}};
-save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, template, [File]}}.
 
 %% Block renderers {{{1
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
+    % ?LOG("~nparallel_block333: ~p ",[Block]),
     [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)].
 
 
@@ -322,42 +326,49 @@ template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
 list(Page, Block, Classes) -> % {{{2
-    list(Page, Block, false, Classes).
+    list(Page, Block, false, Classes, []).
 
-list(Page, Block, Numbered, Classes) -> % {{{2
+list(Page, Block, true, Classes) -> % {{{2
+    list(Page, Block, true, Classes, []);
+list(Page, Block, false, Classes) -> % {{{2
+    list(Page, Block, false, Classes, []).
+list(Page, Block, Numbered, Classes, DataAttr) -> % {{{2
     Items = parallel_block(Page, Block),
     #list{body=Items,
           numbered=Numbered,
           class=Classes,
-          html_id=block_to_html_id(Block)}.
+          html_id=block_to_html_id(Block),
+          data_fields = admin:extract_data_attrs(DataAttr)
+    }.
 
 list_item(Page, ItemID) -> % {{{2
     list_item(Page, ItemID, []).
 
 list_item(Page, ItemID, Classes) -> % {{{2
-    %<li>
-    %<a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
-    %</li>
+    list_item(Page, ItemID, Classes, []).
+list_item(Page, ItemID, Classes, DataAttr) -> % {{{2
     #listitem{
        html_id=block_to_html_id(ItemID),
        body=parallel_block(Page, ItemID),
-       class=Classes
+       class=Classes,
+       data_fields = admin:extract_data_attrs(DataAttr)
       }.
 
 link_url(Page, Block, URL) -> % {{{2
     link_url(Page, Block, URL, []).
-
 link_url(Page, Block, URL, Classes) -> % {{{2
+    link_url(Page, Block, URL, Classes, []).
+link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
     #link{
        url=URL, 
        html_id=block_to_html_id(Block),
        class=Classes,
-       body=parallel_block(Page, Block)
+       body=parallel_block(Page, Block),
+       data_fields = admin:extract_data_attrs(DataAttr)
       }.
 
 link_event(Page, Block, Event) -> % {{{2
     link_event(Page, Block, Event, []).
-
 link_event(Page, Block, Event, Classes) -> % {{{2
     #link{
        html_id=block_to_html_id(Block),
@@ -381,10 +392,13 @@ text(_Page, Block, Text) -> % {{{2
     maybe_wrap_to_edit(Text, Block, wf:role(editor)).
 
 block(Page, Block, Classes) -> % {{{2
+    block(Page, Block, Classes, []).
+block(Page, Block, Classes, DataAttr) -> % {{{2
     #panel{
        html_id=block_to_html_id(Block),
        class=Classes,
-       body=common:parallel_block(Page, Block)
+       body=common:parallel_block(Page, Block),
+       data_fields = admin:extract_data_attrs(DataAttr)
       }.
 
 full_block(_Page, Body) -> % {{{2
