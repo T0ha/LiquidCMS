@@ -667,7 +667,7 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
-formatting_fields(Any) -> % {{{2
+formatting_fields(_Any) -> % {{{2
     ?LOG("Other fields", []), %?LOG("Other fields: ~p", [Any]),
     [].
 
@@ -774,7 +774,7 @@ rec_from_qs(R) -> % {{{2
               settings=#{filters => Filters}}.
 
 apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
-     ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
+     % ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
@@ -1250,7 +1250,6 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
 
 event({page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
-    ?LOG("~nevent savve page:~p",[PID]),
     Title = wf:q(title),
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
@@ -1271,7 +1270,7 @@ event({block, change, module}) -> % {{{2
 event({block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    ?LOG("M: ~p, F: ~p", [M, F]),
+    % ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
@@ -1515,11 +1514,9 @@ event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
-    ?LOG("~n inplace_textbox_event ~p", [Record]),
     Val = db:update(Record, Field, Value),
     Val;
-inplace_textbox_event(Tag, Value) -> % {{{2
-    ?LOG("~p inplace tb event ~p: ~p", [?MODULE, Tag, Value]),
+inplace_textbox_event(_Tag, Value) -> % {{{2
     Value.
 start_upload_event(_Tag) -> % {{{2
     ok.
