@@ -613,23 +613,32 @@ get_data_attrs(M, Prefix) -> % {{{2
               end,
               AllData).
 
-extract_data_attrs(DataAttrs)  -> % {{{2
-    S=string:replace(lists:concat(DataAttrs),"data-","",all),
-    case S of 
-      Lt when is_list(Lt), length(Lt) > 1 ->
-        R=lists:concat(Lt);
-      [R] ->
-        ok
-    end,
-    L=string:tokens(R," =,"),
-    {L1,L2}=lists:partition(fun(A) -> index_of(A,L) rem 2 == 1 end, L),
-    if (length(L1)==length(L2)) ->
-      T=lists:zip(L1,L2);
-    true ->
-      T=[]
-    end,
-    ?LOG("handled data_attrs: ~p", [T]),
-    T.
+extract_data_attrs([])  -> % {{{2
+    [];
+extract_data_attrs([DataAttrs])  -> % {{{2
+    Pairs = string:tokens(DataAttrs, " ,"),
+    ?LOG("Pairs: ~p~n", [Pairs]),
+    [{wf:to_atom(K), V} || Pair <- Pairs, [K, V] <- [string:tokens(Pair, "=")]].
+% extract_data_attrs(DataAttrs)  -> % {{{2
+%     S=string:replace(lists:concat(DataAttrs),"data-","",all),
+%     % Pairs = string:tokens(S, " =,"),
+%     % ?LOG("handled data_attrs: ~p", [Pairs]),
+%     % [{wf:to_atom(K), V} || Pair <- Pairs, length(Pair) == 2, [K, V] <- Pair].
+%     case S of 
+%       Lt when is_list(Lt), length(Lt) > 1 ->
+%         R=lists:concat(Lt);
+%       [R] ->
+%         ok
+%     end,
+%     L=string:tokens(R," =,"),
+%     {L1,L2}=lists:partition(fun(A) -> index_of(A,L) rem 2 == 1 end, L),
+%     if (length(L1)==length(L2)) ->
+%       T=lists:zip(L1,L2);
+%     true ->
+%       T=[]
+%     end,
+%     ?LOG("handled data_attrs: ~p", [T]),
+%     T.
 
 index_of(Item, List) -> index_of(Item, List, 1).
 index_of(_, [], _)  -> not_found;
@@ -774,7 +783,7 @@ rec_from_qs(R) -> % {{{2
               settings=#{filters => Filters}}.
 
 apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
-     % ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
+     ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
