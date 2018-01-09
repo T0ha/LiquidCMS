@@ -774,6 +774,7 @@ rec_from_qs(R) -> % {{{2
               settings=#{filters => Filters}}.
 
 apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
+     ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;

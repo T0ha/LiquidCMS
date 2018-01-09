@@ -17,12 +17,15 @@ functions() -> % {{{2
 format_block(F, [Block|_]=A) -> % {{{2
     {wf:f("account:~s(~p)", [F, A]), Block}.
 
-form_data(F, [_, Block, Classes]) -> % {{{2
+form_data(_F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
-form_data(F, []) -> % {{{2
+form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{id={PID, _}, mfa={M, Fun, [Block, Classes]}}=Rec) -> % {{{2
+% save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes,_DataAttr]}}=Rec) -> % {{{2
+%     ?LOG("~nsave_block1 ~p", [Rec]),
+%     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}}.
 
 %% Block renderers {{{1
