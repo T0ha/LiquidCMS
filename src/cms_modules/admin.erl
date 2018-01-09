@@ -516,7 +516,7 @@ add_default_fields(Data, Formatting, Block, Classes, DataAttrs) -> % {{{2
                | Data]},
      {"Formatting",
       Formatting ++ [{"Additional classes", {classes, Classes}}]
-       ++ [{"Data-attributes", {data_fields, DataAttrs}}]
+       ++ [{"Data-attributes", {data_fields, format_data_attrs(DataAttrs)}}]
      }
     ].
 
@@ -591,21 +591,10 @@ render_field(Any, Width) -> % {{{2
        body=Any
       }.
 
-get_classes(M, Prefix) -> % {{{2
+
+get_with_prefix(M, Prefix, Label) -> % {{{2
     Fields = formatting_fields(form_fields(M, Prefix, [])),
-    ?LOG("Classes fields: ~p", [Fields]),
-    AllClasses = wf:mq([classes | Fields]),
-    ?LOG("Classes data: ~p", [AllClasses]),
-    %Classes = sets:to_list(sets:from_list(AllClasses)),
-    lists:map(fun(none) -> "";
-                 (undefined) -> "";
-                 ("") -> "";
-                 (Class) -> Class
-              end,
-              AllClasses).
-get_data_attrs(M, Prefix) -> % {{{2
-    Fields = formatting_fields(form_fields(M, Prefix, [])),
-    AllData = wf:mq([data_fields | Fields]),
+    AllData = wf:mq([Label | Fields]),
     lists:map(fun(none) -> "";
                  (undefined) -> "";
                  ("") -> "";
@@ -613,34 +602,20 @@ get_data_attrs(M, Prefix) -> % {{{2
               end,
               AllData).
 
+extract_data_attrs([])  -> % {{{2
+    [];
 extract_data_attrs(DataAttrs)  -> % {{{2
-    S=string:replace(lists:concat(DataAttrs),"data-","",all),
-    case S of 
-      Lt when is_list(Lt), length(Lt) > 1 ->
-        R=lists:concat(Lt);
-      [R] ->
-        ok
-    end,
-    L=string:tokens(R," =,"),
-    {L1,L2}=lists:partition(fun(A) -> index_of(A,L) rem 2 == 1 end, L),
-    if (length(L1)==length(L2)) ->
-      T=lists:zip(L1,L2);
-    true ->
-      T=[]
-    end,
-    ?LOG("handled data_attrs: ~p", [T]),
-    T.
+    Pairs = string:tokens(DataAttrs, ", "),
+    ?LOG("Pairs: ~p~n", [Pairs]),
+    [{data_attr_key(K), V} || Pair <- Pairs, [K, V] <- [string:tokens(Pair, "=")]].
 
-index_of(Item, List) -> index_of(Item, List, 1).
-index_of(_, [], _)  -> not_found;
-index_of(Item, [Item|_], Index) -> Index;
-index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).
-    % lists:map(fun(none) -> "";
-    %              (undefined) -> "";
-    %              ("") -> "";
-    %              (Data) -> Data
-    %           end,
-    %           AllData).
+data_attr_key([$d, $a, $t, $a, $- | K]) -> % {{{2
+    data_attr_key(K);
+data_attr_key(K) -> % {{{2
+    wf:to_atom(K).
+
+format_data_attrs(Attrs) -> % {{{2
+    [[K, "=", V, " "] || {K, V} <- Attrs].
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
@@ -764,8 +739,8 @@ rec_from_qs(R) -> % {{{2
     PID = common:q(add_page_select, "index"),
     Block = common:q(add_block, "body"),
 
-    Classes = admin:get_classes(M, wf:to_atom(F)),
-    DataAttrs = admin:get_data_attrs(M, wf:to_atom(F)),
+    Classes = get_with_prefix(M, wf:to_atom(F), classes),
+    DataAttrs =extract_data_attrs(common:q(data_fields, "")),
 
     Filters = wf:mq([qs_key, qs_val, role]),
 

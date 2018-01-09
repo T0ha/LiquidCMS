@@ -332,13 +332,14 @@ list(Page, Block, true, Classes) -> % {{{2
     list(Page, Block, true, Classes, []);
 list(Page, Block, false, Classes) -> % {{{2
     list(Page, Block, false, Classes, []).
+
 list(Page, Block, Numbered, Classes, DataAttr) -> % {{{2
     Items = parallel_block(Page, Block),
     #list{body=Items,
           numbered=Numbered,
           class=Classes,
           html_id=block_to_html_id(Block),
-          data_fields = admin:extract_data_attrs(DataAttr)
+          data_fields=DataAttr
     }.
 
 list_item(Page, ItemID) -> % {{{2
