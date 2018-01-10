@@ -332,13 +332,14 @@ list(Page, Block, true, Classes) -> % {{{2
     list(Page, Block, true, Classes, []);
 list(Page, Block, false, Classes) -> % {{{2
     list(Page, Block, false, Classes, []).
+
 list(Page, Block, Numbered, Classes, DataAttr) -> % {{{2
     Items = parallel_block(Page, Block),
     #list{body=Items,
           numbered=Numbered,
           class=Classes,
           html_id=block_to_html_id(Block),
-          data_fields = admin:extract_data_attrs(DataAttr)
+          data_fields=DataAttr
     }.
 
 list_item(Page, ItemID) -> % {{{2
@@ -351,7 +352,7 @@ list_item(Page, ItemID, Classes, DataAttr) -> % {{{2
        html_id=block_to_html_id(ItemID),
        body=parallel_block(Page, ItemID),
        class=Classes,
-       data_fields = admin:extract_data_attrs(DataAttr)
+       data_fields = DataAttr
       }.
 
 link_url(Page, Block, URL) -> % {{{2
@@ -364,7 +365,7 @@ link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
        html_id=block_to_html_id(Block),
        class=Classes,
        body=parallel_block(Page, Block),
-       data_fields = admin:extract_data_attrs(DataAttr)
+       data_fields = DataAttr
       }.
 
 link_event(Page, Block, Event) -> % {{{2
@@ -398,7 +399,7 @@ block(Page, Block, Classes, DataAttr) -> % {{{2
        html_id=block_to_html_id(Block),
        class=Classes,
        body=common:parallel_block(Page, Block),
-       data_fields = admin:extract_data_attrs(DataAttr)
+       data_fields = DataAttr
       }.
 
 full_block(_Page, Body) -> % {{{2
