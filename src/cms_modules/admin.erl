@@ -1544,4 +1544,3 @@ cms_roles() -> % {{{2
 collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
-

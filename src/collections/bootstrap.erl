@@ -32,9 +32,13 @@ format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
     {wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
          [Block, Width, Offset, Classes]),
     Block};
-format_block(panel, [BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
-    {wf:f("Panel(header_block=~p, body_block=~p, addons_block=~p, footer_block=~p, classes=~p, attr:~p)",
-         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr]),
+format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
+    format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, []]);
+format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
+    format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes, DataAttr]);
+format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, AddonCls, FooterCls, Classes, DataAttr]) -> % {{{2
+    {wf:f("Panel(header:=~p, body:=~p, addons:=~p, footer:=~p, SubClasses=(~p~p~p~p), classes=~p, attr:~p)",
+         [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, AddonCls, FooterCls, Classes, DataAttr]),
      BodyBlock};
 format_block(modal, [Block, HeaderBlock, BodyBlock, FooterBlock, Classes, _DataAttr]) -> % {{{2
     {wf:f("Modal(link_block=~p, title_block=~p, body_block=~p, footer_block=~p, classes=~p)",
@@ -72,8 +76,8 @@ form_data(col, A) -> % {{{2
      Classes
     };
 form_data(panel, A) -> % {{{2
-    [_, Block, HeaderBlock,  AddonsBlock, FooterBlock, C, DataAttr] = admin:maybe_empty(A, 7),
-    [Classes, Context] = admin:maybe_empty(C, 2),
+    [_, Block, HeaderBlock,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
+    [Classes, Context] = admin:maybe_empty(Classes0, 2),
     {[
       {"Block for panel header",
       #txtbx{
@@ -100,7 +104,31 @@ form_data(panel, A) -> % {{{2
           id=context,
           value=Context,
           options=context_classes(panel)
-         }}
+         }},
+      {"Header Classes",
+       #txtbx{
+         id=panel_header_cls,
+         text=HeaderCls,
+         placeholder="Header classes (leave blank for none)"
+        }},
+      {"Body Classes",
+       #txtbx{
+         id=panel_body_cls,
+         text=BodyCls,
+         placeholder="Body classes (leave blank for none)"
+        }},
+      {"Addons Classes",
+       #txtbx{
+         id=panel_addons_cls,
+         text=AddonCls,
+         placeholder="Addons classes (leave blank for none)"
+        }},
+      {"Footer Classes",
+       #txtbx{
+         id=panel_footer_cls,
+         text=FooterCls,
+         placeholder="Footer classes (leave blank for none)"
+        }}
      ],
      Block,
      Classes,
@@ -226,6 +254,10 @@ form_data(_F, []) -> % {{{2
 
 save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
     Context = common:q(context, ""),
+    HeaderCls = common:q(panel_header_cls, ""),
+    BodyCls = common:q(panel_body_cls, ""),
+    AddonCls = common:q(panel_addons_cls, ""),
+    FooterCls = common:q(panel_footer_cls, ""),
     Rec#cms_mfa{mfa={bootstrap,
                      panel,
                      [
@@ -233,6 +265,7 @@ save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Clas
                       Block,
                       Addons,
                       Footer,
+                      HeaderCls, BodyCls, FooterCls, AddonCls,
                       [Classes, Context],
                       DataAttr
                      ]}};
@@ -355,16 +388,16 @@ nav_item(Page, ItemID, Classes, DataAttr) -> % {{{2
       }.
 panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes) -> % {{{2
     panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, []).
-panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, DataAttr) -> % {{{2
-    % ?LOG("~nATTRS:~p~p~p~p~p~p",[ HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr]),
+panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes, DataAttr) -> % {{{2
+    panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes,  DataAttr).
+panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes, DataAttr) -> % {{{2
     #panel{
-       %html_id=common:block_to_html_id(BodyBlock),
        class=["panel" | Classes],
        body=[
-             index:maybe_block(Page, HeaderBlock, ["panel-heading"]),
-             index:maybe_block(Page, BodyBlock, ["panel-body"]),
-             index:maybe_block(Page, AddonsBlock, []),
-             index:maybe_block(Page, FooterBlock, ["panel-footer"])
+             index:maybe_block(Page, HeaderBlock, [HeaderCls | "panel-heading"]),
+             index:maybe_block(Page, BodyBlock, [BodyCls | "panel-body"]),
+             index:maybe_block(Page, AddonsBlock, [AddonCls]),
+             index:maybe_block(Page, FooterBlock, [FooterCls | "panel-footer"])
             ],
        data_fields = DataAttr
       }.
