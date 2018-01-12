@@ -224,7 +224,8 @@ form_data(_F, [_, Block, Classes]) -> % {{{2
 form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes, Context], DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
+    Context = common:q(context, ""),
     Rec#cms_mfa{mfa={bootstrap,
                      panel,
                      [
@@ -350,7 +351,7 @@ nav_item(Page, ItemID, Classes, DataAttr) -> % {{{2
        html_id=common:block_to_html_id(ItemID),
        class=Classes, 
        body=common:parallel_block(Page, ItemID),
-       data_fields = admin:extract_data_attrs(DataAttr)
+       data_fields = DataAttr
       }.
 panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes) -> % {{{2
     panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, []).
@@ -365,7 +366,7 @@ panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, DataAttr)
              index:maybe_block(Page, AddonsBlock, []),
              index:maybe_block(Page, FooterBlock, ["panel-footer"])
             ],
-       data_fields = admin:extract_data_attrs(DataAttr)
+       data_fields = DataAttr
       }.
 
 dropdown(Page, Block) -> % {{{2
@@ -472,7 +473,7 @@ tabs(Page, Block, Classes, DataAttr) -> % {{{2
              #panel{
                 class=["tab-content"|Classes],
                 body=common:parallel_block(Page, BodyBlock),
-                data_fields = admin:extract_data_attrs(DataAttr)
+                data_fields = DataAttr
                }
             ]}.
 tab_header(Page, Block, Classes) -> % {{{2
