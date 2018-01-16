@@ -834,7 +834,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                                 ]}
               ]);
 
-event({asset, new, _Type}) -> % {{{2 TODO: Check and remove _Type at all
+event({?MODULE, asset, new}) -> % {{{2 TODO: Check and remove _Type at all
     new_modal("Upload Static Asset",
               {asset, save},
               asset, 
@@ -856,7 +856,7 @@ event({asset, new, _Type}) -> % {{{2 TODO: Check and remove _Type at all
                   options=common:asset_types()
                  }
               ]);
-event({asset, refresh, Type}) -> % {{{2
+event({?MODULE, asset, refresh, Type}) -> % {{{2
     get_files_from_folder("static"),
     event({asset, show, Type});
 event({asset, save}) -> % {{{2
@@ -907,7 +907,7 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-warning",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({asset, refresh, Type})
+                                              actions=?POSTBACK({?MODULE, asset, refresh, Type})
                                              }},
                                    #bs_col{
                                       cols={lg, 2},
@@ -917,7 +917,7 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({asset, new, Type})
+                                              actions=?POSTBACK({?MODULE, asset, new})
                                              }}
                                   ]},
                           #bs_row{
