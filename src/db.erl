@@ -6,6 +6,7 @@
 
 -compile([export_all]).
 -include("db.hrl").
+-include_lib("nitrogen_core/include/wf.hrl").
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -211,6 +212,23 @@ update("0.1.3"=VSN) -> % {{{1
                                             active=true
                                            }
                                     end, record_info(fields, cms_user)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.4"=VSN) -> % {{{1
+    [AdminPage] = get_page("admin"),
+    db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
+
+    transaction(fun() ->
+                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={common, link_event, '_'}, _='_'}),
+                        lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Event]}}=MFA) ->
+                                              ok=mnesia:delete_object(MFA),
+                                              mnesia:write(MFA#cms_mfa{mfa={M, F, [Block, Event#event{delegate=admin}]}})
+                                      end,
+                                      NavBarEvents)
+                end),
+    transaction(fun() ->
+                        Pages = mnesia:match_object(#cms_page{accepted_role=undefined, _='_'}),
+                        [mnesia:write(P#cms_page{accepted_role=nobody}) || P <- Pages]
+                end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->

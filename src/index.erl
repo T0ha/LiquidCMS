@@ -6,8 +6,52 @@
 -include("db.hrl").
 
 %% CMS Module interface {{{1
-description() -> % {{{2
-    "Main module".
+?DESCRIPTION(Main module).
+
+%% Module install routines {{{1
+default_data() -> % {{{2
+    #{cms_mfa => [
+                  %Scripts
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery"]]},
+                           sort=1},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "jquery-ui"]]},
+                           sort=2},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bert"]]},
+                           sort=3},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "nitrogen"]]},
+                           sort=4},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "livevalidation"]]},
+                           sort=5},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
+                           sort=6,
+                           settings=#{filters => ["", "", "editor"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                           sort=7,
+                           settings=#{filters => ["", "", "editor"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
+                           sort=8,
+                           settings=#{filters => ["", "", "admin"]}},
+                  #cms_mfa{id={"*", "script"},
+                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
+                           sort=9,
+                           settings=#{filters => ["", "", "admin"]}},
+
+                  %CSS
+                  #cms_mfa{id={"*", "css"},
+                           mfa={common, asset, [["css", "jquery-ui"]]},
+                           sort=1},
+                  #cms_mfa{id={"*", "css"},
+                           mfa={common, asset, [["css", "bootstrap"]]},
+                           sort=2}
+                 ]}.
 
 %% Module render functions {{{1
 main() ->  % {{{2
