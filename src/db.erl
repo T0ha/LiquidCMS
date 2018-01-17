@@ -29,7 +29,7 @@ install([])-> % {{{1
                                    mnesia:write(
                                      update_timestamps(R))
                            end,
-                           V)
+                           lists:flatten(V))
                  end,
                 (M):default_data()) ||
                M <- DataModules]
@@ -763,6 +763,8 @@ merge_backup_and_db(Source, Mod) -> % {{{1
            end,
     mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
 
+update_timestamps(Recs) when is_list(Recs) -> % {{{1
+    [update_timestamps(Rec) || Rec <- Recs];
 update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_mfa{created_at=CT, updated_at=CT};

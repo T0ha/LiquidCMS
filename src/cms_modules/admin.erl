@@ -836,7 +836,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
 
 event({?MODULE, asset, new}) -> % {{{2 TODO: Check and remove _Type at all
     new_modal("Upload Static Asset",
-              {asset, save},
+              {?MODULE, asset, save},
               asset, 
               [
                #span{text="Name"},
@@ -859,7 +859,7 @@ event({?MODULE, asset, new}) -> % {{{2 TODO: Check and remove _Type at all
 event({?MODULE, asset, refresh, Type}) -> % {{{2
     get_files_from_folder("static"),
     event({asset, show, Type});
-event({asset, save}) -> % {{{2
+event({?MODULE, asset, save}) -> % {{{2
     Type = wf:to_atom(wf:q(type)),
     Path = wf:q(path),
     Fname = filename:basename(Path),
@@ -926,9 +926,9 @@ event({asset, show, Type}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({template, new}) -> % {{{2
+event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
-              {template, save},
+              {?MODULE, template, save},
               template,
               [
                #span{text="Name"},
@@ -942,10 +942,10 @@ event({template, new}) -> % {{{2
                #hidden{id=path}
               ]);
 
-event({template, refresh}) -> % {{{2
+event({?MODULE, template, refresh}) -> % {{{2
     get_files_from_folder("templates"),
     event({template, show});
-event({template, save}) -> % {{{2
+event({?MODULE, template, save}) -> % {{{2
     Path = wf:q(path),
     add_template(wf:q(name), wf:q(description), Path, []),
     coldstrap:close_modal(),
@@ -984,7 +984,7 @@ event({template, show}) -> % {{{2
                                                      "btn-warning",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({template, refresh})
+                                              actions=?POSTBACK({?MODULE, template, refresh})
                                              }},
                                    #bs_col{
                                       cols={lg, 2},
@@ -994,7 +994,7 @@ event({template, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({template, new})
+                                              actions=?POSTBACK({?MODULE, template, new})
                                              }}
                                   ]},
                           #bs_row{
@@ -1040,7 +1040,7 @@ event({page, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({page, new})
+                                              actions=?POSTBACK({?MODULE, page, new})
                                              }}
                                   ]},
                           #bs_row{
@@ -1049,9 +1049,9 @@ event({page, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({page, new}) -> % {{{2
+event({?MODULE, page, new}) -> % {{{2
     new_modal("Create Page", 
-              {page, save},
+              {?MODULE, page, save},
               undefined,
               [
                #span{text="Name (ID)"},
@@ -1158,9 +1158,9 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
                      Sort
                     ]},
 
-    update_container("Construct Page", "Add Block", {block, add}, Body);
+    update_container("Construct Page", "Add Block", {?MODULE, block, add}, Body);
 
-event({page, save}) -> % {{{2 onclick <Save> btn
+event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
     Title = wf:q(title),
     Description = wf:q(description),
@@ -1312,7 +1312,7 @@ event({user, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({user, new})
+                                              actions=?POSTBACK({?MODULE, user, new})
                                              }}
                                   ]},
                           #bs_row{
@@ -1321,10 +1321,10 @@ event({user, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({user, new}) -> % {{{2
+event({?MODULE, user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
-              {user, save},
+              {?MODULE, user, save},
               undefined,
               [
                account:email_field(Page),
@@ -1337,7 +1337,7 @@ event({user, new}) -> % {{{2
                   options=cms_roles()
                  }
               ]);
-event({user, save}) -> % {{{2
+event({?MODULE, user, save}) -> % {{{2
     account:event({auth, register}),
     coldstrap:close_modal(),
     wf:wire(#event{postback={user, show}});
@@ -1373,7 +1373,7 @@ event({role, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({role, new})
+                                              actions=?POSTBACK({?MODULE, role, new})
                                              }}
                                   ]},
                           #bs_row{
@@ -1382,9 +1382,9 @@ event({role, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({role, new}) -> % {{{2
+event({?MODULE, role, new}) -> % {{{2
     new_modal("Create Role", 
-              {role, save},
+              {?MODULE, role, save},
               undefined,
               [
                #span{text="Role"},
@@ -1395,7 +1395,7 @@ event({role, new}) -> % {{{2
                #txtbx{id=priority,
                       placeholder="Access priority for role (int)"}
               ]);
-event({role, save}) -> % {{{2
+event({?MODULE, role, save}) -> % {{{2
     Name = wf:q(name),
     Role = wf:to_atom(string:to_lower(re:replace(Name, "\s", "_", [{return, list}]))),
     Priority = wf:to_integer(wf:q(priority)),
