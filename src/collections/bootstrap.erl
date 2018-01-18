@@ -394,10 +394,10 @@ panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls
     #panel{
        class=["panel" | Classes],
        body=[
-             index:maybe_block(Page, HeaderBlock, [HeaderCls | "panel-heading"]),
-             index:maybe_block(Page, BodyBlock, [BodyCls | "panel-body"]),
+             index:maybe_block(Page, HeaderBlock, [HeaderCls , "panel-heading"]),
+             index:maybe_block(Page, BodyBlock, [BodyCls , "panel-body"]),
              index:maybe_block(Page, AddonsBlock, [AddonCls]),
-             index:maybe_block(Page, FooterBlock, [FooterCls | "panel-footer"])
+             index:maybe_block(Page, FooterBlock, [FooterCls , "panel-footer"])
             ],
        data_fields = DataAttr
       }.

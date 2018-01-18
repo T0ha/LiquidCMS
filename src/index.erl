@@ -10,7 +10,11 @@
 
 %% Module install routines {{{1
 default_data() -> % {{{2
-    #{cms_mfa => [
+    #{
+  cms_page => [
+                #cms_page{id="restore", description=[], module=index, accepted_role=nobody, title="LiquidCMS"}
+               ],
+  cms_mfa => [
                   %Scripts
                   #cms_mfa{id={"*", "script"},
                            mfa={common, asset, [["js", "jquery"]]},
@@ -50,7 +54,16 @@ default_data() -> % {{{2
                            sort=1},
                   #cms_mfa{id={"*", "css"},
                            mfa={common, asset, [["css", "bootstrap"]]},
-                           sort=2}
+                           sort=2},
+
+                  % Index page
+                  admin:add_to_block("index", "body",
+                                     {router, common_redirect, [[], "/?page=register"]}),
+                  admin:add_to_block("index", "body",
+                                     {common, template, ["templates/setup.html"]}),
+
+                  admin:add_to_block("index", "router",
+                                     {router, page, ["register"]}, 1)
                  ]}.
 
 %% Module render functions {{{1
