@@ -721,42 +721,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
                                     ]
                             end
                         end);
-                    cms_role ->
-                        Name=Item#cms_role.name,
-                        transaction(fun() ->
-                            case mnesia:match_object(#cms_role{name=Name,_='_'}) of
-                                [] ->
-                                    mnesia:write(Item),
-                                    io:format("~nNew item: ~p",[Item]);
-                                L when is_list(L) -> 
-                                    [
-                                      if (Item#cms_role.updated_at>DbItem#cms_role.updated_at)  -> 
-                                        mnesia:delete_object(DbItem),
-                                        mnesia:write(Item),
-                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
-                                      end ||  DbItem <- L
-                                    ]
-                            end
-                        end);
-                    cms_user ->
-                        Email=Item#cms_user.email,
-                        transaction(fun() ->
-                            case mnesia:match_object(#cms_user{email=Email,_='_'}) of
-                                [] ->
-                                    mnesia:write(Item),
-                                    io:format("~nNew item: ~p",[Item]);
-                                L when is_list(L) -> 
-                                    [
-                                      if (Item#cms_user.created_at>DbItem#cms_user.created_at) 
-                                        or (Item#cms_user.updated_at>DbItem#cms_user.updated_at)  -> 
-                                        mnesia:delete_object(DbItem),
-                                        mnesia:write(Item),
-                                        io:format("~nupdate from:~p~n       to ~p",[DbItem,Item])
-                                      end ||  DbItem <- L
-                                    ]
-                            end
-                        end);
-                        _Else -> false          
+                    _Else -> false          
                 end,
 
                 {[Item], Acc + 1}
