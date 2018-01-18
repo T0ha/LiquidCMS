@@ -386,11 +386,11 @@ nav_item(Page, ItemID, Classes, DataAttr) -> % {{{2
        body=common:parallel_block(Page, ItemID),
        data_fields = DataAttr
       }.
-panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes) -> % {{{2
+panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes) -> % {{{2
     panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, []).
-panel(Page, BodyBlock, HeaderBlock,  AddonsBlock, FooterBlock, Classes, DataAttr) -> % {{{2
-    panel(Page,  HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes,  DataAttr).
-panel(Page, BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes, DataAttr) -> % {{{2
+panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr) -> % {{{2
+    panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes,  DataAttr).
+panel(Page, HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes, DataAttr) -> % {{{2
     #panel{
        class=["panel" | Classes],
        body=[
