@@ -298,6 +298,9 @@ default_data() -> % {{{2
               ],
 
     cms_mfa => [
+                % Routes
+                % admin:add_to_block("*", "router",
+                %                    {account, confirm, [[],[[]]]}),
                 % Confirm email page
                 admin:add_to_block("confirm", "body",
                                    {account, confirm, [[],[[]]]}),
@@ -395,11 +398,7 @@ event({auth, login}) -> % {{{2
         [User] ->
             set_user_roles(User),
             wf:user(User),
-            if User#cms_user.role == admin ->
-                wf:redirect_from_login("/admin?page=admin");
-            true ->
-                wf:redirect_from_login("/")
-            end
+            wf:redirect_from_login("/")
     end;
 event({auth, call_restore_password}) -> % {{{2
   call_restore_password();

@@ -32,11 +32,11 @@ format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
     {wf:f("Column: ~s(width=~p, offset=~p, classes=~p)",
          [Block, Width, Offset, Classes]),
     Block};
-format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
-    format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, []]);
-format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
-    format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes, DataAttr]);
-format_block(panel, [BodyBlock, HeaderBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, AddonCls, FooterCls, Classes, DataAttr]) -> % {{{2
+format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes]) -> % {{{2
+    format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, []]);
+format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
+    format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, [],[],[],[], Classes, DataAttr]);
+format_block(panel, [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, AddonCls, FooterCls, Classes, DataAttr]) -> % {{{2
     {wf:f("Panel(header:=~p, body:=~p, addons:=~p, footer:=~p, SubClasses=(~p~p~p~p), classes=~p, attr:~p)",
          [HeaderBlock, BodyBlock, AddonsBlock, FooterBlock, HeaderCls, BodyCls, AddonCls, FooterCls, Classes, DataAttr]),
      BodyBlock};
@@ -76,7 +76,7 @@ form_data(col, A) -> % {{{2
      Classes
     };
 form_data(panel, A) -> % {{{2
-    [_, Block, HeaderBlock,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
+    [_, HeaderBlock, Block,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
     [Classes, Context] = admin:maybe_empty(Classes0, 2),
     {[
       {"Block for panel header",
