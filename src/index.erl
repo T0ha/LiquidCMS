@@ -13,7 +13,7 @@
 default_data() -> % {{{2
     #{
   cms_page => [
-                #cms_page{id="restore",
+                #cms_page{id="index",
                           description=[],
                           module=index,
                           accepted_role=nobody,
