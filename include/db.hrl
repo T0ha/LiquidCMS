@@ -1,5 +1,4 @@
 -define(DB_PREFIX(), liquid_cms_).
--define(DESCRIPTION(Text), description() -> ??Text).
 
 %% DB helpers
 -define(TIMESTAMPS, 
@@ -15,16 +14,6 @@
                                 {index, Indexes},
                                 {attributes, record_info(fields, Record)}
                                ]))).
--define(POSTBACK(P), #event{
-                        type=click,
-                        postback=P
-                       }).
--define(POSTBACK(P, Delegate), #event{
-                        type=click,
-                        postback=P,
-                        delegate=Delegate
-                       }).
-
 -define(ROLE_ROOT_SORT, 1).
 -define(ROLE_ADMIN_SORT, 1000).
 -define(ROLE_EDITOR_SORT, 2000).
@@ -91,15 +80,6 @@
           active=true :: boolean(),
           settings = #{} :: map()
          }).
-
-
-% -record(cms_account, {
-%           id :: any(),
-%           user :: binary(),
-%           ?TIMESTAMPS,
-%           active=true :: boolean(),
-%           settings = #{} :: map()
-%          }).
           
            
 -record(cms_role, {
@@ -110,5 +90,3 @@
           active=true :: boolean(),
           settings = #{} :: map()
          }).
-
-
