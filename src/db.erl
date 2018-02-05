@@ -278,6 +278,7 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
     CT = calendar:universal_time(),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
+                                                           active=true,
                                                            _='_'}) of
                             [] -> 
                                 User = #cms_user{

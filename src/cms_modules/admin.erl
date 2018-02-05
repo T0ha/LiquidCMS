@@ -5,6 +5,7 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 ?DESCRIPTION(Admin).
 
@@ -1357,7 +1358,7 @@ event({?MODULE, user, new}) -> % {{{2
 event({?MODULE, user, save}) -> % {{{2
     account:event({auth, register}),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={user, show}});
+    wf:wire(#event{postback={?MODULE, user, show}, delegate=?MODULE});
 event({?MODULE, role, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1421,7 +1422,7 @@ event({?MODULE, role, save}) -> % {{{2
                name = Name,
                sort = Priority}),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={user, show}});
+    wf:wire(#event{postback={?MODULE, role, show}, delegate=?MODULE});
 event({?MODULE, pages, export}) -> % {{{2
     Path = "/tmp/" ++ wf:temp_id(),
     ok=mnesia:backup(Path),
@@ -1482,7 +1483,7 @@ sort_event({PID, Block}, Blocks) -> % {{{2
                           db:update(B, B#cms_mfa{sort=N})
                   end,
                   lists:zip(lists:seq(1, length(Blocks)), Blocks)),
-    wf:wire(#event{postback={page, construct, PID, [Block]}});
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
 

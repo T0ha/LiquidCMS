@@ -1,6 +1,7 @@
 -module(bootstrap).
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
+-include("cms.hrl").
 -include("db.hrl").
 -include("records.hrl").
 
