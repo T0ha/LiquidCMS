@@ -177,15 +177,13 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
          {_Font, _Name, _Classes} = Args ->
              A = tuple_to_list(Args),
              #cms_mfa{id={PID, LinkBlock},
-                      mfa={common, icon, A},
-                      sort=1};
+                      mfa={common, icon, A}};
          _ ->
              []
      end,
      if Text /= undefined ->
             #cms_mfa{id={PID, LinkBlock},
-                     mfa={common, text, [" " ++ Text]},
-                     sort=2};
+                     mfa={common, text, [" " ++ Text]}};
         true -> []
      end
     ].
