@@ -89,6 +89,17 @@ add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
            {error, no_template}
     end.
 
+add_to_block({PID, Block}, Mater) when is_list(Mater)  -> % {{{2
+    lists:flatten([add_to_block({PID, Block}, M) || M <- Mater]);
+add_to_block({PID, Block}, {_M, _F, _A}=Mater) -> % {{{2
+    add_to_block(PID, Block, Mater);
+add_to_block(Id, {{_M, _F, _A}=MFA, Settings}) -> % {{{2
+    #cms_mfa{
+       id=Id,
+       mfa=MFA,
+       settings=Settings
+      }.
+
 add_to_block(PID, Block, Mater)  -> % {{{2
     add_to_block(PID, Block, Mater, 1).
 
