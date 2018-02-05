@@ -23,16 +23,16 @@ default_data() -> % {{{2
   cms_mfa => [
               add_to_block("admin", "body", {template, "templates/blank.html"}),
 
-              add_to_block("admin", "css", {asset, ["css", "font-awesome"]}, 3),
-              add_to_block("admin", "css", {asset, ["css", "metisMenu"]}, 4),
-              add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}, 6),
-              add_to_block("admin", "css", {asset, ["css", "admin"]}, 7),
+              add_to_block("admin", "css", {asset, ["css", "font-awesome"]}),
+              add_to_block("admin", "css", {asset, ["css", "metisMenu"]}),
+              add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}),
+              add_to_block("admin", "css", {asset, ["css", "admin"]}),
 
-              add_to_block("admin", "script", {asset, ["js", "bootstrap"]}, 6),
-              add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
-              add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
-              add_to_block("admin", "script", {asset, ["js", "hotkeys", "jquery"]}, 9),
-              add_to_block("admin", "script", {asset, ["js", "bootstrap-wysiwyg"]}, 10),
+              add_to_block("admin", "script", {asset, ["js", "bootstrap"]}),
+              add_to_block("admin", "script", {asset, ["js", "metisMenu"]}),
+              add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}),
+              add_to_block("admin", "script", {asset, ["js", "hotkeys", "jquery"]}),
+              add_to_block("admin", "script", {asset, ["js", "bootstrap-wysiwyg"]}),
 
               add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
               add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({?MODULE, asset, show, css}, ?MODULE)}),
@@ -57,10 +57,6 @@ install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
-
-    %add_page("index", "templates/index.html"),
-    %add_page("admin", "templates/blank.html", admin, admin),
-
 
     ok.
 
@@ -110,27 +106,22 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                   #cms_mfa{id={PID, MenuBlock},
                            mfa={common,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, "body"},
-                           mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]},
-                           sort=1},
+                           mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 link_url,
-                                [ItemLinkBlock, ""]},
-                           sort=1},
+                                [ItemLinkBlock, ""]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={bootstrap,
                                 nav_items,
-                                [SubMenuBlock, ["nav-second-level", "collapse"]]},
-                           sort=2}
+                                [SubMenuBlock, ["nav-second-level", "collapse"]]}}
                  ],
     LinkMFAs = [
                 #cms_mfa{
                    id={PID, ItemLinkBlock},
-                   mfa={common, icon, ["fa", "", ["arrow"]]},
-                   sort=3}
+                   mfa={common, icon, ["fa", "", ["arrow"]]}}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
     db:fix_sort(ButtonMFAs ++ LinkMFAs);
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> % {{{2
@@ -139,13 +130,11 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> 
                   #cms_mfa{id={PID, MenuBlock},
                            mfa={common,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 link_event,
-                                [ItemLinkBlock, Actions]},
-                           sort=1}
+                                [ItemLinkBlock, Actions]}}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
     db:fix_sort(ButtonMFAs ++ LinkMFAs);
@@ -155,13 +144,11 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {url, URL}) -> % {{{2
                   #cms_mfa{id={PID, MenuBlock},
                            mfa={common,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={common,
                                 link_url,
-                                [ItemLinkBlock, URL]},
-                           sort=1}
+                                [ItemLinkBlock, URL]}}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
     db:fix_sort(ButtonMFAs ++ LinkMFAs).
@@ -677,6 +664,17 @@ maybe_fix_sort(#cms_mfa{id=Id}=R, #cms_mfa{id=Id}) -> % {{{2
     R;
 maybe_fix_sort(R, _) -> % {{{2
     db:fix_sort(R).
+
+fix_list_sort(List) -> % {{{2
+    Sorted = lists:keysort(#cms_mfa.id, 
+                           lists:flatten(List)),
+    lists:foldl(fun(#cms_mfa{id={P, B}}=MFA, [#cms_mfa{id={P, B}, sort=S}|_]=A) ->
+                        [MFA#cms_mfa{sort=S + 1} | A];
+                   (MFA, A) ->
+                        [MFA | A]
+                end,
+               [],
+               Sorted).
 
 rec_from_qs(R) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),

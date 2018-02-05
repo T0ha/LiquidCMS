@@ -25,9 +25,13 @@ install([])-> % {{{1
               [maps:map(
                  fun(_K, V) ->
                          lists:foreach(
-                           fun(R) ->
+                           fun(#cms_mfa{}=R) ->
                                    mnesia:write(
-                                     update_timestamps(R))
+                                     fix_sort(
+                                       update_timestamps(R)));
+                              (R) ->
+                                   mnesia:write(
+                                       update_timestamps(R))
                            end,
                            lists:flatten(V))
                  end,

@@ -13,49 +13,42 @@
 default_data() -> % {{{2
     #{
   cms_page => [
-                #cms_page{id="restore", description=[], module=index, accepted_role=nobody, title="LiquidCMS"}
+                #cms_page{id="restore",
+                          description=[],
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"}
                ],
   cms_mfa => [
                   %Scripts
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery"]]},
-                           sort=1},
+                           mfa={common, asset, [["js", "jquery"]]}},
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery-ui"]]},
-                           sort=2},
+                           mfa={common, asset, [["js", "jquery-ui"]]}},
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bert"]]},
-                           sort=3},
+                           mfa={common, asset, [["js", "bert"]]}},
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "nitrogen"]]},
-                           sort=4},
+                           mfa={common, asset, [["js", "nitrogen"]]}},
                   #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "livevalidation"]]},
-                           sort=5},
+                           mfa={common, asset, [["js", "livevalidation"]]}},
                   #cms_mfa{id={"*", "script"},
                            mfa={common, asset, [["js", "hotkeys", "jquery"]]},
-                           sort=6,
                            settings=#{filters => ["", "", "editor"]}},
                   #cms_mfa{id={"*", "script"},
                            mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=7,
                            settings=#{filters => ["", "", "editor"]}},
                   #cms_mfa{id={"*", "script"},
                            mfa={common, asset, [["js", "hotkeys", "jquery"]]},
-                           sort=8,
                            settings=#{filters => ["", "", "admin"]}},
                   #cms_mfa{id={"*", "script"},
                            mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=9,
                            settings=#{filters => ["", "", "admin"]}},
 
                   %CSS
                   #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "jquery-ui"]]},
-                           sort=1},
+                           mfa={common, asset, [["css", "jquery-ui"]]}},
                   #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "bootstrap"]]},
-                           sort=2},
+                           mfa={common, asset, [["css", "bootstrap"]]}},
 
                   % Index page
                   admin:add_to_block("index", "body",
@@ -64,7 +57,7 @@ default_data() -> % {{{2
                                      {common, template, ["templates/setup.html"]}),
 
                   admin:add_to_block("index", "router",
-                                     {router, page, ["register"]}, 1)
+                                     {router, page, ["register"]})
                  ]}.
 
 %% Module render functions {{{1
