@@ -6,18 +6,7 @@
 -include("records.hrl").
 -include("db.hrl").
 
-%% CMS Module interface {{{1
-description() -> % {{{2
-    "Admin".
-
-%% Module render functions {{{1
-main() -> % {{{2
-    index:main().
-
-title() -> "Liquid CMS - Admin".% {{{2
-
-body(Page) ->% {{{2
-    index:body(Page).
+?DESCRIPTION(Admin).
 
 %% Module install routines {{{1
 default_data() -> % {{{2
@@ -102,7 +91,7 @@ install() -> % {{{2
 
 %% Different components adding to pages  {{{1
 add_page(PID, TemplatePath) -> % {{{2
-    add_page(PID, TemplatePath, undefined, index).
+    add_page(PID, TemplatePath, nobody, index).
 
 add_page(PID, TemplatePath, Role, Module) -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
@@ -110,18 +99,6 @@ add_page(PID, TemplatePath, Role, Module) -> % {{{2
     add_to_block(PID, "body", {template, TemplatePath}).
 
 add_page(PID, Title, Description, Role, Module) -> % {{{2
-
-    %Funs = [
-    %        {index, maybe_redirect_to_login, []},
-    %        {index, maybe_change_module, []},
-    %        {common, template, ["templates/main.html"]}
-    %       ],
-    %NFuns = lists:zip(lists:seq(1, length(Funs)), Funs),
-    %MFAs = [#cms_mfa{
-    %           id = {PID, "page"},
-    %           mfa=F,
-    %           sort=N} || {N, F} <- NFuns],
-
     Page = #cms_page{
               id=PID,
               title=Title,

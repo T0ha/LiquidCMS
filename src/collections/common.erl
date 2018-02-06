@@ -179,21 +179,21 @@ form_data(text, A) -> % {{{2
                                             body=
                                          #wysiwyg_button{
                                             body="H2",
-                                            func="heading 2",
+                                            func="heading h2",
                                             class=["btn", "btn-default"]}
                                            },
                                          #listitem{
                                             body=
                                          #wysiwyg_button{
                                             body="H3",
-                                            func="heading 3",
+                                            func="heading h3",
                                             class=["btn", "btn-default"]}
                                            },
                                          #listitem{
                                             body=
                                          #wysiwyg_button{
                                             body="H4",
-                                            func="heading 4",
+                                            func="heading h4",
                                             class=["btn", "btn-default"]}}
                                         ]}
                                ]}
