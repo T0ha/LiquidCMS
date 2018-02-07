@@ -319,8 +319,6 @@ default_data() -> % {{{2
 
     cms_mfa => [
                 % Routes
-                % admin:add_to_block("*", "router",
-                %                    {account, confirm, [[],[[]]]}),
                 % Confirm email page
                 admin:add_to_block("confirm", "body",
                                    {account, confirm, [[],[[]]]}),
@@ -328,50 +326,83 @@ default_data() -> % {{{2
                 % Login page
                 admin:add_to_block("login", "body",
                                    {common, template, ["templates/login.html"]}),
-                admin:add_to_block("login", "css",
-                                   {common, asset,[["css","sb-admin-2"]]}),
-                admin:add_to_block("login", "login-button", {common, text, ["Log In"]}),
-                admin:add_to_block("login", "css", {asset, ["css", "sb-admin-2"]}),
-                admin:add_to_block("login", "email-field", {common, text, ["Email"]}),
-                admin:add_to_block("login", "password-field", {common, text, ["Password"]}),
+                admin:add_to_block({"login", "css"},
+                                   [
+                                    {common, asset, [["css", "sb-admin-2"]]}
+                                   ]),
+
+                admin:add_to_block("login", "login-button",
+                                   {common, text, ["Log In"]}),
+                admin:add_to_block("login", "email-field",
+                                   {common, text, ["Email"]}),
+                admin:add_to_block("login", "password-field",
+                                   {common, text, ["Password"]}),
 
                 % Register page
+                admin:add_to_block({"register", "css"},
+                                   [
+                                    {common, asset, [["css", "sb-admin-2"]]}
+                                   ]),
+
                 admin:add_to_block("register", "body",
                                    {common, template, ["templates/setup.html"]}),
-                admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}),
-                admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}),
-                admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}),
-                admin:add_to_block("register", "admin-panel-body", {account, email_field, ["email_plh",[[]]]}),
-                admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}),
-                admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}),
-                admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}),
-                admin:add_to_block("register", "email_plh", {common, text, ["Email"]}),
-                admin:add_to_block("register", "passwd_plh", {common, text, ["Password"]}),
-                admin:add_to_block("register", "re_passwd_plh", {common, text, ["Confirm password"]}),
-                admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}),
-                admin:add_to_block("register", "email_plh/validate", {common, text, ["Please provide a valid email address"]}),
-                admin:add_to_block("register", "re_passwd_plh/validate", {common, text, ["Password and confirmation are different"]}),
+
+                admin:add_to_block("register", "admin-setup",
+                                   {bootstrap, col, ["col-admin", "4", "4", ""]}),
+
+                admin:add_to_block("register", "col-admin",
+                                   {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["login-panel", "panel-default"]]}),
+                admin:add_to_block("register", "admin-panel-header",
+                                   {text, ["<h3 class='panel-title'>Sign Up</h3>"]}),
+
+                admin:add_to_block({"register", "admin-panel-body"},
+                                   [
+                                    {account, email_field, ["email-field",[[]]]},
+                                    {account, password_field, ["password-field",[[]]]},
+                                    {account, retype_password_field, ["repassword-field",[[]]]},
+                                    {account, register_button, ["reg_btn_text","admin",[[]]]}
+                                   ]),
+
+                admin:add_to_block("register", "email-field",
+                                   {common, text, ["Email"]}),
+                admin:add_to_block("register", "password-field",
+                                   {common, text, ["Password"]}),
+                admin:add_to_block("register", "repassword-field",
+                                   {common, text, ["Confirm password"]}),
+                admin:add_to_block("register", "reg_btn_text",
+                                   {common, text, ["Register"]}),
+                admin:add_to_block("register", "email-field/validate",
+                                   {common, text, ["Please provide a valid email address"]}),
+                admin:add_to_block("register", "repassword-field/validate",
+                                   {common, text, ["Password and confirmation are different"]}),
 
                 % Restore password page
                 admin:add_to_block("restore", "body",
-                                   {common, block,["container",["container panel-body"]]}),
-                admin:add_to_block("restore", "body",
-                                   {common, block,["container",["container panel-body"]]}),
-                admin:add_to_block("restore", "container",
-                                   {account, password_field,["password",[]]}),
-                admin:add_to_block("restore", "container",
-                                   {account, retype_password_field,["retype_password",[]]}),
-                admin:add_to_block("restore", "container",
-                         {account, change_password_button,["chb",[[]]]}),
+                                   {bootstrap, row, ["row", []]}),
+                admin:add_to_block("restore", "row",
+                                   {bootstrap, col, ["col", "4", "4", []]}),
+                admin:add_to_block("restore", "col",
+                                   {bootstrap, panel, ["panel-header", "panel-body", "", "", ["panel-default"]]}),
+                admin:add_to_block("restore", "panel-header",
+                                   {common, text,["Change Password"]}),
+
+                admin:add_to_block({"restore", "panel-body"},
+                                   [
+                                    {account, password_field, ["password", []]},
+
+                                    {account, retype_password_field, ["retype_password", []]},
+                                    {account, change_password_button, ["chb",[[]]]}
+                                   ]),
+
                 admin:add_to_block("restore", "chb",
-                                   {common, text,["Change password"]}),
+                                   {common, text, ["Change password"]}),
                 admin:add_to_block("restore", "password",
-                                   {common, text,["New password"]}),
+                                   {common, text, ["New password"]}),
                 admin:add_to_block("restore", "retype_password",
-                                   {common, text,["Retype new password"]}),
+                                   {common, text, ["Retype new password"]}),
 
                 admin:add_to_block("restore", "retype_password/validate",
-                                   {common, text,["Passwords do not match!"]})
+                                   {common, text, ["Passwords mismatch!"]})
                ]}.
 
 
