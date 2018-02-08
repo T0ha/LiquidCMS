@@ -291,15 +291,30 @@ default_data() -> % {{{2
                 #cms_role{role = editor, sort=?ROLE_EDITOR_SORT, name="Editor"}
               ],
     cms_page => [
+                #cms_page{id="login", description=[], module=account, accepted_role=nobody, title="LiquidCMS"},
+                #cms_page{id="register", description=[], module=account, accepted_role=nobody, title="LiquidCMS"},
                 #cms_page{id="confirm", description=[], module=index, accepted_role=nobody, title="LiquidCMS"},
                 #cms_page{id="restore", description=[], module=index, accepted_role=nobody, title="LiquidCMS"}
               ],
+
     cms_mfa => [
                 #cms_mfa{id={"index", "body"},
                          mfa={router, common_redirect, [[], "/?page=register"]},
                          sort=1},
                 #cms_mfa{id={"confirm", "body"},
                          mfa={account, confirm, [[],[[]]]},
+                         sort=1},
+                #cms_mfa{id={"login", "body"},
+                         mfa={common, template, ["templates/login.html"]},
+                         sort=1},
+                #cms_mfa{id={"index", "body"},
+                         mfa={common, template, ["templates/setup.html"]},
+                         sort=2},
+                #cms_mfa{id={"register", "body"},
+                         mfa={common, template, ["templates/setup.html"]},
+                         sort=1},
+                #cms_mfa{id={"restore", "body"},
+                         mfa={common, block,["container",["container panel-body"]]},
                          sort=1},
                 #cms_mfa{id={"login", "css"},
                          mfa={common, asset,[["css","sb-admin-2"]]},
@@ -325,44 +340,30 @@ default_data() -> % {{{2
                 #cms_mfa{id={"restore", "retype_password"},
                          mfa={common, text,["Retype new password"]},
                          sort=1},
+                admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
+                admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
+                admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
+                admin:add_to_block("register", "admin-panel-body", {account, email_field, ["email_plh",[[]]]}, 1),
+                admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}, 2),
+                admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}, 3),
+                admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}, 4),
+                admin:add_to_block("register", "email_plh", {common, text, ["Email"]}, 5),
+                admin:add_to_block("register", "passwd_plh", {common, text, ["Password"]}, 6),
+                admin:add_to_block("register", "re_passwd_plh", {common, text, ["Confirm password"]}, 7),
+                admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}, 8),
+                admin:add_to_block("register", "email_plh/validate", {common, text, ["Please provide a valid email address"]}, 5),
+                admin:add_to_block("register", "re_passwd_plh/validate", {common, text, ["Password and confirmation are different"]}, 7),
+                admin:add_to_block("index", "router", {router, page, ["register"]}, 1),
+                admin:add_to_block("login", "login-button", {common, text, ["Log In"]}, 5),
+                admin:add_to_block("login", "css", {asset, ["css", "sb-admin-2"]}, 3),
+                admin:add_to_block("login", "email-field", {common, text, ["Email"]}, 5),
+                admin:add_to_block("login", "password-field", {common, text, ["Password"]}, 6),
                 #cms_mfa{id={"restore", "retype_password/validate"},
                          mfa={common, text,["Passwords do not match!"]},
                          sort=1}
                ]}.
 
 install() -> % {{{2
-    lager:info("Installing ~p module", [?MODULE]),
-    % Log In page
-    admin:add_page("login", "templates/login.html", undefined, account),
-    admin:add_to_block("login", "css", {asset, ["css", "sb-admin-2"]}, 3),
-
-    % Index Setup page
-    admin:add_page("index", "templates/setup.html", undefined, index),
-    admin:add_to_block("index", "router", {router, page, ["register"]}, 1),
-
-    % Login page
-    admin:add_to_block("login", "login-button", {common, text, ["Log In"]}, 5),
-    admin:add_to_block("login", "email-field", {common, text, ["Email"]}, 5),
-    admin:add_to_block("login", "password-field", {common, text, ["Password"]}, 6),
-
-
-    % Register page
-    admin:add_page("register", "templates/setup.html", undefined, index),
-
-    admin:add_to_block("register", "admin-setup", {bootstrap, col, ["col-admin", "4", "4", ""]}, 1),
-    admin:add_to_block("register", "col-admin", {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["panel-default"]]}, 1),
-    admin:add_to_block("register", "admin-panel-header", {text, ["Admin Account Settings"]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, email_field, ["email_plh",[[]]]}, 1),
-    admin:add_to_block("register", "admin-panel-body", {account, password_field, ["passwd_plh",[[]]]}, 2),
-    admin:add_to_block("register", "admin-panel-body", {account, retype_password_field, ["re_passwd_plh",[[]]]}, 3),
-    admin:add_to_block("register", "admin-panel-body", {account, register_button, ["reg_btn_text","admin",[[]]]}, 4),
-    admin:add_to_block("register", "email_plh", {common, text, ["Email"]}, 5),
-    admin:add_to_block("register", "passwd_plh", {common, text, ["Password"]}, 6),
-    admin:add_to_block("register", "re_passwd_plh", {common, text, ["Confirm password"]}, 7),
-    admin:add_to_block("register", "reg_btn_text", {common, text, ["Register"]}, 8),
-    admin:add_to_block("register", "email_plh/validate", {common, text, ["Please provide a valid email address"]}, 5),
-    admin:add_to_block("register", "re_passwd_plh/validate", {common, text, ["Password and confirmation are different"]}, 7),
-
     ok.
 
 %% Event handlers {{{1

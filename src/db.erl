@@ -6,6 +6,7 @@
 
 -compile([export_all]).
 -include("db.hrl").
+-include_lib("nitrogen_core/include/wf.hrl").
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -28,7 +29,7 @@ install([])-> % {{{1
                                    mnesia:write(
                                      update_timestamps(R))
                            end,
-                           V)
+                           lists:flatten(V))
                  end,
                 (M):default_data()) ||
                M <- DataModules]
@@ -211,6 +212,23 @@ update("0.1.3"=VSN) -> % {{{1
                                             active=true
                                            }
                                     end, record_info(fields, cms_user)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.4"=VSN) -> % {{{1
+    [AdminPage] = get_page("admin"),
+    db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
+
+    transaction(fun() ->
+                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={common, link_event, '_'}, _='_'}),
+                        lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Event]}}=MFA) ->
+                                              ok=mnesia:delete_object(MFA),
+                                              mnesia:write(MFA#cms_mfa{mfa={M, F, [Block, Event#event{delegate=admin}]}})
+                                      end,
+                                      NavBarEvents)
+                end),
+    transaction(fun() ->
+                        Pages = mnesia:match_object(#cms_page{accepted_role=undefined, _='_'}),
+                        [mnesia:write(P#cms_page{accepted_role=nobody}) || P <- Pages]
+                end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
@@ -710,6 +728,8 @@ merge_backup_and_db(Source, Mod) -> % {{{1
            end,
     mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
 
+update_timestamps(Recs) when is_list(Recs) -> % {{{1
+    [update_timestamps(Rec) || Rec <- Recs];
 update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_mfa{created_at=CT, updated_at=CT};
