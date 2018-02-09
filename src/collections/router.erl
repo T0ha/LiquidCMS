@@ -66,16 +66,18 @@ save_block(#cms_mfa{mfa={?MODULE, Fun, [Block, _Classes, _DataAttr]}}=Rec) -> % 
 default_data() -> % {{{2
     #{cms_mfa => [
                     % Page (routing and auth)
-                    #cms_mfa{id={"*", "router"},
-                             mfa={router, page, []}},
-                    #cms_mfa{id={"*", "router"},
-                             mfa={account, maybe_redirect_to_login, []}},
-                    #cms_mfa{id={"*", "router"},
-                             mfa={router, maybe_change_module, []}},
-                    #cms_mfa{id={"*", "router"},
-                             mfa={router, render, []}},
-                    #cms_mfa{id={"*", "page"},
-                             mfa={common, template, ["templates/main.html"]}}
+                    admin:add_to_block({"*", "router"},
+                                     [
+                                      {router, page, []},
+                                      {account, maybe_redirect_to_login, []},
+                                      {router, maybe_change_module, []},
+                                      {router, render, []}
+                                     ]),
+
+                    admin:add_to_block({"*", "page"},
+                                     [
+                                      {common, template, ["templates/main.html"]}
+                                     ])
                  ]}.
 
 %% Block renderers {{{1
