@@ -436,7 +436,7 @@ full_block(Page, Body) -> % {{{2
     full_block(Page, Body, [], []).
 
 container(Page, Block, Classes) -> % {{{2
-    common:block(Page, Block, Classes).
+    html5:block(Page, Block, Classes).
 
 row(Page, Block, Classes) -> % {{{2
     #bs_row{
