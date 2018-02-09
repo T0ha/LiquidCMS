@@ -21,7 +21,7 @@ default_data() -> % {{{2
                  }
               ],
   cms_mfa => [
-              add_to_block("admin", "body", {template, "templates/blank.html"}),
+              add_to_block("admin", "body", {template, "templates/internal/blank.html"}),
 
               add_to_block("admin", "css", {asset, ["css", "font-awesome"]}),
               add_to_block("admin", "css", {asset, ["css", "metisMenu"]}),
@@ -57,6 +57,7 @@ install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
+    get_files_from_folder("templates/internal"),
 
     ok.
 
@@ -1212,14 +1213,14 @@ event({?MODULE, block, add}) -> % {{{2
     Block = common:q(block_select, "body"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/login.html"]},
+           mfa={common, template, ["templates/internal/login.html"]},
            sort=new},
     event({?MODULE, block, edit, B});
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/login.html"]},
+           mfa={common, template, ["templates/internal/login.html"]},
            sort=new},
     event({?MODULE, block, edit, B});
 event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2

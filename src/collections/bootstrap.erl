@@ -363,7 +363,7 @@ navbar(Page, Block, Classes) -> % {{{2
                 {'Block', Block},
                 {'BarClasses', Classes}
                ],
-    common:template(Page, "templates/navbar.html", Bindings).
+    common:template(Page, "templates/internal/navbar.html", Bindings).
 
 
 

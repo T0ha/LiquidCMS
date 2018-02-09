@@ -76,7 +76,7 @@ default_data() -> % {{{2
 
                     admin:add_to_block({"*", "page"},
                                      [
-                                      {common, template, ["templates/main.html"]}
+                                      {common, template, ["templates/internal/main.html"]}
                                      ])
                  ]}.
 
