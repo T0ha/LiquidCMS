@@ -5,6 +5,7 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 ?DESCRIPTION(CMS Collection Template).
 

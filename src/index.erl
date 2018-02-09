@@ -4,53 +4,57 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 %% CMS Module interface {{{1
 ?DESCRIPTION(Main module).
 
 %% Module install routines {{{1
 default_data() -> % {{{2
-    #{cms_mfa => [
+    #{
+  cms_page => [
+                #cms_page{id="index",
+                          description=[],
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"}
+               ],
+  cms_mfa => [
                   %Scripts
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery"]]},
-                           sort=1},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery-ui"]]},
-                           sort=2},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bert"]]},
-                           sort=3},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "nitrogen"]]},
-                           sort=4},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "livevalidation"]]},
-                           sort=5},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
-                           sort=6,
-                           settings=#{filters => ["", "", "editor"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=7,
-                           settings=#{filters => ["", "", "editor"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
-                           sort=8,
-                           settings=#{filters => ["", "", "admin"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=9,
-                           settings=#{filters => ["", "", "admin"]}},
+                  admin:add_to_block({"*", "script"}, 
+                                     [
+                                      {common, asset, [["js", "jquery"]]},
+                                      {common, asset, [["js", "jquery-ui"]]},
+                                      {common, asset, [["js", "bert"]]},
+                                      {common, asset, [["js", "nitrogen"]]},
+                                      {common, asset, [["js", "livevalidation"]]},
+
+                                      {{common, asset, [["js", "hotkeys", "jquery"]]},
+                                       #{filters => ["", "", "editor"]}},
+
+                                      {{common, asset, [["js", "bootstrap-wysiwyg"]]},
+                                       #{filters => ["", "", "editor"]}},
+
+                                      {{common, asset, [["js", "hotkeys", "jquery"]]},
+                                       #{filters => ["", "", "admin"]}},
+
+                                      {{common, asset, [["js", "bootstrap-wysiwyg"]]},
+                                       #{filters => ["", "", "admin"]}}
+                                     ]),
 
                   %CSS
-                  #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "jquery-ui"]]},
-                           sort=1},
-                  #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "bootstrap"]]},
-                           sort=2}
+                  admin:add_to_block({"*", "css"},
+                                     [
+                                      {common, asset, [["css", "jquery-ui"]]},
+                                      {common, asset, [["css", "bootstrap"]]}
+                                     ]),
+
+                  % Index page
+                  admin:add_to_block({"index", "body"},
+                                     [
+                                      {router, common_redirect, [[], "/?page=register"]}
+
+                                     ])
                  ]}.
 
 %% Module render functions {{{1

@@ -5,6 +5,7 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 ?DESCRIPTION(CMS main routing collection).
 
@@ -66,21 +67,17 @@ default_data() -> % {{{2
     #{cms_mfa => [
                     % Page (routing and auth)
                     #cms_mfa{id={"*", "router"},
-                             mfa={router, page, []},
-                             sort=1},
+                             mfa={router, page, []}},
                     #cms_mfa{id={"*", "router"},
-                             mfa={account, maybe_redirect_to_login, []},
-                             sort=2},
+                             mfa={account, maybe_redirect_to_login, []}},
                     #cms_mfa{id={"*", "router"},
-                             mfa={router, maybe_change_module, []},
-                             sort=3},
+                             mfa={router, maybe_change_module, []}},
                     #cms_mfa{id={"*", "router"},
-                             mfa={router, render, []},
-                             sort=4},
+                             mfa={router, render, []}},
                     #cms_mfa{id={"*", "page"},
-                             mfa={common, template, ["templates/main.html"]},
-                             sort=1}
+                             mfa={common, template, ["templates/main.html"]}}
                  ]}.
+
 %% Block renderers {{{1
 page(Page) -> % {{{2
     PID = common:q(page, "index"),

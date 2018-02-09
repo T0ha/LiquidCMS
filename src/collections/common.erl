@@ -2,6 +2,7 @@
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 -include("records.hrl").
 
 ?DESCRIPTION(Common elements).

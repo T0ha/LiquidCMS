@@ -25,9 +25,13 @@ install([])-> % {{{1
               [maps:map(
                  fun(_K, V) ->
                          lists:foreach(
-                           fun(R) ->
+                           fun(#cms_mfa{}=R) ->
                                    mnesia:write(
-                                     update_timestamps(R))
+                                     fix_sort(
+                                       update_timestamps(R)));
+                              (R) ->
+                                   mnesia:write(
+                                       update_timestamps(R))
                            end,
                            lists:flatten(V))
                  end,
@@ -278,6 +282,7 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
     CT = calendar:universal_time(),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
+                                                           active=true,
                                                            _='_'}) of
                             [] -> 
                                 User = #cms_user{
