@@ -253,7 +253,7 @@ form_data(_F, [_, Block, Classes]) -> % {{{2
 form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
     Context = common:q(context, ""),
     HeaderCls = common:q(panel_header_cls, ""),
     BodyCls = common:q(panel_body_cls, ""),

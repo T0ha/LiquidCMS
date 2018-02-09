@@ -28,6 +28,7 @@ default_data() -> % {{{2
                                       {common, asset, [["js", "bert"]]},
                                       {common, asset, [["js", "nitrogen"]]},
                                       {common, asset, [["js", "livevalidation"]]},
+                                      {common, asset, [["js", "bootstrap"]]},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
                                        #{filters => ["", "", "editor"]}},

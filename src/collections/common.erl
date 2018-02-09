@@ -480,8 +480,8 @@ apply_filters([undefined, undefined, undefined]) -> % {{{2
     true;
 apply_filters(["", "", Role]) -> % {{{2
     #cms_user{role=R} = account:user(),
-    ?LOG("Am I ~p - ~p", [Role, Role == R]),
-   wf:to_atom(Role) == R;
+    ?LOG("Am I ~p - ~p", [Role, wf:to_atom(Role) == R]),
+    wf:to_atom(Role) == R;
 apply_filters([K, V, ""]) -> % {{{2
     D = wf:q(wf:to_atom(K)),
     ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
