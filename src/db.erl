@@ -274,7 +274,8 @@ register(Email, Password, Role) -> % {{{1
     register(Email, Password, Role, false).
 
 register(Email, Password, Role, DoConfirm) -> % {{{1
-    Confirm = if DoConfirm ->
+    Users_count = mnesia:table_info('cms_user', size),
+    Confirm = if DoConfirm and (Users_count > 0) ->
                      {ok, C} = wf:hex_encode(crypto:strong_rand_bytes(16)),
                      C;
                  true -> 0
