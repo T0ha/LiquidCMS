@@ -11,23 +11,41 @@
 functions() -> % {{{2
     [
      % {img, "Image"},
-     {list, "Items List"},
-     {list_item, "List Item"},
-     {link_url, "Link"},
-     {block, "Block (div)"}
+     {list, "Items List (ul)"},
+     {list_item, "List Item (li)"},
+     {link_url, "Link (a)"},
+     {block, "Block (div)"},
+     {header, "Header (h{level})"},
+     {paragraph, "Paragraph (p)"},
+     {email_link, "Email Link"},
+     {article, "Article"}
+     % {h2, "Header 2 (h2)"},
+     % {h3, "Header 3 (h3)"},
+     % {h4, "Header 4 (h4)"}
      ].
 
 format_block(block, [Block, Classes, DataAttr]) -> % {{{2
-    {wf:f("Block (div): ~s(class=~p) (attr:~p)", [Block, Classes, DataAttr]), Block};
+    {wf:f("Block (div): ~s(class=~p attr:~p)", [Block, Classes, DataAttr]), Block};
 format_block(list, [Block, Numbered, Classes, DataAttr]) -> % {{{2
     {wf:f("List: ~s(numbered=~s, class=~p, attr:~p)", [Block, Numbered, Classes, DataAttr]), Block};
 format_block(list_item, [Block, Classes, DataAttr]) -> % {{{2
     {wf:f("List Item: ~s(class=~p, attr:~p)", [Block, Classes, DataAttr]), Block};
 format_block(link_url, [Block, URL, Classes, DataAttr]) -> % {{{2
     {wf:f("Link: ~s(href=~s, class=~p, attr:~p)", [Block, URL, Classes, DataAttr]), Block};
+format_block(header, [Block, Level, Classes, DataAttr]) -> % {{{2
+    {wf:f("Header: ~s(level=~s, class=~p, attr:~p)", [Block, Level, Classes, DataAttr]), Block};
+
+format_block(article, [HeaderBlock, BodyBlock, FooterBlock, Classes, DataAttr]) -> % {{{2
+    {wf:f("Article (head_block=~p, body_block=~p, footer_block=~p, classes=~p, attr:~p)",
+         [HeaderBlock, BodyBlock, FooterBlock, Classes, DataAttr]), BodyBlock};
+
+format_block(F, [Block, Data, Classes, DataAttr]) -> % {{{2
+    {wf:f("html5(~s): ~s(data=~s, class=~p, attr:~p)", [F, Block, Data, Classes, DataAttr]), Block};
+format_block(F, [Block, Classes, DataAttr]) -> % {{{2
+	{wf:f("html5(~s): (id:~p class=~p attr:~p)", [F, Block, Classes, DataAttr]), Block};
 format_block(F, A) -> % {{{2
     % ?LOG("format_block: F:~p, A:~p",[F,A]),
-    {wf:f("html5:~s(~p)", [F, A]), undefined}.
+    {wf:f("html5: ~s(~p)", [F, A]), undefined}.
 
 
 form_data(list, A) -> % {{{2
@@ -52,13 +70,80 @@ form_data(link_url, A) -> % {{{2
           placeholder="http://yoursite.com"
          }}
      ],
-     [], Block, Classes, DataAttr}.
+     [], Block, Classes, DataAttr};
+form_data(email_link, A) -> % {{{2
+    [_, Block, Email, Classes, DataAttr] = admin:maybe_empty(A, 5),
+    {[
+      {"Email link",
+       #txtbx{
+          id=email_link,
+          text=Email,
+          placeholder="example@mail.com"
+         }}
+     ],
+     [], Block, Classes, DataAttr};
+form_data(header, A) -> % {{{2
+    [_, Block, Level, Classes, DataAttr] = admin:maybe_empty(A, 5),
+    {[
+      {"Header level (1-5)",
+       #txtbx{
+          id=level,
+          text=Level,
+          placeholder="Input number"
+         }}
+     ],
+     [], Block, Classes, DataAttr};
+form_data(article, A) -> % {{{2
+    [_, HeaderBlock, Block, FooterBlock, Classes, DataAttr] = admin:maybe_empty(A, 6),
+    {[
+      {"Block for header",
+      #txtbx{
+         id=article_header_block,
+         text=HeaderBlock,
+         placeholder="Block name for article header (leave blank for none)"
+        }},
+      {"Block for footer",
+      #txtbx{
+         id=article_footer_block,
+         text=FooterBlock,
+         placeholder="Block name for article footer (leave blank for none)"
+        }}
+     ],
+     [],
+     Block,
+     Classes,
+     DataAttr
+    }.
 
-save_block(#cms_mfa{mfa={common, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={html5, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
     Num = wf:to_atom(common:q(numbered, "false")),
-    Rec#cms_mfa{mfa={common, list, [Block, Num, Classes, DataAttr]}};
-save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}}.
+    Rec#cms_mfa{mfa={html5, list, [Block, Num, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={html5, header, [Block, Level, Classes, DataAttr]}}=Rec) -> % {{{2
+	L = try
+			case list_to_integer(Level) of
+				Num when (Num < 6) and (Num > 0) ->
+					Level;
+				_ ->
+					"5"
+			end
+		catch  _:_ -> 
+			"5"
+		end,
+    Rec#cms_mfa{mfa={html5, header, [Block, L, Classes, DataAttr]}};
+save_block(#cms_mfa{mfa={html5, article, [Block, Header, Footer, Classes, DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={html5,
+                     article,
+                     [
+                      Header,
+                      Block,
+                      Footer,
+                      Classes,
+                      DataAttr
+                     ]}}.
 
 list(Page, Block, Classes) -> % {{{2
     list(Page, Block, false, Classes, []).
@@ -103,6 +188,15 @@ link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
        data_fields = DataAttr
       }.
 
+email_link(Page, Block, Email, Classes, DataAttr) -> % {{{2
+	#email_link {
+		email=Email,
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+    	body=common:parallel_block(Page, Block),
+    	data_fields = DataAttr
+	}.
+
 block(Page, Block, Classes) -> % {{{2
     block(Page, Block, Classes, []).
 block(Page, Block, Classes, DataAttr) -> % {{{2
@@ -112,3 +206,61 @@ block(Page, Block, Classes, DataAttr) -> % {{{2
        body=common:parallel_block(Page, Block),
        data_fields = DataAttr
       }.
+
+header(Page, Block, Level, Classes, DataAttr) ->  % {{{2
+	case Level of 
+		"1" -> 
+			#h1{
+				html_id=common:block_to_html_id(Block),
+				class=Classes,
+				body=common:parallel_block(Page, Block),
+		       	data_fields = DataAttr
+			};
+		"2" ->
+			#h2{
+				html_id=common:block_to_html_id(Block),
+				class=Classes,
+				body=common:parallel_block(Page, Block),
+		       	data_fields = DataAttr
+			};
+		"3" ->
+			#h3{
+				html_id=common:block_to_html_id(Block),
+				class=Classes,
+				body=common:parallel_block(Page, Block),
+		       	data_fields = DataAttr
+			};
+		"4" ->
+			#h4{
+				html_id=common:block_to_html_id(Block),
+				class=Classes,
+				body=common:parallel_block(Page, Block),
+		       	data_fields = DataAttr
+			};
+		_ ->
+			#h5{
+				html_id=common:block_to_html_id(Block),
+				class=Classes,
+				body=common:parallel_block(Page, Block),
+		       	data_fields = DataAttr
+			}
+	end.
+
+paragraph(Page, Block, Classes, DataAttr) ->  % {{{2
+	#p{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+article(Page, HeaderBlock, BodyBlock, FooterBlock, Classes, DataAttr) -> % {{{2
+	#article {
+		body=[
+		   #html5_header{ body=index:maybe_block(Page, HeaderBlock, [])},
+		   index:maybe_block(Page, BodyBlock, []),
+		   #html5_footer{ body=index:maybe_block(Page, FooterBlock, [])}
+		],
+		class=[Classes],
+		data_fields = DataAttr
+	}.
