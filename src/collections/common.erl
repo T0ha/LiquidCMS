@@ -116,52 +116,6 @@ form_data(text, A) -> % {{{2
                                    body="<i class='fa fa-indent'></i>",
                                    func="indent",
                                    class=["btn", "btn-default"]}
-                               ]},
-                       #panel{
-                          class="btn-group",
-                          body=[
-                                #link{
-                                   class=[
-                                          "btn",
-                                          "btn-default",
-                                          "dropdown-toggle"
-                                         ],
-                                   text="H<i class='caret'></i>",
-                                   data_fields=[
-                                                {toggle, dropdown}
-                                               ]},
-                                #list{
-                                   class="dropdown-menu",
-                                   numbered=flase,
-                                   body=[ 
-                                         #listitem{
-                                            body=
-                                            #wysiwyg_button{
-                                            body="H1",
-                                            func="heading h1",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H2",
-                                            func="heading h2",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H3",
-                                            func="heading h3",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H4",
-                                            func="heading h4",
-                                            class=["btn", "btn-default"]}}
-                                        ]}
                                ]}
                       ]}
     ];
@@ -326,7 +280,7 @@ event({asset, type, change}) -> % {{{2
     wf:replace(asset_id, assets_dropdown(AssetType));
 
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event(common.erl) ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 block_to_html_id(Block) -> % {{{2

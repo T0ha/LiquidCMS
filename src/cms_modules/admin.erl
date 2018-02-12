@@ -28,11 +28,8 @@ default_data() -> % {{{2
               add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}),
               add_to_block("admin", "css", {asset, ["css", "admin"]}),
 
-              add_to_block("admin", "script", {asset, ["js", "bootstrap"]}),
               add_to_block("admin", "script", {asset, ["js", "metisMenu"]}),
               add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}),
-              add_to_block("admin", "script", {asset, ["js", "hotkeys", "jquery"]}),
-              add_to_block("admin", "script", {asset, ["js", "bootstrap-wysiwyg"]}),
 
               add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
               add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({?MODULE, asset, show, css}, ?MODULE)}),
@@ -802,52 +799,6 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                                              body="<i class='fa fa-indent'></i>",
                                              func="indent",
                                              class=["btn", "btn-default"]}
-                                         ]},
-                                 #panel{
-                                    class="btn-group",
-                                    body=[
-                                          #link{
-                                             class=[
-                                                    "btn",
-                                                    "btn-default",
-                                                    "dropdown-toggle"
-                                                   ],
-                                             text="H<i class='caret'></i>",
-                                             data_fields=[
-                                                          {toggle, dropdown}
-                                                         ]},
-                                          #list{
-                                             class="dropdown-menu",
-                                             numbered=flase,
-                                             body=[ 
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H1",
-                                                         func="heading h1",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H2",
-                                                         func="heading 2",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H3",
-                                                         func="heading 3",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H4",
-                                                         func="heading 4",
-                                                         class=["btn", "btn-default"]}}
-                                                  ]}
                                          ]}
                                 ]}
               ]);
