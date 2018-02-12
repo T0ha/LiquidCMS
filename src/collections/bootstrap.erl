@@ -368,7 +368,7 @@ navbar(Page, Block, Classes) -> % {{{2
 
 
 nav_items(Page, Block, Classes) -> % {{{2
-    common:list(Page, Block, ["nav" | Classes]).
+    html5:list(Page, Block, ["nav" | Classes]).
 
 nav_item(Page, ItemID) -> % {{{2
     nav_item(Page, ItemID, []).
@@ -412,7 +412,7 @@ dropdown(Page, Block) -> % {{{2
                     {toggle, "dropdown"}
                    ]
       },
-       common:list(Page, Block, ["dropdown-menu"])
+       html5:list(Page, Block, ["dropdown-menu"])
     ].
 
 slider(Page, Block, Classes) -> % {{{2
@@ -500,7 +500,7 @@ tabs(Page, Block, Classes, DataAttr) -> % {{{2
     #panel{
        html_id=common:block_to_html_id(Block),
        body=[
-             common:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
+             html5:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
              #panel{
                 class=["tab-content"|Classes],
                 body=common:parallel_block(Page, BodyBlock),

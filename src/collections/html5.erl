@@ -18,10 +18,17 @@ functions() -> % {{{2
      {header, "Header (h{level})"},
      {paragraph, "Paragraph (p)"},
      {email_link, "Email Link"},
-     {article, "Article"}
-     % {h2, "Header 2 (h2)"},
-     % {h3, "Header 3 (h3)"},
-     % {h4, "Header 4 (h4)"}
+     {span, "Span"},
+     {label, "Label"},
+     {article, "Article"},
+     {nav, "Nav"},
+     {aside, "Aside"},
+     {header_html, "Header (header)"},
+     {footer_html, "Footer (footer)"},
+     {mark, "Mark"},
+     {main, "Main"},
+     {section, "Section"},
+     {time, "Time"}
      ].
 
 format_block(block, [Block, Classes, DataAttr]) -> % {{{2
@@ -68,6 +75,17 @@ form_data(link_url, A) -> % {{{2
           id=url,
           text=URL,
           placeholder="http://yoursite.com"
+         }}
+     ],
+     [], Block, Classes, DataAttr};
+form_data(time, A) -> % {{{2
+    [_, Block, Datetime, Classes, DataAttr] = admin:maybe_empty(A, 5),
+    {[
+      {"Datetime (opt.)",
+       #txtbx{
+          id=url,
+          text=Datetime,
+          placeholder="2018-01-01 19:20"
          }}
      ],
      [], Block, Classes, DataAttr};
@@ -263,4 +281,85 @@ article(Page, HeaderBlock, BodyBlock, FooterBlock, Classes, DataAttr) -> % {{{2
 		],
 		class=[Classes],
 		data_fields = DataAttr
+	}.
+
+nav(Page, Block, Classes, DataAttr) ->  % {{{2
+	#nav{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+aside(Page, Block, Classes, DataAttr) ->  % {{{2
+	#aside{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+header_html(Page, Block, Classes, DataAttr) ->  % {{{2
+	#html5_header{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+footer_html(Page, Block, Classes, DataAttr) ->  % {{{2
+	#html5_footer{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+mark(Page, Block, Classes, DataAttr) ->  % {{{2
+	#mark{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+main(Page, Block, Classes, DataAttr) ->  % {{{2
+	#main{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+section(Page, Block, Classes, DataAttr) ->  % {{{2
+	#section{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+time(Page, Block, Datetime, Classes, DataAttr) ->  % {{{2
+	#time{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		datetime=Datetime,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+span(Page, Block, Classes, DataAttr) ->  % {{{2
+	#span{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
+	}.
+
+label(Page, Block, Classes, DataAttr) ->  % {{{2
+	#label{
+		html_id=common:block_to_html_id(Block),
+		class=Classes,
+		body=common:parallel_block(Page, Block),
+       	data_fields = DataAttr
 	}.
