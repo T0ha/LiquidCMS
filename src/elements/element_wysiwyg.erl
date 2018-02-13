@@ -19,7 +19,7 @@ render_element(_Record = #wysiwyg{
                             preview=Preview,
                             html=HTML,
                             class=Class,
-                            hotkeys=HotKeys
+                            hotkeys=_HotKeys
                            }) ->
     wf:wire("#wysiwyg_editor",
             #event{
@@ -30,11 +30,23 @@ render_element(_Record = #wysiwyg{
     #panel{
        body=[
              buttons(Buttons),
-             #textarea{style="display: none;",
+             #checkbox{id=checkbox_html,
+                       label_position='before',
+                       text="Show/hide html code",
+                       class="pull-left",
+                       postback=display_source_code
+                       },
+             #textarea{style="display: none; width: 100%; height: auto;",
                        id=Id,
+                       % readonly=true,
                        html_id="wysiwyg_raw_html"},
              #panel{html_id="wysiwyg_editor",
-                    style="height: 300px;margin: 15px;",
+                    style="height: auto;
+                           margin-top: 15px;
+                           min-height: 100px;
+                           max-height:60vh;
+                           overflow-y:auto;
+                           ",
                     body=HTML,
                     class=Class},
              preview(Preview)

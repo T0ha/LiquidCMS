@@ -234,6 +234,23 @@ update("0.1.4"=VSN) -> % {{{1
                         [mnesia:write(P#cms_page{accepted_role=nobody}) || P <- Pages]
                 end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
+    transaction(fun() ->
+                        Replaced_items = [list, list_item, link_url, block], 
+                        lists:foreach(
+                          fun(Replaced) ->
+                            Common_elements = mnesia:match_object(#cms_mfa{id='_', mfa={common, Replaced, '_'}, _='_'}),
+                            lists:foreach(fun(#cms_mfa{mfa={_M, F, A}}=MFA) ->
+                                                  New_mfa = MFA#cms_mfa{mfa={html5, F, A}},
+                                                  mnesia:delete_object(MFA),
+                                                  mnesia:write(New_mfa)
+                                                  % io:format("~nReplace ~p to ~p",[MFA, New_mfa])
+                                          end,
+                                          Common_elements)
+                          end,
+                          Replaced_items)
+                end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -274,7 +291,8 @@ register(Email, Password, Role) -> % {{{1
     register(Email, Password, Role, false).
 
 register(Email, Password, Role, DoConfirm) -> % {{{1
-    Confirm = if DoConfirm ->
+    Users_count = mnesia:table_info('cms_user', size),
+    Confirm = if DoConfirm and (Users_count > 0) ->
                      {ok, C} = wf:hex_encode(crypto:strong_rand_bytes(16)),
                      C;
                  true -> 0

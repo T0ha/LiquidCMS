@@ -27,6 +27,7 @@ form_data(_F, []) -> % {{{2
 %     ?LOG("~nsave_block1 ~p", [Rec]),
 %     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes]}}=Rec) -> % {{{2
+     ?LOG("~nsave_block_def: ~p", [Rec]),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Classes]}}.
 
 %% Block renderers {{{1

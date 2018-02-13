@@ -20,17 +20,20 @@ functions() -> % {{{2
 default_data() -> % {{{2
     #{cms_template => [
                   #cms_template{
-                            file="templates/hs_analytics.html",
+                            file="templates/analytics/hs_analytics.html",
                             bindings=[],
-                            name="Hubspot Analytics"},
+                            description="Hubspot Analytics",
+                            name="templates/analytics/hs_analytics.html"},
                   #cms_template{
-                            file="templates/ga_analytics.html",
+                            file="templates/analytics/ga_analytics.html",
                             bindings=[],
-                            name="Google Analytics"},
+                            description="Google Analytics",
+                            name="templates/analytics/ga_analytics.html"},
                   #cms_template{
-                            file="templates/ya_analytics.html",
+                            file="templates/analytics/ya_analytics.html",
                             bindings=[],
-                            name="Yandex Analytics"}
+                            description="Yandex Analytics",
+                            name="templates/analytics/ya_analytics.html"}
                   ]}.
 
 format_block(F, A) -> % {{{2
@@ -47,18 +50,18 @@ save_block(#cms_mfa{ mfa={?MODULE, Fun, [_,AnalyticsId,_,_]}}=Rec) -> % {{{2
 
 metric_hs(Page, AnalyticsId) -> % {{{2
     common:template(Page,
-      "templates/hs_analytics.html",
+      "templates/analytics/hs_analytics.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).
 
 metric_ya(Page, AnalyticsId) -> % {{{2
     common:template(Page,
-      "templates/ya_analytics.html",
+      "templates/analytics/ya_analytics.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).
 
 metric_ga(Page, AnalyticsId) -> % {{{2
     common:template(Page,
-      "templates/ga_analytics.html",
+      "templates/analytics/ga_analytics.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).

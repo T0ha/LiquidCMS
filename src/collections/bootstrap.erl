@@ -20,6 +20,8 @@ functions() -> % {{{2
      {container, "Container"},
      {tabs, "Tabs"},
      {tab, "Tab"},
+     {tab_body, "Tab Body"},
+     {tab_header, "Tab Header"},
      {row, "Row"},
      {col, "Column"},
      {table, "Table"},
@@ -202,9 +204,7 @@ form_data(navbar, A) -> % {{{2
     [PID, NavItemsBlock, AllClasses] = admin:maybe_empty(A, 3),
     [Classes, Inverse, Position] = admin:maybe_empty(AllClasses, 3),
 
-
     {Block, Alignment} = get_navbar_alignmant(PID, NavItemsBlock),
-    ?LOG("NavBar: ~p ~p", [Position, Alignment]),
     {[],
      [
       {"Position",
@@ -253,7 +253,7 @@ form_data(_F, [_, Block, Classes]) -> % {{{2
 form_data(_F, []) -> % {{{2
     {[], []}.
 
-save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{mfa={bootstrap, panel, [Block, Header, Addons, Footer, [Classes], DataAttr]}}=Rec) -> % {{{2
     Context = common:q(context, ""),
     HeaderCls = common:q(panel_header_cls, ""),
     BodyCls = common:q(panel_body_cls, ""),
@@ -271,7 +271,6 @@ save_block(#cms_mfa{mfa={bootstrap, panel, [Header, Block, Addons, Footer, [Clas
                       DataAttr
                      ]}};
 save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes, _DataAttr]}}=Rec) -> % {{{2
-    ?LOG("~nsave_tab: ~p", [Rec]),
     Sort = Rec#cms_mfa.sort,
     % Outside blocks
     HeaderBlock = common:sub_block(Block, "tab-header"),
@@ -343,7 +342,6 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
     PPadding = admin:prefix_classes(navbar, [Padding]),
-    ?LOG("Prefix: ~p ~p", [NewClasses, PPadding]),
 
     db:maybe_update(#cms_mfa{id={PID, NavItemsBlock},
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
@@ -356,7 +354,6 @@ save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes, _D
             end,
     Rec#cms_mfa{mfa={bootstrap, container, [Block, [Fluid | Classes]]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2 
-    ?LOG("~nsave_block: ~p", [Rec]),
     wf:warning("Bootstrap: ~p", [Rec]),
     Rec#cms_mfa{mfa={bootstrap, Fun, [Block, Classes]}}.
 
@@ -366,12 +363,12 @@ navbar(Page, Block, Classes) -> % {{{2
                 {'Block', Block},
                 {'BarClasses', Classes}
                ],
-    common:template(Page, "templates/navbar.html", Bindings).
+    common:template(Page, "templates/internal/navbar.html", Bindings).
 
 
 
 nav_items(Page, Block, Classes) -> % {{{2
-    common:list(Page, Block, ["nav" | Classes]).
+    html5:list(Page, Block, ["nav" | Classes]).
 
 nav_item(Page, ItemID) -> % {{{2
     nav_item(Page, ItemID, []).
@@ -415,7 +412,7 @@ dropdown(Page, Block) -> % {{{2
                     {toggle, "dropdown"}
                    ]
       },
-       common:list(Page, Block, ["dropdown-menu"])
+       html5:list(Page, Block, ["dropdown-menu"])
     ].
 
 slider(Page, Block, Classes) -> % {{{2
@@ -439,7 +436,7 @@ full_block(Page, Body) -> % {{{2
     full_block(Page, Body, [], []).
 
 container(Page, Block, Classes) -> % {{{2
-    common:block(Page, Block, Classes).
+    html5:block(Page, Block, Classes).
 
 row(Page, Block, Classes) -> % {{{2
     #bs_row{
@@ -503,7 +500,7 @@ tabs(Page, Block, Classes, DataAttr) -> % {{{2
     #panel{
        html_id=common:block_to_html_id(Block),
        body=[
-             common:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
+             html5:list(Page, HeaderBlock, ["nav", "nav-tabs"]),
              #panel{
                 class=["tab-content"|Classes],
                 body=common:parallel_block(Page, BodyBlock),
@@ -527,8 +524,9 @@ tab_header(Page, Block, Classes, _DataAttr) -> % {{{2
                             {toggle, "tab"}
                            ]
               }}.
-
 tab_body(Page, Block, Classes) -> % {{{2
+    tab_body(Page, Block, Classes, []).
+tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
     #panel{
        html_id=common:block_to_html_id(Block),
        %role="tabpanel",

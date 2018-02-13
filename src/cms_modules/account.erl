@@ -325,7 +325,7 @@ default_data() -> % {{{2
 
                 % Login page
                 admin:add_to_block("login", "body",
-                                   {common, template, ["templates/login.html"]}),
+                                   {common, template, ["templates/internal/login.html"]}),
                 admin:add_to_block({"login", "css"},
                                    [
                                     {common, asset, [["css", "sb-admin-2"]]}
@@ -345,7 +345,7 @@ default_data() -> % {{{2
                                    ]),
 
                 admin:add_to_block("register", "body",
-                                   {common, template, ["templates/setup.html"]}),
+                                   {common, template, ["templates/internal/setup.html"]}),
 
                 admin:add_to_block("register", "admin-setup",
                                    {bootstrap, col, ["col-admin", "4", "4", ""]}),

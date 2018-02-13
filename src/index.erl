@@ -28,6 +28,7 @@ default_data() -> % {{{2
                                       {common, asset, [["js", "bert"]]},
                                       {common, asset, [["js", "nitrogen"]]},
                                       {common, asset, [["js", "livevalidation"]]},
+                                      {common, asset, [["js", "bootstrap"]]},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
                                        #{filters => ["", "", "editor"]}},
@@ -46,7 +47,8 @@ default_data() -> % {{{2
                   admin:add_to_block({"*", "css"},
                                      [
                                       {common, asset, [["css", "jquery-ui"]]},
-                                      {common, asset, [["css", "bootstrap"]]}
+                                      {common, asset, [["css", "bootstrap"]]},
+                                      {common, asset, [["css", "font-awesome"]]}
                                      ]),
 
                   % Index page
@@ -90,11 +92,17 @@ event({?MODULE, links, disable}) -> % {{{2
             wf:wire(#script{script="$('a,button').unbind('click');"})
     end;
 
-event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+event({page, construct, _PID, [_Block|_]=_BlocksPath}) -> % {{{2
     wf:update("body", common:parallel_block(wf:state(page), "body"));
+event(display_source_code) -> % {{{2
+    case common:q(checkbox_html, "") of
+        "on" ->
+            wf:wire(#script{script="$('.wfid_text_mfa.textarea').show(); $('#wysiwyg_editor').hide()"});
+        _ ->
+            wf:wire(#script{script="$('.wfid_text_mfa.textarea').hide(); $('#wysiwyg_editor').show()"})
+    end;
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
-
 
 %% Block renderers {{{1
 maybe_block(_Page, "", _Classes) -> % {{{2
@@ -115,11 +123,11 @@ flash() -> % {{{2
 maybe_add_editor(Page) -> % {{{2
     maybe_add_editor(Page, wf:role(editor)).
 
-maybe_add_editor(Page, false) -> % {{{2
+maybe_add_editor(_Page, false) -> % {{{2
     ok;
 maybe_add_editor(#cms_page{id="admin"}, true) -> % {{{2
     ok;
-maybe_add_editor(Page, true) -> % {{{2
+maybe_add_editor(_Page, true) -> % {{{2
     wf:insert_top("body",
                   #panel{
                      class="container-fluid",
