@@ -21,16 +21,20 @@ default_data() -> % {{{2
                  }
               ],
   cms_mfa => [
-              add_to_block("admin", "body", {template, "templates/internal/blank.html"}),
+              add_to_block("admin", "body", {template, "templates/internal/admin.html"}),
 
-              add_to_block("admin", "css", {asset, ["css", "font-awesome"]}),
-              add_to_block("admin", "css", {asset, ["css", "metisMenu"]}),
-              add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}),
-              add_to_block("admin", "css", {asset, ["css", "admin"]}),
+              add_to_block({"admin", "css"}, [
+                                              {common, asset, [["css", "font-awesome"]]},
+                                              {common, asset, [["css", "metisMenu"]]},
+                                              {common, asset, [["css", "sb-admin-2"]]},
+                                              {common, asset, [["css", "admin"]]}
+                                             ]),
 
-              add_to_block("admin", "script", {asset, ["js", "metisMenu"]}),
-              add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}),
-
+              add_to_block({"admin", "script"}, [
+                                               {common, asset, [["js", "metisMenu"]]},
+                                               {common, asset, [["js", "sb-admin-2"]]}
+                                              ]),
+                                                
               add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
               add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({?MODULE, asset, show, css}, ?MODULE)}),
               add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({?MODULE, asset, show, script}, ?MODULE)}),
@@ -113,13 +117,13 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
                                 [ItemBlock]}},
                   #cms_mfa{id={PID, "body"},
                            mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_url,
                                 [ItemLinkBlock, ""]}},
                   #cms_mfa{id={PID, ItemBlock},
@@ -137,11 +141,11 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> 
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
                                 [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_event,
                                 [ItemLinkBlock, Actions]}}
                  ],
@@ -151,11 +155,11 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {url, URL}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
                                 [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_url,
                                 [ItemLinkBlock, URL]}}
                  ],
