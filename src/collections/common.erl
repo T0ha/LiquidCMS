@@ -10,8 +10,6 @@
 %% CMS Module interface {{{1
 functions() -> % {{{2
     [
-     %{parallel_block, "Parallell Group of Blocks"},
-     %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
      {img, "Image"},
      {template, "Template"},
@@ -240,16 +238,6 @@ template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
     #template{file=File,
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
-
-link_event(Page, Block, Event) -> % {{{2
-    link_event(Page, Block, Event, []).
-link_event(Page, Block, Event, Classes) -> % {{{2
-    #link{
-       html_id=block_to_html_id(Block),
-       actions=Event,
-       class=Classes,
-       body=parallel_block(Page, Block)
-      }.
 
 icon(_Page, Font, Name, Classes) -> % {{{2
     icon(Font, Name, Classes).

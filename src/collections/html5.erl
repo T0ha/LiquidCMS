@@ -207,6 +207,16 @@ link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
        data_fields = DataAttr
       }.
 
+link_event(Page, Block, Event) -> % {{{2
+    link_event(Page, Block, Event, []).
+link_event(Page, Block, Event, Classes) -> % {{{2
+    #link{
+       html_id=common:block_to_html_id(Block),
+       actions=Event,
+       class=Classes,
+       body=common:parallel_block(Page, Block)
+      }.
+
 email_link(Page, Block, Email, Classes, DataAttr) -> % {{{2
 	#email_link {
 		email=Email,
