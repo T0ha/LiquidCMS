@@ -163,6 +163,7 @@ save_block(#cms_mfa{mfa={html5, article, [Block, Header, Footer, Classes, DataAt
                       DataAttr
                      ]}}.
 
+%% Block renderers {{{1
 list(Page, Block, Classes) -> % {{{2
     list(Page, Block, false, Classes, []).
 

@@ -9,14 +9,7 @@
 
 ?DESCRIPTION(Analytics services).
 
-%% CMS Module interface {{{1
-functions() -> % {{{2
-    [
-     {metric_ga, "Google"},
-     {metric_ya, "Yandex"},
-     {metric_hs, "Hubspot"}
-    ].
-
+%% Module install routines {{{1
 default_data() -> % {{{2
     #{cms_template => [
                   #cms_template{
@@ -36,6 +29,14 @@ default_data() -> % {{{2
                             name="templates/analytics/ya_analytics.html"}
                   ]}.
 
+%% CMS Module interface {{{1
+functions() -> % {{{2
+    [
+     {metric_ga, "Google"},
+     {metric_ya, "Yandex"},
+     {metric_hs, "Hubspot"}
+    ].
+
 format_block(F, A) -> % {{{2
      {wf:f("~s(analytics_id:~s)", [F, A]), undefined}.
 
@@ -48,6 +49,7 @@ form_data(_, A) -> % {{{2
 save_block(#cms_mfa{ mfa={?MODULE, Fun, [_,AnalyticsId,_,_]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [AnalyticsId]}}.
 
+%% Block renderers {{{1
 metric_hs(Page, AnalyticsId) -> % {{{2
     common:template(Page,
       "templates/analytics/hs_analytics.html",
