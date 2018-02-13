@@ -421,6 +421,10 @@ event({auth, register, Role, DoConfirm}) -> % {{{2
     Email = common:q(email, undefined),
     Passwd = hash(common:q(password, "")),
     case db:register(Email, Passwd, Role, DoConfirm) of
+        #cms_user{confirm=0}=U ->
+            wf:user(U),
+            set_user_roles(U),
+            wf:redirect("/");
         #cms_user{email=Email,
                   password=Passwd,
                   confirm=Confirm,

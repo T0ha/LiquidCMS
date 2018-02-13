@@ -54,6 +54,8 @@ default_data() -> % {{{2
                   % Index page
                   admin:add_to_block({"index", "body"},
                                      [
+                                      {{router, common_redirect, [[], "/?page=admin"]},
+                                       #{filters => ["", "", "admin"]}},
                                       {router, common_redirect, [[], "/?page=register"]}
 
                                      ])
