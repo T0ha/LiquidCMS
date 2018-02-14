@@ -537,7 +537,7 @@ tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
 modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes) -> % {{{2
     modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes, []).
 modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes, _DataAttr) -> % {{{2
-    common:link_event(Page, Block, ?POSTBACK({modal, Page, TitleBlock, BodyBlock, FooterBlock}, ?MODULE), Classes).
+    html5:link_event(Page, Block, ?POSTBACK({modal, Page, TitleBlock, BodyBlock, FooterBlock}, ?MODULE), Classes).
 
 %% Event handlers % {
 event({modal, Page, TitleBlock, BodyBlock, FooterBlock}) -> % {{{2

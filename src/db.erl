@@ -222,7 +222,7 @@ update("0.1.4"=VSN) -> % {{{1
     db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
 
     transaction(fun() ->
-                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={common, link_event, '_'}, _='_'}),
+                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={html5, link_event, '_'}, _='_'}),
                         lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Event]}}=MFA) ->
                                               ok=mnesia:delete_object(MFA),
                                               mnesia:write(MFA#cms_mfa{mfa={M, F, [Block, Event#event{delegate=admin}]}})

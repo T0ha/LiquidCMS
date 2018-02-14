@@ -101,7 +101,12 @@ event(display_source_code) -> % {{{2
         "on" ->
             wf:wire(#script{script="$('.wfid_text_mfa.textarea').show(); $('#wysiwyg_editor').hide()"});
         _ ->
-            wf:wire(#script{script="$('.wfid_text_mfa.textarea').hide(); $('#wysiwyg_editor').show()"})
+            wf:wire(#script{
+              script="$('.wfid_text_mfa.textarea').hide();
+                      $('#wysiwyg_editor').show();
+                      let h_code=$('.wfid_text_mfa.textarea').val();
+                      $('#wysiwyg_editor').html(h_code);"
+            })
     end;
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
