@@ -120,8 +120,14 @@ table_row(#crud{ % {{{1
                                                  text=wf:to_binary(
                                                         maps:get(Field, Data, " "))};
                            none ->
-                               _V = 
-                               #span{text=wf:f("~p", [maps:get(Field, Data, " ")])};
+                                Text = maps:get(Field, Data, " "),
+                                try
+                                    Decoded=unicode:characters_to_list(Text, unicode),
+                                    #span{text=wf:f("~ts", [Decoded])}
+                                catch 
+                                  _:_ ->
+                                    #span{text=wf:f("~p", [Text])}
+                                end;
                            {select, Values} ->
                                Id = wf:temp_id(),
                                #dropdown{
@@ -212,3 +218,7 @@ cast(Value, Old) when is_integer(Old) -> % {{{1
 cast(Value, Type) -> % {{{1
     wf:warning("Can't cast ~p to ~p", [Value, Type]),
     Value.
+
+datetime_tostr(Date) ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
+    _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])).

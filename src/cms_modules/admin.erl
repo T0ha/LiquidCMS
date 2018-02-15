@@ -49,7 +49,9 @@ default_data() -> % {{{2
 
               add_navbar_button("admin", "sidebar-nav", "accounts", {{"fa", "users", []}, "Access"}, {menu, "accounts-menu"}),
               add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({?MODULE, user, show}, ?MODULE)}),
-              add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)})
+              add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)}),
+
+              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)})
              ]
 
  }.
@@ -72,20 +74,27 @@ add_page(PID, Title, Description, Role, Module) -> % {{{2
        module=Module
       }.
 
+add_form(PID, Phone, Text, Email, Rating) -> % {{{2
+    db:save(#cms_form{
+        id=crypto:hash(sha512, Email++Text),
+        page=PID,
+        phone=Phone,
+        text=unicode:characters_to_binary(Text),
+        email=Email,
+        rating=Rating
+    }).
+
 add_template(TemplatePath, Bindings) -> % {{{2
     add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
 
 add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
-    CT = calendar:universal_time(),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
                       name = Name,
                       description = Description,
-                      bindings = Bindings,
-                      created_at=CT,
-                      updated_at={}
+                      bindings = Bindings
                      });
        true ->
            {error, no_template}
@@ -173,12 +182,12 @@ menu_item_funs(Page, MenuBlock, ItemSub, URL) -> % {{{2
 
     [
      #cms_mfa{id={Page, MenuBlock},
-              mfa={common,
+              mfa={html5,
                    list_item,
                    [ItemBlock]},
               sort=1},
      #cms_mfa{id={Page, ItemBlock},
-              mfa={common,
+              mfa={html5,
                    link_url,
                    [ItemBodyBlock, URL]},
               sort=1}
@@ -412,6 +421,7 @@ format_block(#cms_mfa{ % {{{2$
              Body,
              #span{
                 class="pull-right",
+                style="margin-top:-7px",
                 body=[
                       #link{
                          class="btn btn-link",
@@ -976,6 +986,35 @@ event({?MODULE, template, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
+event({?MODULE, forms, show}) -> % {{{2
+    CRUD = #crud{
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {page, "Page", none},
+                    {phone, "Phone", none},
+                    {text, "Text", none},
+                    {email, "Email", none},
+                    {created_at, "Date", none}, %fun(Field, {{Y, M, D}, _}) -> ... end}
+                    {rating, "Rating", none},
+                    {comment, "Comment", ta}
+                   ],
+              funs=#{
+                list => fun db:get_forms/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
+    wf:update(container, [
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({?MODULE, page, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1053,7 +1092,6 @@ event({?MODULE, page, new}) -> % {{{2
                   options=cms_roles()
                  }
               ]);
-
 event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,

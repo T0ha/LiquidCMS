@@ -90,3 +90,15 @@
           active=true :: boolean(),
           settings = #{} :: map()
          }).
+
+-record(cms_form, {
+          id :: string(),
+          page=index :: atom(),
+          phone="" :: string(),
+          text="" :: string(),
+          email="" :: string(),
+          rating=[] :: [proplists:property()], %#{} :: map(),
+          active=true :: boolean(),
+          comment="" :: string(),
+          ?TIMESTAMPS
+         }).
