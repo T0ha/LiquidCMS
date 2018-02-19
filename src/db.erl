@@ -17,6 +17,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_page, set, []),
     ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
+    ?CREATE_TABLE(cms_form, set, []),
     {ok, VSN} = application:get_key(nitrogen, vsn),
     DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
@@ -222,7 +223,7 @@ update("0.1.4"=VSN) -> % {{{1
     db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
 
     transaction(fun() ->
-                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={common, link_event, '_'}, _='_'}),
+                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={html5, link_event, '_'}, _='_'}),
                         lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Event]}}=MFA) ->
                                               ok=mnesia:delete_object(MFA),
                                               mnesia:write(MFA#cms_mfa{mfa={M, F, [Block, Event#event{delegate=admin}]}})
@@ -235,6 +236,7 @@ update("0.1.4"=VSN) -> % {{{1
                 end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
+    ?CREATE_TABLE(cms_form, set, []),
     transaction(fun() ->
                         Replaced_items = [list, list_item, link_url, link_event, block], 
                         lists:foreach(
@@ -432,6 +434,12 @@ get_assets(Type) -> % {{{1
                         [record_to_map(A) || A <- Assets]
                 end).
 
+get_forms() -> % {{{1
+    transaction(fun() ->
+                        Forms = mnesia:match_object(#cms_form{active=true, _='_'}),
+                        [record_to_map(A) || A <- Forms]
+                end).
+
 fix_sort(Recs) when is_list(Recs) -> % {{{1
     [fix_sort(Rec) || Rec <- Recs];
 fix_sort(#cms_mfa{sort=new}=Rec) -> % {{{1
@@ -599,7 +607,7 @@ full_delete(Record) -> % {{{1
                 end).
 %% For convenience in install and update process
 delete(#{}=Map, FieldsFun) -> % {{{1
-    io:format("~nDelete map: ~p~n", [Map]),
+    % io:format("~nDelete map: ~p~n", [Map]),
     delete(map_to_record(Map, FieldsFun)).
 
 verify_create_table({atomic, ok}) -> ok; % {{{1
@@ -652,7 +660,9 @@ fields(cms_user) -> % {{{1
 fields(cms_role) -> % {{{1
     record_info(fields, cms_role);
 fields(cms_template) -> % {{{1
-    record_info(fields, cms_template).
+    record_info(fields, cms_template);
+fields(cms_form) -> % {{{1
+    record_info(fields, cms_form).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
     CT = calendar:universal_time(),
@@ -751,7 +761,7 @@ merge_backup_and_db(Source, Mod) -> % {{{1
            end,
     mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
 
-update_timestamps(Recs) when is_list(Recs) -> % {{{1
+update_timestamps(Recs) when is_list(Recs) -> % {{{
     [update_timestamps(Rec) || Rec <- Recs];
 update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
@@ -759,6 +769,9 @@ update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
 update_timestamps(#cms_page{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_page{created_at=CT, updated_at=CT};
+update_timestamps(#cms_form{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_form{created_at=CT, updated_at=CT};
 update_timestamps(#cms_user{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{created_at=CT, updated_at=CT};
@@ -777,6 +790,9 @@ update_timestamps(#cms_mfa{}=Rec) -> % {{{1
 update_timestamps(#cms_page{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_page{updated_at=CT};
+update_timestamps(#cms_form{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_form{updated_at=CT};
 update_timestamps(#cms_user{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{updated_at=CT};

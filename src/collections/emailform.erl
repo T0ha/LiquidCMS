@@ -132,17 +132,20 @@ submit(Page, Block, ToEmail, Classes) -> % {{{2
        }.
 
 %% Event handlers % {{{1
-event({submit, Page, Block, ToEmail}) -> % {{{2
-    Email = wf:to_list(common:q(email, "nomail@site.com")),
+event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
     Phone = wf:to_list(common:q(phone, "")),
     RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
     ?LOG("Ratings: ~p~n", [RatingsPL]),
+    TextForm = unicode:characters_to_binary(wf:to_list(common:q(text, ""))),
+    Host = application:get_env(nitrogen, host, "site.com"),
+    FromEmail = application:get_env(nitrogen, form_email, "form@" ++ Host),
+    Email = wf:to_list(common:q(email, FromEmail)),
     Text = [
-            add_if_not_empty("E-mail: ", Email),
+            add_if_not_empty("E-mail: ", FromEmail),
             add_if_not_empty("Phone: ", Phone),
             add_if_not_empty("Your ratings: ",
                             [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
-            wf:to_list(common:q(text, ""))
+            TextForm
            ],
     Flash = #span{
                class=["alert-warning"],
@@ -156,7 +159,7 @@ event({submit, Page, Block, ToEmail}) -> % {{{2
                     actions=#hide{effect=blind, speed=40}
                    }),
     smtp:send_html(Email, ToEmail, "Form sent from site", Text),
-
+    admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     wf:flash(FlashID, Flash);
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
