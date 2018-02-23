@@ -179,9 +179,11 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 
 %% Block renderers {{{1
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
-    % ?LOG("~nparallel_block333: ~p ",[Block]),
-    [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)].
-
+    try
+      [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
+    catch  error:_ -> 
+        wf:redirect("/?page=500")
+    end.
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
@@ -227,14 +229,13 @@ img(_Page, AID, Classes) -> % {{{1 % {{{2
         _ -> []
     end.
 
-template(#cms_page{id=PID}=Page, TID) -> % {{{2
-    template(#cms_page{id=PID}=Page, TID, []).
+template(Page, TID) -> % {{{2
+    template(Page, TID, []).
 
-template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
+template(Page, TID, AdditionalBindings) -> % {{{2
     ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
-
     #template{file=File,
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
@@ -299,9 +300,11 @@ q(Id, Default) -> % {{{2
     end.
 
 
-module_by_function(FunTuple) -> % {{{2
+module_by_function(FunTuple) -> % {{{2  
+    Exclude_modules = [web_404],
     {ok, Files} = file:list_dir("ebin"),
-    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    AllMods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    Mods = lists:filter(fun(I)-> not lists:member(I, Exclude_modules) end, AllMods),
     [M || M <- Mods,
           M /= cms_collection_default,
           F <- M:module_info(exports),

@@ -6,3 +6,5 @@ db/*
 log/*
 deps/*
 .rebar/*
+*.lcms
+scratch/*
