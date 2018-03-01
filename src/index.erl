@@ -17,6 +17,24 @@ default_data() -> % {{{2
                           description=[],
                           module=index,
                           accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="404",
+                          description="Page not found",
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="500",
+                          description="Internal error",
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="403",
+                          description="Access forbidden",
+                          module=index,
+                          accepted_role=nobody,
                           title="LiquidCMS"}
                ],
   cms_mfa => [
@@ -57,8 +75,16 @@ default_data() -> % {{{2
                                       {{router, common_redirect, [[], "/?page=admin"]},
                                        #{filters => ["", "", "admin"]}},
                                       {router, common_redirect, [[], "/?page=register"]}
+                                     ]),
 
-                                     ])
+                  % Error pages
+                  admin:add_to_block({"404", "body"},
+                                     [{common, template,["templates/404.html"]}]),
+                  admin:add_to_block({"403", "body"},
+                                     [{common, template,["templates/403.html"]}]),
+                  admin:add_to_block({"500", "body"},
+                                     [{common, template,["templates/500.html"]}])
+
                  ]}.
 
 %% Module render functions {{{1
