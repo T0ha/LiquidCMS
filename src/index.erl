@@ -4,10 +4,88 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 %% CMS Module interface {{{1
-description() -> % {{{2
-    "Main module".
+?DESCRIPTION(Main module).
+
+%% Module install routines {{{1
+default_data() -> % {{{2
+    #{
+  cms_page => [
+                #cms_page{id="index",
+                          description=[],
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="404",
+                          description="Page not found",
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="500",
+                          description="Internal error",
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"},
+
+                #cms_page{id="403",
+                          description="Access forbidden",
+                          module=index,
+                          accepted_role=nobody,
+                          title="LiquidCMS"}
+               ],
+  cms_mfa => [
+                  %Scripts
+                  admin:add_to_block({"*", "script"}, 
+                                     [
+                                      {common, asset, [["js", "jquery"]]},
+                                      {common, asset, [["js", "jquery-ui"]]},
+                                      {common, asset, [["js", "bert"]]},
+                                      {common, asset, [["js", "nitrogen"]]},
+                                      {common, asset, [["js", "livevalidation"]]},
+                                      {common, asset, [["js", "bootstrap"]]},
+
+                                      {{common, asset, [["js", "hotkeys", "jquery"]]},
+                                       #{filters => ["", "", "editor"]}},
+
+                                      {{common, asset, [["js", "bootstrap-wysiwyg"]]},
+                                       #{filters => ["", "", "editor"]}},
+
+                                      {{common, asset, [["js", "hotkeys", "jquery"]]},
+                                       #{filters => ["", "", "admin"]}},
+
+                                      {{common, asset, [["js", "bootstrap-wysiwyg"]]},
+                                       #{filters => ["", "", "admin"]}}
+                                     ]),
+
+                  %CSS
+                  admin:add_to_block({"*", "css"},
+                                     [
+                                      {common, asset, [["css", "jquery-ui"]]},
+                                      {common, asset, [["css", "bootstrap"]]},
+                                      {common, asset, [["css", "font-awesome"]]}
+                                     ]),
+
+                  % Index page
+                  admin:add_to_block({"index", "body"},
+                                     [
+                                      {{router, common_redirect, [[], "/?page=admin"]},
+                                       #{filters => ["", "", "admin"]}},
+                                      {router, common_redirect, [[], "/?page=register"]}
+                                     ]),
+
+                  % Error pages
+                  admin:add_to_block({"404", "body"},
+                                     [{common, template,["templates/404.html"]}]),
+                  admin:add_to_block({"403", "body"},
+                                     [{common, template,["templates/403.html"]}]),
+                  admin:add_to_block({"500", "body"},
+                                     [{common, template,["templates/500.html"]}])
+
+                 ]}.
 
 %% Module render functions {{{1
 main() ->  % {{{2
@@ -42,11 +120,22 @@ event({?MODULE, links, disable}) -> % {{{2
             wf:wire(#script{script="$('a,button').unbind('click');"})
     end;
 
-event({page, construct, PID, [Block|_]=BlocksPath}) -> % {{{2
+event({page, construct, _PID, [_Block|_]=_BlocksPath}) -> % {{{2
     wf:update("body", common:parallel_block(wf:state(page), "body"));
+event(display_source_code) -> % {{{2
+    case common:q(checkbox_html, "") of
+        "on" ->
+            wf:wire(#script{script="$('.wfid_text_mfa.textarea').show(); $('#wysiwyg_editor').hide()"});
+        _ ->
+            wf:wire(#script{
+              script="$('.wfid_text_mfa.textarea').hide();
+                      $('#wysiwyg_editor').show();
+                      let h_code=$('.wfid_text_mfa.textarea').val();
+                      $('#wysiwyg_editor').html(h_code);"
+            })
+    end;
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
-
 
 %% Block renderers {{{1
 maybe_block(_Page, "", _Classes) -> % {{{2
@@ -67,11 +156,11 @@ flash() -> % {{{2
 maybe_add_editor(Page) -> % {{{2
     maybe_add_editor(Page, wf:role(editor)).
 
-maybe_add_editor(Page, false) -> % {{{2
+maybe_add_editor(_Page, false) -> % {{{2
     ok;
 maybe_add_editor(#cms_page{id="admin"}, true) -> % {{{2
     ok;
-maybe_add_editor(Page, true) -> % {{{2
+maybe_add_editor(_Page, true) -> % {{{2
     wf:insert_top("body",
                   #panel{
                      class="container-fluid",

@@ -5,128 +5,111 @@
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 
 ?DESCRIPTION(Admin).
 
 %% Module install routines {{{1
 default_data() -> % {{{2
-    #{cms_mfa => [
-                  %Scripts
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery"]]},
-                           sort=1},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery-ui"]]},
-                           sort=2},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bert"]]},
-                           sort=3},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "nitrogen"]]},
-                           sort=4},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "livevalidation"]]},
-                           sort=5},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "hotkeys", "jquery"]]},
-                           sort=6,
-                           settings=#{filters => ["", "", "editor"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=7,
-                           settings=#{filters => ["", "", "editor"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "jquery.hotkeys"]]},
-                           sort=8,
-                           settings=#{filters => ["", "", "admin"]}},
-                  #cms_mfa{id={"*", "script"},
-                           mfa={common, asset, [["js", "bootstrap-wysiwyg"]]},
-                           sort=9,
-                           settings=#{filters => ["", "", "admin"]}},
+    #{
+  cms_page => [
+               #cms_page{
+                  id="admin",
+                  module=index,
+                  accepted_role=admin,
+                  title= <<"Admin Page - LiquidCMS">>
+                 }
+              ],
+  cms_mfa => [
+              add_to_block("admin", "body", {template, "templates/internal/admin.html"}),
 
-                  %CSS
-                  #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "jquery-ui"]]},
-                           sort=1},
-                  #cms_mfa{id={"*", "css"},
-                           mfa={common, asset, [["css", "bootstrap"]]},
-                           sort=2}
-                 ]}.
+              add_to_block({"admin", "css"}, [
+                                              {common, asset, [["css", "font-awesome"]]},
+                                              {common, asset, [["css", "metisMenu"]]},
+                                              {common, asset, [["css", "sb-admin-2"]]},
+                                              {common, asset, [["css", "admin"]]}
+                                             ]),
+
+              add_to_block({"admin", "script"}, [
+                                               {common, asset, [["js", "metisMenu"]]},
+                                               {common, asset, [["js", "sb-admin-2"]]}
+                                              ]),
+                                                
+              add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
+              add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({?MODULE, asset, show, css}, ?MODULE)}),
+              add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({?MODULE, asset, show, script}, ?MODULE)}),
+              add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({?MODULE, asset, show, image}, ?MODULE)}),
+              add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({?MODULE, asset, show, binary}, ?MODULE)}),
+
+              add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({?MODULE, template, show}, ?MODULE)}),
+
+              add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
+              add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({?MODULE, page, show}, ?MODULE)}),
+              add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({?MODULE, page, construct}, ?MODULE)}),
+
+              add_navbar_button("admin", "sidebar-nav", "accounts", {{"fa", "users", []}, "Access"}, {menu, "accounts-menu"}),
+              add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({?MODULE, user, show}, ?MODULE)}),
+              add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)}),
+
+              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)})
+             ]
+
+ }.
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
-
-    %add_page("index", "templates/index.html"),
-    add_page("admin", "templates/blank.html", admin, admin),
-    add_to_block("admin", "css", {asset, ["css", "font-awesome"]}, 3),
-    add_to_block("admin", "css", {asset, ["css", "metisMenu"]}, 4),
-    add_to_block("admin", "css", {asset, ["css", "sb-admin-2"]}, 6),
-    add_to_block("admin", "css", {asset, ["css", "admin"]}, 7),
-
-    add_to_block("admin", "script", {asset, ["js", "bootstrap"]}, 6),
-    add_to_block("admin", "script", {asset, ["js", "metisMenu"]}, 7),
-    add_to_block("admin", "script", {asset, ["js", "sb-admin-2"]}, 8),
-    add_to_block("admin", "script", {asset, ["js", "hotkeys", "jquery"]}, 9),
-    add_to_block("admin", "script", {asset, ["js", "bootstrap-wysiwyg"]}, 10),
-
-    add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
-    add_navbar_button("admin", "static-assets-menu", "assets-css", {{"fa", "css3", []}, "CSS"}, {event, ?POSTBACK({asset, show, css})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-scripst", {{"fa", "code", []}, "JavaScript"}, {event, ?POSTBACK({asset, show, script})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-img", {{"fa", "image", []}, "Images"}, {event, ?POSTBACK({asset, show, image})}),
-    add_navbar_button("admin", "static-assets-menu", "assets-binary", {{"fa", "file-o", []}, "Other"}, {event, ?POSTBACK({asset, show, binary})}),
-
-    add_navbar_button("admin", "sidebar-nav", "templates", {{"fa", "hdd-o", []}, "Templates"}, {event, ?POSTBACK({template, show})}),
-
-    add_navbar_button("admin", "sidebar-nav", "pages", {{"fa", "file-o", []}, "Pages"}, {menu, "pages-menu"}),
-    add_navbar_button("admin", "pages-menu", "pages-all", {{"fa", "file-o", []}, "All Pages"}, {event, ?POSTBACK({page, show})}),
-    add_navbar_button("admin", "pages-menu", "page-construct", {{"fa", "puzzle-piece", []}, "Construct Page"}, {event, ?POSTBACK({page, construct})}),
-
-    add_navbar_button("admin", "sidebar-nav", "accounts", {{"fa", "users", []}, "Access"}, {menu, "accounts-menu"}),
-    add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({user, show})}),
-    add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({role, show})}),
+    get_files_from_folder("templates/internal"),
 
     ok.
 
 %% Different components adding to pages  {{{1
-add_page(PID, TemplatePath) -> % {{{2
-    add_page(PID, TemplatePath, nobody, index).
-
-add_page(PID, TemplatePath, Role, Module) -> % {{{2
-    lager:info("Installing ~p module", [?MODULE]),
-    add_page(PID, <<"LiquidCMS">>, "LiquidCMS", Role, Module),
-    add_to_block(PID, "body", {template, TemplatePath}).
-
 add_page(PID, Title, Description, Role, Module) -> % {{{2
-    Page = #cms_page{
-              id=PID,
-              title=Title,
-              description=Description,
-              accepted_role=Role,
-              module=Module
-             },
-    ?LOG("~nadd_page:~p", [Page]),
-    db:save(Page).
+    #cms_page{
+       id=PID,
+       title=unicode:characters_to_binary(Title),
+       description=unicode:characters_to_binary(Description),
+       accepted_role=Role,
+       module=Module
+      }.
+
+add_form(PID, Phone, Text, Email, Rating) -> % {{{2
+    db:save(#cms_form{
+        id=crypto:hash(sha512, Email++Text),
+        page=PID,
+        phone=Phone,
+        text=unicode:characters_to_binary(Text),
+        email=Email,
+        rating=Rating
+    }).
 
 add_template(TemplatePath, Bindings) -> % {{{2
     add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
 
 add_template(Name, Description, TemplatePath, Bindings) -> % {{{2
     IsTemplate = filelib:is_regular(TemplatePath),
-    CT = calendar:universal_time(),
     if IsTemplate ->
            db:save(#cms_template{
                       file = TemplatePath,
                       name = Name,
                       description = Description,
-                      bindings = Bindings,
-                      created_at=CT,
-                      updated_at={}
+                      bindings = Bindings
                      });
        true ->
            {error, no_template}
     end.
+
+add_to_block({PID, Block}, Mater) when is_list(Mater)  -> % {{{2
+    lists:flatten([add_to_block({PID, Block}, M) || M <- Mater]);
+add_to_block({PID, Block}, {_M, _F, _A}=Mater) -> % {{{2
+    add_to_block(PID, Block, Mater);
+add_to_block(Id, {{_M, _F, _A}=MFA, Settings}) -> % {{{2
+    #cms_mfa{
+       id=Id,
+       mfa=MFA,
+       settings=Settings
+      }.
 
 add_to_block(PID, Block, Mater)  -> % {{{2
     add_to_block(PID, Block, Mater, 1).
@@ -134,76 +117,63 @@ add_to_block(PID, Block, Mater)  -> % {{{2
 add_to_block(PID, Block, {Type, ID}, Sort) -> % {{{2
     add_to_block(PID, Block, {common, Type, [ID]}, Sort);
 add_to_block(PID, Block, {M, F, A}, Sort) -> % {{{2
-    db:save(#cms_mfa{
-               id={PID, Block},
-               mfa={M, F, A},
-               sort=Sort}).
+    #cms_mfa{
+       id={PID, Block},
+       mfa={M, F, A},
+       sort=Sort}.
 
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
-    _ItemSubmenuBlock = common:sub_block(ItemBlock, "submenu"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, "body"},
-                           mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]},
-                           sort=1},
+                           mfa={common, script, [wf:f("$('#~s').metisMenu();", [MenuBlock])]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_url,
-                                [ItemLinkBlock, ""]},
-                           sort=1},
+                                [ItemLinkBlock, ""]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={bootstrap,
                                 nav_items,
-                                [SubMenuBlock, ["nav-second-level", "collapse"]]},
-                           sort=2}
+                                [SubMenuBlock, ["nav-second-level", "collapse"]]}}
                  ],
     LinkMFAs = [
                 #cms_mfa{
                    id={PID, ItemLinkBlock},
-                   mfa={common, icon, ["fa", "", ["arrow"]]},
-                   sort=3}
+                   mfa={common, icon, ["fa", "", ["arrow"]]}}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
-    db:save(
-      db:fix_sort(ButtonMFAs ++ LinkMFAs));
+    db:fix_sort(ButtonMFAs ++ LinkMFAs);
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_event,
-                                [ItemLinkBlock, Actions]},
-                           sort=1}
+                                [ItemLinkBlock, Actions]}}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
-    db:save(
-      db:fix_sort(ButtonMFAs ++ LinkMFAs));
+    db:fix_sort(ButtonMFAs ++ LinkMFAs);
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {url, URL}) -> % {{{2
     ItemLinkBlock = common:sub_block(ItemBlock, "link"),
     ButtonMFAs = [
                   #cms_mfa{id={PID, MenuBlock},
-                           mfa={common,
+                           mfa={html5,
                                 list_item,
-                                [ItemBlock]},
-                           sort=1},
+                                [ItemBlock]}},
                   #cms_mfa{id={PID, ItemBlock},
-                           mfa={common,
+                           mfa={html5,
                                 link_url,
-                                [ItemLinkBlock, URL]},
-                           sort=1}
+                                [ItemLinkBlock, URL]}}
                  ],
     LinkMFAs = link_body_funs(PID, ItemLinkBlock, Icon, Text),
-    db:save(
-      db:fix_sort(ButtonMFAs ++ LinkMFAs)).
+    db:fix_sort(ButtonMFAs ++ LinkMFAs).
 
 %% Helpers and private functions {{{1
 menu_item_funs(Page, MenuBlock, ItemSub, URL) -> % {{{2
@@ -212,12 +182,12 @@ menu_item_funs(Page, MenuBlock, ItemSub, URL) -> % {{{2
 
     [
      #cms_mfa{id={Page, MenuBlock},
-              mfa={common,
+              mfa={html5,
                    list_item,
                    [ItemBlock]},
               sort=1},
      #cms_mfa{id={Page, ItemBlock},
-              mfa={common,
+              mfa={html5,
                    link_url,
                    [ItemBodyBlock, URL]},
               sort=1}
@@ -229,22 +199,20 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
          {_Font, _Name, _Classes} = Args ->
              A = tuple_to_list(Args),
              #cms_mfa{id={PID, LinkBlock},
-                      mfa={common, icon, A},
-                      sort=1};
+                      mfa={common, icon, A}};
          _ ->
              []
      end,
      if Text /= undefined ->
             #cms_mfa{id={PID, LinkBlock},
-                     mfa={common, text, [" " ++ Text]},
-                     sort=2};
+                     mfa={common, text, [" " ++ Text]}};
         true -> []
      end
     ].
 
 file_to_asset(File, Path) -> % {{{2
     [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
-    case {Ext, Min} of
+    case {string:lowercase(Ext), string:lowercase(Min)} of
         {"js", "min"} ->
             #cms_asset{
                id=[Ext | Id],
@@ -322,7 +290,7 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK(ButtonPostBack)
+                                              actions=?POSTBACK(ButtonPostBack, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -364,7 +332,8 @@ render_cancel_button() -> % {{{2
        type=warning,
        size=md,
        text="Cancel",
-       postback=close_modal
+       postback=close_modal,
+       delegate=?MODULE
       }.
 
 render_copy_button(undefined) -> % {{{2
@@ -374,7 +343,8 @@ render_copy_button(CopyPostback) -> % {{{2
        type=success,
        size=md,
        text="Copy",
-       postback=CopyPostback
+       postback=CopyPostback,
+       delegate=?MODULE
       }.
 
 render_move_button(MovePostback) -> % {{{2
@@ -383,7 +353,8 @@ render_move_button(MovePostback) -> % {{{2
        type=success,
        size=md,
        text="Move",
-       postback=MovePostback
+       postback=MovePostback,
+       delegate=?MODULE
       }.
 
 new_modal(Title, OkPostback, Form) -> % {{{2
@@ -424,6 +395,7 @@ new_modal(Title, SavePostback, CopyPostback, UploadTag, Form) -> % {{{2
                        body=#upload{
                                tag=UploadTag,
                                droppable=true,
+                               delegate=?MODULE,
                                show_button=false,
                                overall_progress=true
                               }},
@@ -449,28 +421,34 @@ format_block(#cms_mfa{ % {{{2$
              Body,
              #span{
                 class="pull-right",
+                style="margin-top:-7px",
                 body=[
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "plus", []),
                          show_if=(Sub /= undefined),
-                         actions=?POSTBACK({block, add, Sub})
+                         actions=?POSTBACK({?MODULE, block, add, Sub}, ?MODULE)
                         },
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "arrow-right", []),
                          show_if=(Sub /= undefined),
-                         actions=?POSTBACK({page, construct, PID, [Sub]})
+                         actions=?POSTBACK({?MODULE, page, construct, PID, [Sub]}, ?MODULE)
                         },
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "pencil", []),
-                         actions=?POSTBACK({block, edit, B})
+                         actions=?POSTBACK({?MODULE, block, edit, B}, ?MODULE)
                         },
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "remove", []),
-                         actions=?POSTBACK({block, remove, B})
+                         actions=#event{
+                                    type=click,
+                                    actions=#confirm{
+                                               text="Are you sure to delete?", 
+                                               postback={?MODULE, block, remove_block, B},
+                                               delegate=?MODULE}}
                         }
                      ]}
             ]}.
@@ -708,6 +686,17 @@ maybe_fix_sort(#cms_mfa{id=Id}=R, #cms_mfa{id=Id}) -> % {{{2
 maybe_fix_sort(R, _) -> % {{{2
     db:fix_sort(R).
 
+fix_list_sort(List) -> % {{{2
+    Sorted = lists:keysort(#cms_mfa.id, 
+                           lists:flatten(List)),
+    lists:foldl(fun(#cms_mfa{id={P, B}}=MFA, [#cms_mfa{id={P, B}, sort=S}|_]=A) ->
+                        [MFA#cms_mfa{sort=S + 1} | A];
+                   (MFA, A) ->
+                        [MFA | A]
+                end,
+               [],
+               Sorted).
+
 rec_from_qs(R) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),
     F = wf:to_atom(common:q(function, "template")),
@@ -824,59 +813,13 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                                              body="<i class='fa fa-indent'></i>",
                                              func="indent",
                                              class=["btn", "btn-default"]}
-                                         ]},
-                                 #panel{
-                                    class="btn-group",
-                                    body=[
-                                          #link{
-                                             class=[
-                                                    "btn",
-                                                    "btn-default",
-                                                    "dropdown-toggle"
-                                                   ],
-                                             text="H<i class='caret'></i>",
-                                             data_fields=[
-                                                          {toggle, dropdown}
-                                                         ]},
-                                          #list{
-                                             class="dropdown-menu",
-                                             numbered=flase,
-                                             body=[ 
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H1",
-                                                         func="heading h1",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H2",
-                                                         func="heading 2",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H3",
-                                                         func="heading 3",
-                                                         class=["btn", "btn-default"]}
-                                                     },
-                                                   #listitem{
-                                                      body=
-                                                      #wysiwyg_button{
-                                                         body="H4",
-                                                         func="heading 4",
-                                                         class=["btn", "btn-default"]}}
-                                                  ]}
                                          ]}
                                 ]}
               ]);
 
-event({asset, new, _Type}) -> % {{{2 TODO: Check and remove _Type at all
+event({?MODULE, asset, new}) -> % {{{2 TODO: Check and remove _Type at all
     new_modal("Upload Static Asset",
-              {asset, save},
+              {?MODULE, asset, save},
               asset, 
               [
                #span{text="Name"},
@@ -896,10 +839,10 @@ event({asset, new, _Type}) -> % {{{2 TODO: Check and remove _Type at all
                   options=common:asset_types()
                  }
               ]);
-event({asset, refresh, Type}) -> % {{{2
+event({?MODULE, asset, refresh, Type}) -> % {{{2
     get_files_from_folder("static"),
-    event({asset, show, Type});
-event({asset, save}) -> % {{{2
+    event({?MODULE, asset, show, Type});
+event({?MODULE, asset, save}) -> % {{{2
     Type = wf:to_atom(wf:q(type)),
     Path = wf:q(path),
     Fname = filename:basename(Path),
@@ -911,8 +854,8 @@ event({asset, save}) -> % {{{2
               type=Type
              }),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={asset, show, Type}});
-event({asset, show, Type}) -> % {{{2
+    wf:wire(#event{postback={?MODULE, asset, show, Type}, delegate=?MODULE});
+event({?MODULE, asset, show, Type}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -947,7 +890,7 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-warning",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({asset, refresh, Type})
+                                              actions=?POSTBACK({?MODULE, asset, refresh, Type}, ?MODULE)
                                              }},
                                    #bs_col{
                                       cols={lg, 2},
@@ -957,7 +900,7 @@ event({asset, show, Type}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({asset, new, Type})
+                                              actions=?POSTBACK({?MODULE, asset, new}, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -966,9 +909,9 @@ event({asset, show, Type}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({template, new}) -> % {{{2
+event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
-              {template, save},
+              {?MODULE, template, save},
               template,
               [
                #span{text="Name"},
@@ -982,15 +925,15 @@ event({template, new}) -> % {{{2
                #hidden{id=path}
               ]);
 
-event({template, refresh}) -> % {{{2
+event({?MODULE, template, refresh}) -> % {{{2
     get_files_from_folder("templates"),
     event({template, show});
-event({template, save}) -> % {{{2
+event({?MODULE, template, save}) -> % {{{2
     Path = wf:q(path),
     add_template(wf:q(name), wf:q(description), Path, []),
     coldstrap:close_modal(),
     wf:wire(#event{postback={template, show}});
-event({template, show}) -> % {{{2
+event({?MODULE, template, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1024,7 +967,7 @@ event({template, show}) -> % {{{2
                                                      "btn-warning",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({template, refresh})
+                                              actions=?POSTBACK({?MODULE, template, refresh}, ?MODULE)
                                              }},
                                    #bs_col{
                                       cols={lg, 2},
@@ -1034,7 +977,7 @@ event({template, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({template, new})
+                                              actions=?POSTBACK({?MODULE, template, new}, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -1043,7 +986,36 @@ event({template, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({page, show}) -> % {{{2
+event({?MODULE, forms, show}) -> % {{{2
+    CRUD = #crud{
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {page, "Page", none},
+                    {phone, "Phone", none},
+                    {text, "Text", none},
+                    {email, "Email", none},
+                    {created_at, "Date", none}, %fun(Field, {{Y, M, D}, _}) -> ... end}
+                    {rating, "Rating", none},
+                    {comment, "Comment", ta}
+                   ],
+              funs=#{
+                list => fun db:get_forms/0,
+                update => fun db:update_map/1, 
+                delete => fun db:delete/1
+               }
+             },
+    wf:update(container, [
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
+event({?MODULE, page, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1080,7 +1052,7 @@ event({page, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({page, new})
+                                              actions=?POSTBACK({?MODULE, page, new}, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -1089,9 +1061,9 @@ event({page, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({page, new}) -> % {{{2
+event({?MODULE, page, new}) -> % {{{2
     new_modal("Create Page", 
-              {page, save},
+              {?MODULE, page, save},
               undefined,
               [
                #span{text="Name (ID)"},
@@ -1120,16 +1092,15 @@ event({page, new}) -> % {{{2
                   options=cms_roles()
                  }
               ]);
-
-event({page, construct}) -> % {{{2
+event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
     ?LOG("~nconstruct page:~p",[PID]),
     Block = common:q(block_select, "page"),
-    wf:wire(#event{postback={page, construct, PID, [Block]}});
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
-event({page, construct, PID, [Block|_]}) -> % {{{2
+event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
@@ -1143,41 +1114,44 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
                      id=page_select,
                      options=lists:keysort(1,  [{N, N} || #{id := N} <- Pages]),
                      value=PID,
-                     postback={page, construct}
+                     delegate=?MODULE,
+                     postback={?MODULE, page, construct}
                     },
                   #span{text=" / "},
                   #dropdown{
                      id=block_select,
                      options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
                      value=Block,
-                     postback={page, construct}
+                     delegate=?MODULE,
+                     postback={?MODULE, page, construct}
                     },
                   #span{text=" Show All "},
                   #checkbox{
                      text="",
                      id=show_all,
                      checked=ShowAll,
-                     postback={page, construct}
+                     delegate=?MODULE,
+                     postback={?MODULE, page, construct}
                     },
                   #btn{
                      text="Export Pages",
                      class=["pull-right"],
                      style="",
                      type=success,
-                     actions=?POSTBACK({?MODULE, pages, export})
+                     actions=?POSTBACK({?MODULE, pages, export}, ?MODULE)
                     },
                   #btn{
                    text="Merge Pages",
                    class=["pull-right"],
                    style="margin: 0 10px;",
                    type=info,
-                   actions=?POSTBACK({?MODULE, pages, merge})
+                   actions=?POSTBACK({?MODULE, pages, merge}, ?MODULE)
                   },
                   #btn{
                      text="Import Pages",
                      class=["pull-right"],
                      type=warning,
-                     actions=?POSTBACK({?MODULE, pages, import})
+                     actions=?POSTBACK({?MODULE, pages, import}, ?MODULE)
                     }
 
 
@@ -1185,6 +1159,7 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
     Sort = #sortblock{
               tag={PID, Block},
               class="panel-body", %"page-block-sort",
+              delegate=?MODULE,
               items=Blocks,
               group=blocks},
 
@@ -1198,48 +1173,50 @@ event({page, construct, PID, [Block|_]}) -> % {{{2
                      Sort
                     ]},
 
-    update_container("Construct Page", "Add Block", {block, add}, Body);
+    update_container("Construct Page", "Add Block", {?MODULE, block, add}, Body);
 
-event({page, save}) -> % {{{2 onclick <Save> btn
+event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
     Title = wf:q(title),
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
     Role = wf:to_atom(wf:q(role)),
-    add_page(PID, Title, Description, Role, Module),
+    db:save(
+      add_page(PID, Title, Description, Role, Module)),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={page, show}});
-event({block, change, module}) -> % {{{2
+    wf:wire(#event{postback={?MODULE, page, show}, delegate=?MODULE});
+event({?MODULE, block, change, module}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     wf:replace(function, 
                #dd{
                   id=function,
                   value=template,
-                  postback={block, change, function},
+                  postback={?MODULE, block, change, function},
+                  delegate=?MODULE,
                   options=lists:keysort(2, apply(M, functions, []))
                  }),
-    wf:wire(#event{postback={block, change, function}});
-event({block, change, function}) -> % {{{2
+    wf:wire(#event{postback={?MODULE, block, change, function}, delegate=?MODULE});
+event({?MODULE, block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
     % ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
-event({block, add}) -> % {{{2
+event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
     Block = common:q(block_select, "body"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/login.html"]},
+           mfa={common, template, ["templates/internal/login.html"]},
            sort=new},
-    event({block, edit, B});
-event({block, add, Block}) -> % {{{2
+    event({?MODULE, block, edit, B});
+event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/login.html"]},
+           mfa={common, template, ["templates/internal/login.html"]},
            sort=new},
-    event({block, edit, B});
-event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
+    event({?MODULE, block, edit, B});
+event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role] = get_filters(B),
@@ -1249,7 +1226,8 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
                  id=add_page_select,
                  options=[{N, N} || #{id := N} <- Pages],
                  value=PID,
-                 postback={page, construct}
+                 delegate=?MODULE,
+                 postback={?MODULE, page, construct}
                 },
               " to block: ",
               #textbox{
@@ -1265,14 +1243,16 @@ event({block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
                #span{text="Elements Collection"},
                #dd{id=module,
                    value=M,
-                   postback={block, change, module},
+                   postback={?MODULE, block, change, module},
+                  delegate=?MODULE,
                    options=collections()},
 
                #span{text="Block Type"},
                #dd{
                   id=function,
                   value=F,
-                  postback={block, change, function},
+                  postback={?MODULE, block, change, function},
+                  delegate=?MODULE,
                   options=(M):functions()
                  },
                #panel{
@@ -1306,20 +1286,20 @@ event({?MODULE, block, save, OldMFA}) -> % {{{2
                                           OldMFA))),
 
     coldstrap:close_modal(),
-    wf:wire(#event{postback={page, construct, PID, [Block]}});
-event({block, remove, B}) -> % {{{2
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
+event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
         {block, remove_block, B},
         []
     );
 
-event({block, remove_block, B}) -> % {{{2
+event({?MODULE, block, remove_block, B}) -> % {{{2
     {PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
-    wf:wire(#event{postback={page, construct, PID, [Block]}}),
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
     coldstrap:close_modal();
-event({user, show}) -> % {{{2
+event({?MODULE, user, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1351,7 +1331,7 @@ event({user, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({user, new})
+                                              actions=?POSTBACK({?MODULE, user, new}, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -1360,10 +1340,10 @@ event({user, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({user, new}) -> % {{{2
+event({?MODULE, user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
-              {user, save},
+              {?MODULE, user, save},
               undefined,
               [
                account:email_field(Page),
@@ -1376,11 +1356,11 @@ event({user, new}) -> % {{{2
                   options=cms_roles()
                  }
               ]);
-event({user, save}) -> % {{{2
+event({?MODULE, user, save}) -> % {{{2
     account:event({auth, register}),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={user, show}});
-event({role, show}) -> % {{{2
+    wf:wire(#event{postback={?MODULE, user, show}, delegate=?MODULE});
+event({?MODULE, role, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1412,7 +1392,7 @@ event({role, show}) -> % {{{2
                                                      "btn-success",
                                                      "btn-block",
                                                      "btn-upload"],
-                                              actions=?POSTBACK({role, new})
+                                              actions=?POSTBACK({?MODULE, role, new}, ?MODULE)
                                              }}
                                   ]},
                           #bs_row{
@@ -1421,9 +1401,9 @@ event({role, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({role, new}) -> % {{{2
+event({?MODULE, role, new}) -> % {{{2
     new_modal("Create Role", 
-              {role, save},
+              {?MODULE, role, save},
               undefined,
               [
                #span{text="Role"},
@@ -1434,7 +1414,7 @@ event({role, new}) -> % {{{2
                #txtbx{id=priority,
                       placeholder="Access priority for role (int)"}
               ]);
-event({role, save}) -> % {{{2
+event({?MODULE, role, save}) -> % {{{2
     Name = wf:q(name),
     Role = wf:to_atom(string:to_lower(re:replace(Name, "\s", "_", [{return, list}]))),
     Priority = wf:to_integer(wf:q(priority)),
@@ -1443,7 +1423,7 @@ event({role, save}) -> % {{{2
                name = Name,
                sort = Priority}),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={user, show}});
+    wf:wire(#event{postback={?MODULE, role, show}, delegate=?MODULE});
 event({?MODULE, pages, export}) -> % {{{2
     Path = "/tmp/" ++ wf:temp_id(),
     ok=mnesia:backup(Path),
@@ -1458,10 +1438,8 @@ event({?MODULE, pages, merge}) -> % {{{2
               {popup, close},
               merge_backup,
               undefined);
-event({auth, call_restore_password}) -> % {{{2
+event({?MODULE, auth, call_restore_password}) -> % {{{2
     account:call_restore_password();
-event(close_modal) ->
-  coldstrap:close_modal();
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
@@ -1506,7 +1484,7 @@ sort_event({PID, Block}, Blocks) -> % {{{2
                           db:update(B, B#cms_mfa{sort=N})
                   end,
                   lists:zip(lists:seq(1, length(Blocks)), Blocks)),
-    wf:wire(#event{postback={page, construct, PID, [Block]}});
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 sort_event(SortTag, Blocks) -> % {{{2
     wf:warning("Wrong sort event in ~p tag: ~p Blocks: ~p", [?MODULE, SortTag, Blocks]).
 

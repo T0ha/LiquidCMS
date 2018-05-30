@@ -6,6 +6,7 @@
 
 -compile([export_all]).
 -include("db.hrl").
+-include_lib("nitrogen_core/include/wf.hrl").
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -16,6 +17,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_page, set, []),
     ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
+    ?CREATE_TABLE(cms_form, set, []),
     {ok, VSN} = application:get_key(nitrogen, vsn),
     DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
@@ -24,11 +26,15 @@ install([])-> % {{{1
               [maps:map(
                  fun(_K, V) ->
                          lists:foreach(
-                           fun(R) ->
+                           fun(#cms_mfa{}=R) ->
                                    mnesia:write(
-                                     update_timestamps(R))
+                                     fix_sort(
+                                       update_timestamps(R)));
+                              (R) ->
+                                   mnesia:write(
+                                       update_timestamps(R))
                            end,
-                           V)
+                           lists:flatten(V))
                  end,
                 (M):default_data()) ||
                M <- DataModules]
@@ -212,6 +218,41 @@ update("0.1.3"=VSN) -> % {{{1
                                            }
                                     end, record_info(fields, cms_user)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("0.1.4"=VSN) -> % {{{1
+    [AdminPage] = get_page("admin"),
+    db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
+
+    transaction(fun() ->
+                        NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={html5, link_event, '_'}, _='_'}),
+                        lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Event]}}=MFA) ->
+                                              ok=mnesia:delete_object(MFA),
+                                              mnesia:write(MFA#cms_mfa{mfa={M, F, [Block, Event#event{delegate=admin}]}})
+                                      end,
+                                      NavBarEvents)
+                end),
+    transaction(fun() ->
+                        Pages = mnesia:match_object(#cms_page{accepted_role=undefined, _='_'}),
+                        [mnesia:write(P#cms_page{accepted_role=nobody}) || P <- Pages]
+                end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
+    ?CREATE_TABLE(cms_form, set, []),
+    transaction(fun() ->
+                        Replaced_items = [list, list_item, link_url, link_event, block], 
+                        lists:foreach(
+                          fun(Replaced) ->
+                            Common_elements = mnesia:match_object(#cms_mfa{id='_', mfa={common, Replaced, '_'}, _='_'}),
+                            lists:foreach(fun(#cms_mfa{mfa={_M, F, A}}=MFA) ->
+                                                  New_mfa = MFA#cms_mfa{mfa={html5, F, A}},
+                                                  mnesia:delete_object(MFA),
+                                                  mnesia:write(New_mfa)
+                                                  % io:format("~nReplace ~p to ~p",[MFA, New_mfa])
+                                          end,
+                                          Common_elements)
+                          end,
+                          Replaced_items)
+                end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -252,7 +293,8 @@ register(Email, Password, Role) -> % {{{1
     register(Email, Password, Role, false).
 
 register(Email, Password, Role, DoConfirm) -> % {{{1
-    Confirm = if DoConfirm ->
+    Users_count = mnesia:table_info('cms_user', size),
+    Confirm = if DoConfirm and (Users_count > 0) ->
                      {ok, C} = wf:hex_encode(crypto:strong_rand_bytes(16)),
                      C;
                  true -> 0
@@ -260,6 +302,7 @@ register(Email, Password, Role, DoConfirm) -> % {{{1
     CT = calendar:universal_time(),
     transaction(fun() ->
                         case mnesia:match_object(#cms_user{email=Email,
+                                                           active=true,
                                                            _='_'}) of
                             [] -> 
                                 User = #cms_user{
@@ -389,6 +432,12 @@ get_assets(Type) -> % {{{1
     transaction(fun() ->
                         Assets = mnesia:select(cms_asset, [{#cms_asset{type=Type, active=true, _='_'}, [], ['$_']}]),
                         [record_to_map(A) || A <- Assets]
+                end).
+
+get_forms() -> % {{{1
+    transaction(fun() ->
+                        Forms = mnesia:match_object(#cms_form{active=true, _='_'}),
+                        [record_to_map(A) || A <- Forms]
                 end).
 
 fix_sort(Recs) when is_list(Recs) -> % {{{1
@@ -558,7 +607,7 @@ full_delete(Record) -> % {{{1
                 end).
 %% For convenience in install and update process
 delete(#{}=Map, FieldsFun) -> % {{{1
-    io:format("~nDelete map: ~p~n", [Map]),
+    % io:format("~nDelete map: ~p~n", [Map]),
     delete(map_to_record(Map, FieldsFun)).
 
 verify_create_table({atomic, ok}) -> ok; % {{{1
@@ -611,7 +660,9 @@ fields(cms_user) -> % {{{1
 fields(cms_role) -> % {{{1
     record_info(fields, cms_role);
 fields(cms_template) -> % {{{1
-    record_info(fields, cms_template).
+    record_info(fields, cms_template);
+fields(cms_form) -> % {{{1
+    record_info(fields, cms_form).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
     CT = calendar:universal_time(),
@@ -710,12 +761,17 @@ merge_backup_and_db(Source, Mod) -> % {{{1
            end,
     mnesia:traverse_backup(Source, Mod, dummy, read_only, View, 0).
 
+update_timestamps(Recs) when is_list(Recs) -> % {{{
+    [update_timestamps(Rec) || Rec <- Recs];
 update_timestamps(#cms_mfa{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_mfa{created_at=CT, updated_at=CT};
 update_timestamps(#cms_page{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_page{created_at=CT, updated_at=CT};
+update_timestamps(#cms_form{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_form{created_at=CT, updated_at=CT};
 update_timestamps(#cms_user{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{created_at=CT, updated_at=CT};
@@ -734,6 +790,9 @@ update_timestamps(#cms_mfa{}=Rec) -> % {{{1
 update_timestamps(#cms_page{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_page{updated_at=CT};
+update_timestamps(#cms_form{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_form{updated_at=CT};
 update_timestamps(#cms_user{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{updated_at=CT};

@@ -2,6 +2,7 @@
 -compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("db.hrl").
+-include("cms.hrl").
 -include("records.hrl").
 
 ?DESCRIPTION(Common elements).
@@ -9,15 +10,9 @@
 %% CMS Module interface {{{1
 functions() -> % {{{2
     [
-     %{parallel_block, "Parallell Group of Blocks"},
-     %{waterfall, "Waterfall Block"},
      {asset, "Static Asset"},
      {img, "Image"},
      {template, "Template"},
-     {list, "Items List"},
-     {list_item, "List Item"},
-     {link_url, "Link"},
-     {block, "Block (div)"},
      %{icon, "Icon"},
      %{script, "Inline Script"},
      {text, "Text with HTML"}
@@ -25,14 +20,6 @@ functions() -> % {{{2
      ].
 
 
-format_block(block, [Block, Classes, DataAttr]) -> % {{{2
-    {wf:f("Block (div): ~s(class=~p) (attr:~p)", [Block, Classes, DataAttr]), Block};
-format_block(list, [Block, Numbered, Classes, DataAttr]) -> % {{{2
-    {wf:f("List: ~s(numbered=~s, class=~p, attr:~p)", [Block, Numbered, Classes, DataAttr]), Block};
-format_block(list_item, [Block, Classes, DataAttr]) -> % {{{2
-    {wf:f("List Item: ~s(class=~p, attr:~p)", [Block, Classes, DataAttr]), Block};
-format_block(link_url, [Block, URL, Classes, DataAttr]) -> % {{{2
-    {wf:f("Link: ~s(href=~s, class=~p, attr:~p)", [Block, URL, Classes, DataAttr]), Block};
 format_block(text, [Text]) -> % {{{2
     {#panel{body=Text}, undefined};
 format_block(template, [TID]) -> % {{{2
@@ -49,29 +36,6 @@ format_block(F, A) -> % {{{2
     {wf:f("common:~s(~p)", [F, A]), undefined}.
 
 
-form_data(list, A) -> % {{{2
-    [_, Block, Numbered, Classes, DataAttr] = admin:maybe_empty(A, 5),
-    {[
-       #checkbox{
-          text="Numbered",
-          value="true",
-          label_position=before,
-          id=numbered,
-          checked=Numbered
-         }
-     ],
-     [], Block, Classes, DataAttr};
-form_data(link_url, A) -> % {{{2
-    [_, Block, URL, Classes, DataAttr] = admin:maybe_empty(A, 5),
-    {[
-      {"URL",
-       #txtbx{
-          id=url,
-          text=URL,
-          placeholder="http://yoursite.com"
-         }}
-     ],
-     [], Block, Classes, DataAttr};
 form_data(text, A) -> % {{{2
     [_, Text] = admin:maybe_empty(A, 2),
     [
@@ -150,52 +114,6 @@ form_data(text, A) -> % {{{2
                                    body="<i class='fa fa-indent'></i>",
                                    func="indent",
                                    class=["btn", "btn-default"]}
-                               ]},
-                       #panel{
-                          class="btn-group",
-                          body=[
-                                #link{
-                                   class=[
-                                          "btn",
-                                          "btn-default",
-                                          "dropdown-toggle"
-                                         ],
-                                   text="H<i class='caret'></i>",
-                                   data_fields=[
-                                                {toggle, dropdown}
-                                               ]},
-                                #list{
-                                   class="dropdown-menu",
-                                   numbered=flase,
-                                   body=[ 
-                                         #listitem{
-                                            body=
-                                            #wysiwyg_button{
-                                            body="H1",
-                                            func="heading h1",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H2",
-                                            func="heading h2",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H3",
-                                            func="heading h3",
-                                            class=["btn", "btn-default"]}
-                                           },
-                                         #listitem{
-                                            body=
-                                         #wysiwyg_button{
-                                            body="H4",
-                                            func="heading h4",
-                                            class=["btn", "btn-default"]}}
-                                        ]}
                                ]}
                       ]}
     ];
@@ -244,11 +162,6 @@ form_data(asset, A) -> % {{{2
     ],
     []}.
 
-save_block(#cms_mfa{mfa={common, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
-    Num = wf:to_atom(common:q(numbered, "false")),
-    Rec#cms_mfa{mfa={common, list, [Block, Num, Classes, DataAttr]}};
-save_block(#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={common, link_url, [Block, URL, Classes, DataAttr]}};
 save_block(#cms_mfa{mfa={common, text, [_Block, _Classes, _DataAttr]}}=Rec) -> % {{{2
     HTML = q(text_mfa, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
@@ -266,9 +179,11 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 
 %% Block renderers {{{1
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
-    % ?LOG("~nparallel_block333: ~p ",[Block]),
-    [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)].
-
+    try
+      [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
+    catch  error:_ -> 
+        wf:redirect("/?page=500")
+    end.
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
@@ -314,69 +229,16 @@ img(_Page, AID, Classes) -> % {{{1 % {{{2
         _ -> []
     end.
 
-template(#cms_page{id=PID}=Page, TID) -> % {{{2
-    template(#cms_page{id=PID}=Page, TID, []).
+template(Page, TID) -> % {{{2
+    template(Page, TID, []).
 
-template(#cms_page{id=_PID}=Page, TID, AdditionalBindings) -> % {{{2
+template(Page, TID, AdditionalBindings) -> % {{{2
     ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
-
     #template{file=File,
               bindings=[{'Page', Page} | Bindings ++ AdditionalBindings]}.
 
-list(Page, Block, Classes) -> % {{{2
-    list(Page, Block, false, Classes, []).
-
-list(Page, Block, true, Classes) -> % {{{2
-    list(Page, Block, true, Classes, []);
-list(Page, Block, false, Classes) -> % {{{2
-    list(Page, Block, false, Classes, []).
-
-list(Page, Block, Numbered, Classes, DataAttr) -> % {{{2
-    Items = parallel_block(Page, Block),
-    #list{body=Items,
-          numbered=Numbered,
-          class=Classes,
-          html_id=block_to_html_id(Block),
-          data_fields=DataAttr
-    }.
-
-list_item(Page, ItemID) -> % {{{2
-    list_item(Page, ItemID, []).
-
-list_item(Page, ItemID, Classes) -> % {{{2
-    list_item(Page, ItemID, Classes, []).
-list_item(Page, ItemID, Classes, DataAttr) -> % {{{2
-    #listitem{
-       html_id=block_to_html_id(ItemID),
-       body=parallel_block(Page, ItemID),
-       class=Classes,
-       data_fields = DataAttr
-      }.
-
-link_url(Page, Block, URL) -> % {{{2
-    link_url(Page, Block, URL, []).
-link_url(Page, Block, URL, Classes) -> % {{{2
-    link_url(Page, Block, URL, Classes, []).
-link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
-    #link{
-       url=URL, 
-       html_id=block_to_html_id(Block),
-       class=Classes,
-       body=parallel_block(Page, Block),
-       data_fields = DataAttr
-      }.
-
-link_event(Page, Block, Event) -> % {{{2
-    link_event(Page, Block, Event, []).
-link_event(Page, Block, Event, Classes) -> % {{{2
-    #link{
-       html_id=block_to_html_id(Block),
-       actions=Event,
-       class=Classes,
-       body=parallel_block(Page, Block)
-      }.
 
 icon(_Page, Font, Name, Classes) -> % {{{2
     icon(Font, Name, Classes).
@@ -391,16 +253,6 @@ script(_Page, Script) -> % {{{2
 
 text(_Page, Block, Text) -> % {{{2
     maybe_wrap_to_edit(Text, Block, wf:role(editor)).
-
-block(Page, Block, Classes) -> % {{{2
-    block(Page, Block, Classes, []).
-block(Page, Block, Classes, DataAttr) -> % {{{2
-    #panel{
-       html_id=block_to_html_id(Block),
-       class=Classes,
-       body=common:parallel_block(Page, Block),
-       data_fields = DataAttr
-      }.
 
 full_block(_Page, Body) -> % {{{2
     #bs_row{
@@ -417,7 +269,7 @@ event({asset, type, change}) -> % {{{2
     wf:replace(asset_id, assets_dropdown(AssetType));
 
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event(common.erl) ~p", [?MODULE, Ev]).
 
 %% Helpers {{{1
 block_to_html_id(Block) -> % {{{2
@@ -448,9 +300,11 @@ q(Id, Default) -> % {{{2
     end.
 
 
-module_by_function(FunTuple) -> % {{{2
+module_by_function(FunTuple) -> % {{{2  
+    Exclude_modules = [web_404],
     {ok, Files} = file:list_dir("ebin"),
-    Mods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    AllMods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
+    Mods = lists:filter(fun(I)-> not lists:member(I, Exclude_modules) end, AllMods),
     [M || M <- Mods,
           M /= cms_collection_default,
           F <- M:module_info(exports),
@@ -479,8 +333,8 @@ apply_filters([undefined, undefined, undefined]) -> % {{{2
     true;
 apply_filters(["", "", Role]) -> % {{{2
     #cms_user{role=R} = account:user(),
-    ?LOG("Am I ~p - ~p", [Role, Role == R]),
-   wf:to_atom(Role) == R;
+    ?LOG("Am I ~p - ~p", [Role, wf:to_atom(Role) == R]),
+    wf:to_atom(Role) == R;
 apply_filters([K, V, ""]) -> % {{{2
     D = wf:q(wf:to_atom(K)),
     ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
@@ -496,10 +350,13 @@ maybe_list(L) when is_list(L) -> % {{{2
 maybe_list(L) -> % {{{2
     [L].
 maybe_wrap_to_edit(Text, _Block, false) -> % {{{2
+    %% @doc "Return text",
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
+    %% @doc "Return text if page is admin",
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
+    %% @doc "Return panel for edit a textblock if user have permission",
     #panel{
        id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
        body=Text,

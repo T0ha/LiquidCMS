@@ -113,14 +113,21 @@ table_row(#crud{ % {{{1
                                OldValue = maps:get(Field, Data, " "),
                                #inplace_textbox{tag={update, Rec, Data, Field,OldValue},
                                                 delegate=?MODULE,
-                                                text=OldValue};
+                                                text=wf:to_binary(OldValue)};
                            ta ->
                                #inplace_textarea{tag={update, Rec, Data, Field},
                                                  delegate=?MODULE,
-                                                 text=maps:get(Field, Data, " ")};
+                                                 text=wf:to_binary(
+                                                        maps:get(Field, Data, " "))};
                            none ->
-                               _V = 
-                               #span{text=wf:f("~p", [maps:get(Field, Data, " ")])};
+                                Text = maps:get(Field, Data, " "),
+                                try
+                                    Decoded=unicode:characters_to_list(Text, unicode),
+                                    #span{text=wf:f("~ts", [Decoded])}
+                                catch 
+                                  _:_ ->
+                                    #span{text=wf:f("~p", [Text])}
+                                end;
                            {select, Values} ->
                                Id = wf:temp_id(),
                                #dropdown{
@@ -160,7 +167,7 @@ inplace_textbox_event(_Tag, Value) -> % {{{1
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
      % ?LOG("inplace textarea event ~p:", [ Value]),
-    update(Fun, Rec, Data, Field, Value, undefined);
+    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), undefined);
 inplace_textarea_event(_Tag, Value) -> % {{{1
     % ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
@@ -211,3 +218,7 @@ cast(Value, Old) when is_integer(Old) -> % {{{1
 cast(Value, Type) -> % {{{1
     wf:warning("Can't cast ~p to ~p", [Value, Type]),
     Value.
+
+datetime_tostr(Date) ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
+    _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])).
