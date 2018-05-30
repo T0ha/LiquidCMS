@@ -350,10 +350,13 @@ maybe_list(L) when is_list(L) -> % {{{2
 maybe_list(L) -> % {{{2
     [L].
 maybe_wrap_to_edit(Text, _Block, false) -> % {{{2
+    %% @doc "Return text",
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
+    %% @doc "Return text if page is admin",
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
+    %% @doc "Return panel for edit a textblock if user have permission",
     #panel{
        id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
        body=Text,
