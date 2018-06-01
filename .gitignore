@@ -2,6 +2,7 @@
 Mnesia*
 *.app
 static/nitrogen
+*node_modules*
 db/*
 log/*
 deps/*
