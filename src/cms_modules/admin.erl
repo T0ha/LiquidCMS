@@ -58,7 +58,7 @@ default_data() -> % {{{2
 
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
-    %get_files_from_folder("static/dest"),
+    get_files_from_folder("static"),
     get_files_from_folder("templates"),
     get_files_from_folder("templates/internal"),
 
