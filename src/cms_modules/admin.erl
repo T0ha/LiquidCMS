@@ -212,7 +212,7 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
 
 file_to_asset(File, Path) -> % {{{2
     [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
-    case {string:lowercase(Ext), string:lowercase(Min)} of
+    case {string:to_lower(Ext), string:to_lower(Min)} of
         {"js", "min"} ->
             #cms_asset{
                id=[Ext | Id],
