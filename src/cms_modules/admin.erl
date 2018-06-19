@@ -648,7 +648,7 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
               filelib:is_dir(Path),
               {ok, Files} <- [file:list_dir(Path)],
               Path /= "nitrogen"],
-    %io:format("Static: ~p~n", [Static]),
+    io:format("Static: ~p~n", [Static]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
                          end,
@@ -667,12 +667,25 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
                      ],
     NitrogenAssets = [
                       file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
+    io:format("Assets NitrogenAssets: ~p~n", [Assets ++ NitrogenAssets]),
     db:save(Assets ++ NitrogenAssets),
     file:set_cwd(OldCWD);
 
 get_files_from_folder(SubFolder) -> % {{{2
     {ok, TemplateFiles} = file:list_dir(SubFolder),
     lists:foreach(fun(F) -> add_template(wf:f("~s/~s", [SubFolder, F]), []) end, TemplateFiles).
+
+get_social_files("static/images"=SubFolder) -> % {{{2
+    {ok, StaticImages} = file:list_dir(SubFolder),
+    Static = [{"images", StaticImages}],
+    % io:format("StaticImages: ~p~n", [StaticImages]),
+    Assets = lists:foldl(fun({Path, Files}, A) ->
+                                 [file_to_asset(File, Path) || File <- Files,
+                                  string:str(File, "_icon.png") > 0 ] ++ A
+                         end,
+                         [],
+                         Static),
+    db:save(Assets).
 
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
     Filters;
