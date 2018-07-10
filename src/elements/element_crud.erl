@@ -110,17 +110,14 @@ table_row(#crud{ % {{{1
               [#tablecell{
                   body=case Type of
                            tb ->
-                               OldValue = maps:get(Field, Data, " "),
-                               #inplace_textbox{tag={update, Rec, Data, Field,OldValue},
+                               #inplace_textbox{tag={update, Rec, Data, Field, Text},
                                                 delegate=?MODULE,
-                                                text=wf:to_binary(OldValue)};
+                                                text=Text};
                            ta ->
                                #inplace_textarea{tag={update, Rec, Data, Field},
                                                  delegate=?MODULE,
-                                                 text=wf:to_binary(
-                                                        maps:get(Field, Data, " "))};
+                                                 text=Text};
                            none ->
-                                Text = maps:get(Field, Data, " "),
                                 try
                                     Decoded=unicode:characters_to_list(Text, unicode),
                                     #span{text=wf:f("~ts", [Decoded])}
@@ -146,7 +143,8 @@ table_row(#crud{ % {{{1
                                         actions=?POSTBACK({copy_page, Rec, Data})
                                        }
                        end
-                 } || {Field, _, Type} <- Cols] ++
+                 } || {Field, _, Type} <- Cols,
+                      Text <- [wf:f("~ts", [maps:get(Field, Data, " ")])]] ++
               [#tablecell{
                   show_if=maps:is_key(delete, Funs),
                   body=#button{
@@ -160,14 +158,14 @@ table_row(#crud{ % {{{1
 
 inplace_textbox_event({update=Fun, Rec, Data, Field, OldValue}, Value) -> % {{{1
   % ?LOG("inplace1 tb event ~p:  ", [Value]),
-    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), OldValue);
+    update(Fun, Rec, Data, Field, wf:f("~ts", [Value]), OldValue);
 inplace_textbox_event(_Tag, Value) -> % {{{1
     % ?LOG("~p inplace2 tb event ~p: ~p", [?MODULE, Tag, Value]),
     Value.
 
 inplace_textarea_event({update=Fun, Rec, Data, Field}, Value) -> % {{{1
      % ?LOG("inplace textarea event ~p:", [ Value]),
-    update(Fun, Rec, Data, Field, unicode:characters_to_binary(Value), undefined);
+    update(Fun, Rec, Data, Field, wf:f("~ts", [Value]), undefined);
 inplace_textarea_event(_Tag, Value) -> % {{{1
     % ?LOG("~p inplace ta event ~p: ~p", [?MODULE, Tag, Value]),
     Value.

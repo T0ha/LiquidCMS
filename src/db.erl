@@ -253,6 +253,9 @@ update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
                           Replaced_items)
                 end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.1"=VSN) -> % {{{1 : add social-btn images
+    admin:get_social_files("static/images"),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
