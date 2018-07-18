@@ -235,15 +235,16 @@ update("0.1.4"=VSN) -> % {{{1
                         [mnesia:write(P#cms_page{accepted_role=nobody}) || P <- Pages]
                 end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
+update("1.0.0"=VSN) -> 
     ?CREATE_TABLE(cms_form, set, []),
-    transaction(fun() ->
+    transaction(fun() -> % {{{1 :  replace commmon -> html5
                         Replaced_items = [list, list_item, link_url, link_event, block], 
                         lists:foreach(
                           fun(Replaced) ->
                             Common_elements = mnesia:match_object(#cms_mfa{id='_', mfa={common, Replaced, '_'}, _='_'}),
                             lists:foreach(fun(#cms_mfa{mfa={_M, F, A}}=MFA) ->
-                                                  New_mfa = MFA#cms_mfa{mfa={html5, F, A}},
+                                                  New_mfa = MFA#cms_mfa{mfa={html5, F, A},
+                                                                        updated_at=calendar:universal_time()},
                                                   mnesia:delete_object(MFA),
                                                   mnesia:write(New_mfa)
                                                   % io:format("~nReplace ~p to ~p",[MFA, New_mfa])
@@ -252,7 +253,51 @@ update("1.0.0"=VSN) -> % {{{1 :  replace commmon -> html5
                           end,
                           Replaced_items)
                 end),
-    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+    
+    DeleteTemplates=["templates/admin.html", "templates/login.html", "templates/main.html",
+                      "templates/navbar.html", "templates/setup.html", "templates/ga_analytics.html",
+                      "templates/ya_analytics.html", "templates/hs_analytics.html"],
+    transaction(fun() -> % delete old templates
+      lists:foreach(
+        fun(Tmpl) ->
+          Tmpls = mnesia:match_object(#cms_template{file=Tmpl, _='_'}),
+          lists:foreach(fun(#cms_template{file=_}=DT) ->
+                                mnesia:delete_object(DT)
+                        end,
+                        Tmpls)
+        end,
+           DeleteTemplates)
+     end),
+    % create new templates:
+    admin:get_files_from_folder("templates"),
+    admin:get_files_from_folder("templates/internal"),
+    admin:get_files_from_folder("templates/analytics"),
+    admin:get_files_from_folder("templates/mail"),  % need???
+    MFAReplacedTemplates=[["templates/admin.html", "templates/internal/admin.html"],
+                        ["templates/login.html", "templates/internal/login.html"],
+                        ["templates/main.html", "templates/internal/main.html"],
+                        ["templates/navbar.html","templates/internal/navbar.html"],
+                        ["templates/setup.html","templates/internal/setup.html"],
+                        ["templates/ga_analytics.html","templates/analytics/ga_analytics.html"],
+                        ["templates/ya_analytics.html","templates/analytics/ya_analytics.html"],
+                        ["templates/hs_analytics.html","templates/analytics/hs_analytics.html"]
+                       ],
+    transaction(fun() -> % delete old templates
+        lists:foreach(
+          fun([Old,New]=_TmplPair) ->
+              ReplElements = mnesia:match_object(#cms_mfa{mfa={common, template, [Old]}, _='_'}),
+              lists:foreach(fun(MFA) ->
+                              New_mfa = MFA#cms_mfa{mfa={common, template, [New]},
+                                                    updated_at=calendar:universal_time()},
+                              mnesia:delete_object(MFA),
+                              mnesia:write(New_mfa)
+                              % ,io:format("~nReplace ~p to ~p",[MFA, New_mfa])
+                            end,
+                            ReplElements)
+          end,
+             MFAReplacedTemplates)
+       end),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("1.0.1"=VSN) -> % {{{1 : add social-btn images
     admin:get_social_files("static/images"),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});

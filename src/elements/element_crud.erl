@@ -105,7 +105,8 @@ table_row(#crud{ % {{{1
             } = Rec,
            {N, Data}) ->
     #tablerow{
-       cells=[
+       cells=
+            [
               #tablecell{text=N} |
               [#tablecell{
                   body=case Type of
@@ -118,6 +119,7 @@ table_row(#crud{ % {{{1
                                                  delegate=?MODULE,
                                                  text=Text};
                            none ->
+
                                 try
                                     Decoded=unicode:characters_to_list(Text, unicode),
                                     #span{text=wf:f("~ts", [Decoded])}
@@ -143,17 +145,25 @@ table_row(#crud{ % {{{1
                                         actions=?POSTBACK({copy_page, Rec, Data})
                                        }
                        end
-                 } || {Field, _, Type} <- Cols,
-                      Text <- [wf:f("~ts", [maps:get(Field, Data, " ")])]] ++
-              [#tablecell{
-                  show_if=maps:is_key(delete, Funs),
-                  body=#button{
-                          text="×",
-                          class=Rec#crud.button_class++" close ",
-                          title="Delete",
-                          actions=?POSTBACK({delete, Rec, Data})
-                         }}]                           
-             ]}.
+                  } || {Field, _, Type} <- Cols,
+                  Text <- [
+                    try
+                        U=unicode:characters_to_list(maps:get(Field, Data, " "), unicode),
+                        wf:f("~ts", [U])
+                    catch
+                      _:_ ->
+                        wf:f("~p", [maps:get(Field, Data, " ")])
+                    end
+                  ]
+              ] ++ [#tablecell{
+                    show_if=maps:is_key(delete, Funs),
+                    body=#button{
+                            text="×",
+                            class=Rec#crud.button_class++" close ",
+                            title="Delete",
+                            actions=?POSTBACK({delete, Rec, Data})
+                           }}]
+            ]}.
 
 
 inplace_textbox_event({update=Fun, Rec, Data, Field, OldValue}, Value) -> % {{{1
