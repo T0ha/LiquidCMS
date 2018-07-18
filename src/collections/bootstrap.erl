@@ -15,8 +15,6 @@ functions() -> % {{{2
      {panel, "Panel"},
      {modal, "Modal"},
      {slider, "Slider"},
-     %{dropdown, "Dropdown"},
-     %{script, "Inline Script"},
      {container, "Container"},
      {tabs, "Tabs"},
      {tab, "Tab"},
@@ -28,7 +26,6 @@ functions() -> % {{{2
      {th, "Table header"},
      {tr, "Table row"},
      {td, "Table cell"}
-     %{full_block, "One Column Row"}
      ].
 
 format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
@@ -322,19 +319,13 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
             ];
         URL ->
             db:maybe_update(#cms_mfa{id={PID, NavItemBlock},
-                               mfa={common, link_url, [Block, URL]},
+                               mfa={html5, link_url, [Block, URL]},
                                sort=1}),
             db:maybe_update(#cms_mfa{id={PID, Block},
                                mfa={common, text, [Text]},
                                sort=1}),
             [
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes, DataAttr]}}
-             %#cms_mfa{id={PID, NavItemBlock},
-             %         mfa={common, link_url, [Block, URL]},
-             %         sort=1},
-             %#cms_mfa{id={PID, Block},
-             %         mfa={common, text, [Text]},
-             %         sort=1}
             ]
     end;
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2

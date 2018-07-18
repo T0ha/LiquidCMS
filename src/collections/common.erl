@@ -16,7 +16,6 @@ functions() -> % {{{2
      %{icon, "Icon"},
      %{script, "Inline Script"},
      {text, "Text with HTML"}
-     %{full_block, "One Column Row"}
      ].
 
 
@@ -181,7 +180,8 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
     try
       [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
-    catch  error:_ -> 
+    catch  error:E -> 
+        ?LOG("~nError: ~p ~p ~p",[E,PID, Block]),
         wf:redirect("/?page=500")
     end.
 
