@@ -1118,8 +1118,25 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
-    ?LOG("~nconstruct page(2):~p",[PID]),
-
+    ?LOG("~nconstruct page(2) Block:~p",[Block]),
+    ParentBlock=db:get_parent_block(PID,Block),
+    ParentBody=case ParentBlock of
+      S when is_list(S) ->
+          #button{
+                text=S,
+                class=["btn"],
+                actions=?POSTBACK({?MODULE, page, construct, PID, [ParentBlock]}, ?MODULE)
+          };
+      undefined -> 
+          #span{
+               id=parent_block,
+               text="none"
+          };
+      _ -> #span{
+                 id=parent_block,
+                 text=ParentBlock
+           }
+    end,
     ShowAll = (common:q(show_all, "false") /= "false"),
 
     PageSelect = [
@@ -1146,6 +1163,10 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                      delegate=?MODULE,
                      postback={?MODULE, page, construct}
                     },
+                  #span{
+                   text=" Parent: "
+                  },
+                  ParentBody,
                   #btn{
                      text="Export Pages",
                      class=["pull-right"],
