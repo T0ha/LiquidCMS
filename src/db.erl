@@ -443,7 +443,28 @@ get_all_blocks(PID) -> % {{{1
                          end),
     % io:format("~n_block~p",[sets:from_list(Blocks)]),
     sets:to_list(sets:from_list(Blocks)).
-                                 
+get_parent_block(PID, BID) -> % {{{1
+    transaction(fun() ->
+                        P1=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_']}, active=true, _='_'}),
+                        P2=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_']}, active=true, _='_'}),
+                        P3=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_']}, active=true, _='_'}),
+                        P4=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_']}, active=true, _='_'}),
+                        P5=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_','_']}, active=true, _='_'}),
+                        P12=lists:append(P1,P2),
+                        P34=lists:append(P3,P4),
+                        P35=lists:append(P34,P5),
+                        P=lists:append(P12,P35),
+                        case P of
+                          L when is_list(L), length(L) > 1 ->
+                              length(L);
+                          [I] ->  
+                                  {_, ParentID}=I#cms_mfa.id,
+                                  ParentID;
+                          
+                          _  ->  undefined
+                        end
+                end).
+
 get_users() -> % {{{1
     transaction(fun() ->
                         Users = mnesia:match_object(#cms_user{active=true, _='_'}),
