@@ -68,8 +68,8 @@ install() -> % {{{2
 add_page(PID, Title, Description, Role, Module) -> % {{{2
     #cms_page{
        id=PID,
-       title=unicode:characters_to_binary(Title),
-       description=unicode:characters_to_binary(Description),
+       title=wf:f("~ts", [Title]),
+       description=wf:f("~ts", [Description]),
        accepted_role=Role,
        module=Module
       }.
@@ -79,7 +79,7 @@ add_form(PID, Phone, Text, Email, Rating) -> % {{{2
         id=crypto:hash(sha512, Email++Text),
         page=PID,
         phone=Phone,
-        text=unicode:characters_to_binary(Text),
+        text=wf:f("~ts", [Text]),
         email=Email,
         rating=Rating
     }).

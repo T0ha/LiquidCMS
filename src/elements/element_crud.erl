@@ -220,7 +220,7 @@ cast(Value, Old) when is_atom(Old) -> % {{{1
 cast(Value, Old) when is_list(Old) -> % {{{1
     wf:to_list(Value);
 cast(Value, Old) when is_binary(Old) -> % {{{1
-    wf:to_binary(Value);
+    unicode:characters_to_binary(Value);
 cast(Value, Old) when is_integer(Old) -> % {{{1
     wf:to_integer(Value);
 cast(Value, Type) -> % {{{1

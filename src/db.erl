@@ -237,7 +237,7 @@ update("0.1.4"=VSN) -> % {{{1
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("1.0.0"=VSN) -> 
     ?CREATE_TABLE(cms_form, set, []),
-    transaction(fun() -> % {{{1 :  replace commmon -> html5
+    transaction(fun() -> % {{{2 :  replace commmon -> html5
                         Replaced_items = [list, list_item, link_url, link_event, block], 
                         lists:foreach(
                           fun(Replaced) ->
