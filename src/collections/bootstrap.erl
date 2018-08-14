@@ -154,7 +154,7 @@ form_data(modal, A) -> % {{{2
       #txtbx{
          id=footer_block,
          text=FooterBlock,
-         placeholder="Block name for modal title (leave blank for none)"
+         placeholder="Block name for modal footer (leave blank for none)"
         }}
      ],
      [],
