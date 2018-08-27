@@ -141,7 +141,7 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
     FromEmail = application:get_env(nitrogen, form_email, "form@" ++ Host),
     Email = wf:to_list(common:q(email, FromEmail)),
     Text = [
-            add_if_not_empty("E-mail: ", FromEmail),
+            add_if_not_empty("E-mail: ", Email),
             add_if_not_empty("Phone: ", Phone),
             add_if_not_empty("Your ratings: ",
                             [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
@@ -158,7 +158,7 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
                     target=FlashID,
                     actions=#hide{effect=blind, speed=40}
                    }),
-    smtp:send_html(Email, ToEmail, "Form sent from site", Text),
+    smtp:send_html(FromEmail, ToEmail, "Form sent from site", Text),
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     wf:flash(FlashID, Flash);
 event(Ev) -> % {{{2
