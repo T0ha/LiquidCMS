@@ -317,7 +317,7 @@ maybe_render_block(Page, MFA) -> % {{{2
     render_block(true, Page, MFA).
 
 render_block(false, _, _) -> % {{{2
-    ?PRINT("Dont't show"),
+    % ?PRINT("Dont't show"),
     "";
 render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
     apply(?MODULE, F, [Page, MFA | Args]);

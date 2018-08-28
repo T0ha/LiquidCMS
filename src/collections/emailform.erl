@@ -53,6 +53,21 @@ form_data(rating, A) -> % {{{2
      [],
      Block,
      Classes};
+form_data(email_field, A) -> % {{{2
+    [_PID, Block, Required, Classes] = admin:maybe_empty(A, 4),
+    {[],
+     [
+      #checkbox{
+         text="Required",
+         % value=true,
+         label_position=before,
+         id=email_required,
+         checked=Required
+        }
+     ],
+     Block,
+     Classes
+    };
 form_data(submit, A) -> % {{{2
     [_, Block, ToEmail, Classes] = admin:maybe_empty(A, 4),
     {[
@@ -67,7 +82,6 @@ form_data(_F, []) -> % {{{2
     {[], []}.
 
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
-    % ?LOG("save rating: ~p", [Rec]),
     [Block, Min, Max, Step, Size, Classes, _DataAttr] = admin:maybe_empty(A, 7),
     ShowCaption = wf:to_atom(common:q(show_caption, false)),
     ShowClear = wf:to_atom(common:q(show_clear, false)),
@@ -75,19 +89,38 @@ save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
 
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [B,Email, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, email_field=Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Required = wf:to_atom(common:q(email_required, false)),
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Required, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
 
 
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
-     #panel{
+    email_field(Page, Block, on, Classes).
+email_field(Page, Block, Required, Classes) -> % {{{2
+
+    case Required of
+        on ->  wf:defer(submit,
+            email,
+            #validate{
+                validators=[
+                            #is_email{text="Not a valid email."}
+                ]
+            }
+        );
+                                
+        _ -> ok
+    end,
+    #panel{
         class="form-group",
         body=#txtbx{
                 id=email,
-        html_id=common:block_to_html_id(Block),
+                html_id=common:block_to_html_id(Block),
                 class=Classes,
-                placeholder=common:parallel_block(Page, Block)}}.
+                placeholder=common:parallel_block(Page, Block)}
+    }.
 
 phone_field(Page, Block, Classes) -> % {{{2
      #panel{
@@ -123,6 +156,7 @@ rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
      #btn{
         %type=success,
+        id=submit,
         size=lg,
         html_id=common:block_to_html_id(Block),
         class=["btn-block"|Classes],
@@ -158,6 +192,7 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
                     target=FlashID,
                     actions=#hide{effect=blind, speed=40}
                    }),
+    ?LOG("Send email to ~p", [ToEmail]),
     smtp:send_html(FromEmail, ToEmail, "Form sent from site", Text),
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     wf:flash(FlashID, Flash);

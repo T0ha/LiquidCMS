@@ -39,7 +39,6 @@ install([])-> % {{{1
                 (M):default_data()) ||
                M <- DataModules]
       end).
-
 %% Don't remove! This is is used to update your Mnesia DB backend  from CLI tool
 update([]) -> % {{{1
     {ok, VSN} = application:get_key(nitrogen, vsn),
