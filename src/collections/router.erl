@@ -115,11 +115,11 @@ common_redirect(_Page, _Block, URL) -> % {{{2
 maybe_change_module(#cms_page{module=Module} = Page) -> % {{{2
     maybe_change_module(#cms_page{module=Module} = Page, []).
 maybe_change_module(#cms_page{module=Module} = Page, _) -> % {{{2
-    ?LOG("Change module: ~p(~p)", [Page, Module]),
     case wf:page_module() of 
         Module ->
             Page;
         _Other ->
+            ?LOG("Change module: ~p(~p)", [Page, Module]),
             URI = wf:uri(),
             QS = get_qs(URI),
             wf:redirect(wf:f("/~s~s", [Module, QS]))
@@ -127,7 +127,7 @@ maybe_change_module(#cms_page{module=Module} = Page, _) -> % {{{2
 render(Page, _) -> % {{{2
     render(Page).
 render(Page) -> % {{{2
-    ?LOG("render:: ~p", [Page]),
+    % ?LOG("render:: ~p", [Page]),
     try common:waterfall(Page, "page")
     catch
         error:unauthorized -> 
