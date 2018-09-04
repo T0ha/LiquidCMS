@@ -182,7 +182,8 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
       [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
     catch  error:E -> 
         ?LOG("~nError: ~p ~p ~p",[E,PID, Block]),
-        wf:redirect("/?page=500")
+        wf:status_code(500),
+        common:template(Page,"templates/500.html")
     end.
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
