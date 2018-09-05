@@ -80,7 +80,6 @@ form_data(link_url, A) -> % {{{2
      [], Block, Classes, DataAttr};
 form_data(iframe, A) -> % {{{2
     [_, Block, URL, Width, Height, AllowFls, Classes, DataAttr] = admin:maybe_empty(A, 8),
-    ?LOG("form_data iframe ~p",[AllowFls]),
     {[
       {"URL",
        #txtbx{

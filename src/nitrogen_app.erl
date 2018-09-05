@@ -10,6 +10,7 @@ start(_StartType, _StartArgs) ->
     Node = node(),
     case mnesia:create_schema([Node]) of
         ok ->
+            io:format("STARTTT",[]),
             {ok, _}=application:ensure_all_started(lager),
             {ok, _}=application:ensure_all_started(mnesia),
             {atomic, _}=db:install([]),

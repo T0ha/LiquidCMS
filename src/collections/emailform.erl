@@ -53,12 +53,32 @@ form_data(rating, A) -> % {{{2
      [],
      Block,
      Classes};
+form_data(email_field, A) -> % {{{2
+    [_PID, Block, Required, Classes] = admin:maybe_empty(A, 4),
+    {[],
+     [
+      #checkbox{
+         text="Required",
+         % value=true,
+         label_position=before,
+         id=email_required,
+         checked=Required
+        }
+     ],
+     Block,
+     Classes
+    };
 form_data(submit, A) -> % {{{2
-    [_, Block, ToEmail, Classes] = admin:maybe_empty(A, 4),
+    [_, Block, ToEmail, Smtp, Classes] = admin:maybe_empty(A, 5),
     {[
       {"Email to send form", {to_email, ToEmail}}
      ],
-     [],
+     [#checkbox{
+         text="Use Smtp",
+         label_position=before,
+         id=use_smtp,
+         checked=Smtp
+        }],
      Block,
      Classes};
 form_data(_F, [_, Block, Classes]) -> % {{{2
@@ -67,27 +87,46 @@ form_data(_F, []) -> % {{{2
     {[], []}.
 
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
-    % ?LOG("save rating: ~p", [Rec]),
     [Block, Min, Max, Step, Size, Classes, _DataAttr] = admin:maybe_empty(A, 7),
     ShowCaption = wf:to_atom(common:q(show_caption, false)),
     ShowClear = wf:to_atom(common:q(show_clear, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B,Email, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Smtp, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Smtp = wf:to_atom(common:q(use_smtp, false)),
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, email_field=Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Required = wf:to_atom(common:q(email_required, false)),
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Required, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
 
 
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
-     #panel{
+    email_field(Page, Block, on, Classes).
+email_field(Page, Block, Required, Classes) -> % {{{2
+
+    case Required of
+        on ->  wf:defer(submit,
+            email,
+            #validate{
+                validators=[
+                            #is_email{text="Not a valid email."}
+                ]
+            }
+        );
+                                
+        _ -> ok
+    end,
+    #panel{
         class="form-group",
         body=#txtbx{
                 id=email,
-        html_id=common:block_to_html_id(Block),
+                html_id=common:block_to_html_id(Block),
                 class=Classes,
-                placeholder=common:parallel_block(Page, Block)}}.
+                placeholder=common:parallel_block(Page, Block)}
+    }.
 
 phone_field(Page, Block, Classes) -> % {{{2
      #panel{
@@ -121,30 +160,35 @@ rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> 
                     ]}.
 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
-     #btn{
+    submit(Page, Block, ToEmail, off, Classes).
+submit(Page, Block, ToEmail, Smtp, Classes) -> % {{{2
+    #btn{
         %type=success,
+        id=submit,
         size=lg,
         html_id=common:block_to_html_id(Block),
         class=["btn-block"|Classes],
         body=common:parallel_block(Page, Block),
-        postback={submit, Page, Block, ToEmail},
+        postback={submit, Page, Block, ToEmail, Smtp},
         delegate=?MODULE
        }.
 
 %% Event handlers % {{{1
-event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
+event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp}) -> % {{{2
     Phone = wf:to_list(common:q(phone, "")),
     RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
-    ?LOG("Ratings: ~p~n", [RatingsPL]),
+    % ?LOG("Ratings: ~p~n", [RatingsPL]),
     TextForm = unicode:characters_to_binary(wf:to_list(common:q(text, ""))),
     Host = application:get_env(nitrogen, host, "site.com"),
-    FromEmail = application:get_env(nitrogen, form_email, "form@" ++ Host),
-    Email = wf:to_list(common:q(email, FromEmail)),
+    FromEmailForm = application:get_env(nitrogen, form_email, "form@" ++ Host),
+    Subject = "Form sent from " ++ Host,
+    Email = wf:to_list(common:q(email, FromEmailForm)),
     Text = [
-            add_if_not_empty("E-mail: ", Email),
+            add_if_not_empty("Email: ", Email),
             add_if_not_empty("Phone: ", Phone),
             add_if_not_empty("Your ratings: ",
                             [wf:f("~s: ~p~n", [K, V]) || {K, V} <- RatingsPL]),
+            "\n",
             TextForm
            ],
     Flash = #span{
@@ -158,7 +202,19 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail}) -> % {{{2
                     target=FlashID,
                     actions=#hide{effect=blind, speed=40}
                    }),
-    smtp:send_html(FromEmail, ToEmail, "Form sent from site", Text),
+        
+    case Smtp of
+        on ->
+            AuthData = application:get_env(esmpt, smtp_auth_data),
+            HostSmtp = application:get_env(esmpt, host),
+            Port = application:get_env(esmpt, port, 465),
+            Options = [{use_ssl, true}, {host, HostSmtp}, {port, Port}],
+            Body = lists:concat([Text]),
+            gen_smtpc:send(AuthData, ToEmail, Subject, Body, Options);
+        _ ->
+            smtp:send_html(FromEmailForm, ToEmail, Subject, Text)
+    end,
+    ?LOG("Send email to ~p from ~p", [ToEmail, Email]),
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     wf:flash(FlashID, Flash);
 event(Ev) -> % {{{2
@@ -184,5 +240,5 @@ add_if_not_empty(_Header, undefined) -> % {{{2
 add_if_not_empty(_Header, "") -> % {{{2
     "";
 add_if_not_empty(Header, Text) -> % {{{2
-    [Header, "\n", Text].
+    [Header, Text, "\n"].
 %% Dropdown formatters {{{1

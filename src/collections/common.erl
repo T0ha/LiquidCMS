@@ -182,12 +182,13 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
       [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
     catch  error:E -> 
         ?LOG("~nError: ~p ~p ~p",[E,PID, Block]),
-        wf:redirect("/?page=500")
+        wf:status_code(500),
+        common:template(Page,"templates/500.html")
     end.
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
-    ?LOG("Waterfall: ~p", [Functions]),
+    % ?LOG("Waterfall: ~p", [Functions]),
     lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{}=P) ->
                         apply(M, F, [P | Args]);
                    (#cms_mfa{mfa=Fun}, #cms_page{}=P) when is_function(Fun) ->
@@ -311,13 +312,13 @@ module_by_function(FunTuple) -> % {{{2
           F == FunTuple].
 
 maybe_render_block(Page, #cms_mfa{settings=#{filters := Filters}}=MFA) -> % {{{2
-    ?LOG("Filters: ~p", [Filters]),
+    % ?LOG("Filters: ~p", [Filters]),
     render_block(apply_filters(Filters), Page, MFA);
 maybe_render_block(Page, MFA) -> % {{{2
     render_block(true, Page, MFA).
 
 render_block(false, _, _) -> % {{{2
-    ?PRINT("Dont't show"),
+    % ?PRINT("Dont't show"),
     "";
 render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
     apply(?MODULE, F, [Page, MFA | Args]);

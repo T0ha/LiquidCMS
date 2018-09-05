@@ -1,7 +1,7 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
 -module (account).
--compile([export_all, {parse_transform, lager_transform}]).
+-compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
@@ -269,7 +269,7 @@ maybe_redirect_to_login(Page) -> % {{{2
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
-    ?LOG("Not redirect to login: ~p", [Page]),
+    % ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
     ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
@@ -278,7 +278,7 @@ maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
             ?LOG("Role: ~p", [Role]),
             Page;
         false ->
-            ?LOG("Redirect to login: ~p", [Page]),
+            % ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
 

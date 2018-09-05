@@ -26,5 +26,7 @@ init([]) ->
     application:start(nprocreg),
     application:start(simple_bridge),
     application:start(ct),
+    application:start(gen_smtpc),
+    application:start(ssl),
 
     {ok, { {one_for_one, 5, 10}, []} }.
