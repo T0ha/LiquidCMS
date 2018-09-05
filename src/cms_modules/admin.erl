@@ -3,6 +3,7 @@
 -module (admin).
 -compile([export_all, {parse_transform, lager_transform}]).
 -include_lib("nitrogen_core/include/wf.hrl").
+-include_lib("xmerl/include/xmerl.hrl").
 -include("records.hrl").
 -include("db.hrl").
 -include("cms.hrl").
@@ -65,13 +66,14 @@ install() -> % {{{2
     ok.
 
 %% Different components adding to pages  {{{1
-add_page(PID, Title, Description, Role, Module) -> % {{{2
+add_page(PID, Title, Description, Role, Module, Sitemap) -> % {{{2
     #cms_page{
        id=PID,
        title=wf:f("~ts", [Title]),
        description=wf:f("~ts", [Description]),
        accepted_role=Role,
-       module=Module
+       module=Module,
+       sitemap=Sitemap
       }.
 
 add_form(PID, Phone, Text, Email, Rating) -> % {{{2
@@ -1041,6 +1043,7 @@ event({?MODULE, page, show}) -> % {{{2
                     {description, "Description", ta},
                     {module, "Module", {select, modules()}},
                     {accepted_role, "Assess role", {select, cms_roles()}},
+                    {sitemap, "Sitemap", {select, sitemap_frequencies()}},
                     {undefined, "Actions", button}
                    ],
               funs=#{
@@ -1103,6 +1106,13 @@ event({?MODULE, page, new}) -> % {{{2
                   id=role,
                   value=undefined,
                   options=cms_roles()
+                 },
+
+                #span{text="Sitemap frequency"},
+               #dd{
+                  id=sitemap,
+                  value=none,
+                  options=sitemap_frequencies()
                  }
               ]);
 event({?MODULE, page, construct}) -> % {{{2
@@ -1215,8 +1225,9 @@ event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
     Role = wf:to_atom(wf:q(role)),
+    Sitemap = wf:to_atom(wf:q(sitemap)),
     db:save(
-      add_page(PID, Title, Description, Role, Module)),
+      add_page(PID, Title, Description, Role, Module, Sitemap)),
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, page, show}, delegate=?MODULE});
 event({?MODULE, block, change, module}) -> % {{{2
@@ -1528,8 +1539,49 @@ modules() -> % {{{2
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 
 cms_roles() -> % {{{2
+?LOG("cms_roles: ~p", [ [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()]]),
     [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()].
 
 collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
+
+sitemap_frequencies() -> % {{{2
+  [{always,"always"},{hourly,"hourly"}, {daily,"daily"}, {weekly,"weekly"},
+    {monthly,"monthly"}, {yearly,"yearly"}, {never,"never"}, {none,"none"}].
+
+
+%% @doc Helper function to generate XML from a data structure and print it
+serialize_xml(Data) ->
+    Prolog = ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>"],
+    Xml = lists:flatten(xmerl:export_simple(Data, xmerl_xml,[{prolog,Prolog}])),
+    io:format("~s~n", [Xml]).
+
+%% @doc Prints <?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\
+%% <url><loc>url_n</loc>><changefreq_n>nl</changefreq></url>...</urlset>
+generate_sitemap() -> % % {{{2
+    Ns1 = "http://www.sitemaps.org/schemas/sitemap/0.9",
+    Pages = db:get_pages(),
+    BaseUrl = application:get_env(nitrogen, host, "http://site.com") ++ "/",
+    RootElem = #xmlElement{name=urlset,
+                           namespace=#xmlNamespace{default=Ns1},
+                           attributes=[#xmlAttribute{name=xmlns, value=Ns1}],
+                           content = 
+                              lists:map(
+                                fun(I) ->
+                                  {url, [#xmlElement{ name=loc,
+                                                      content=[BaseUrl++maps:get(id,I)]
+                                                    },
+                                         case maps:get(sitemap,I) of
+                                            none -> [];
+                                            Fr -> 
+                                               #xmlElement{ name=changefreq,
+                                                            content=[atom_to_list(Fr)]
+                                                          }
+                                          end
+                                        ]
+                                  }
+                                end, Pages
+                              )
+                          },
+    serialize_xml([RootElem]).
