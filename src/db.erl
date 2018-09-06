@@ -313,7 +313,7 @@ update("1.0.2"=VSN) -> % {{{1 : add sitemap column for cms_page table
                                             created_at=CT,
                                             updated_at=CurTime,
                                             active=A,
-                                            sitemap=none
+                                            sitemap=never
                                            }
                                     end, record_info(fields, cms_page)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});

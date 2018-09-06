@@ -273,7 +273,7 @@ maybe_set(Id, Val) -> % {{{2
         "" ->
             wf:set(Id, Val);
         A ->
-            ?LOG("~s vaue is ~p", [Id, A])
+            ?LOG("~s value is ~p", [Id, A])
     end.
 
 update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
@@ -483,7 +483,6 @@ form_fields(M, F, A) -> % {{{2
     catch error:E when E /= undef; 
                        E /= function_clause -> 
               [_, Block, Classes, DataAttrs] = maybe_empty(A, 4),
-              ?LOG("~nErorr: ~p",[Block]),
               {[], [], Block, Classes, DataAttrs}
     end.
 
@@ -495,13 +494,11 @@ form_elements(M, F, A) -> % {{{2
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
         Width when Width >= 4 ->
-            %?LOG("Width: ~p", [Width]),
             [
              #bs_row{
                 body=[render_field(Col, Width) || Col <- Cols]
                }];
         _Width ->
-            %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
 
@@ -563,7 +560,6 @@ extract_data_attrs([])  -> % {{{2
     [];
 extract_data_attrs(DataAttrs)  -> % {{{2
     Pairs = string:tokens(DataAttrs, ", "),
-    ?LOG("Pairs: ~p~n", [Pairs]),
     [{data_attr_key(K), V} || Pair <- Pairs, [K, V] <- [string:tokens(Pair, "=")]].
 
 data_attr_key([$d, $a, $t, $a, $- | K]) -> % {{{2
@@ -576,9 +572,7 @@ format_data_attrs(Attrs) -> % {{{2
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
-    ?LOG("Fields: ~p", [Fields]),
     Data = wf:mq([block | Fields]),
-    ?LOG("Data: ~p", [Data]),
     lists:map(fun(none) -> "";
                  (undefined) -> "";
                  ("") -> "";
@@ -730,7 +724,6 @@ rec_from_qs(R) -> % {{{2
               settings=#{filters => Filters}}.
 
 apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
-     % ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
@@ -1043,7 +1036,7 @@ event({?MODULE, page, show}) -> % {{{2
                     {description, "Description", ta},
                     {module, "Module", {select, modules()}},
                     {accepted_role, "Assess role", {select, cms_roles()}},
-                    {sitemap, "Sitemap", {select, sitemap_frequencies()}},
+                    {sitemap, "Sitemap", {select, sitemap:sitemap_frequencies()}},
                     {undefined, "Actions", button}
                    ],
               funs=#{
@@ -1112,14 +1105,13 @@ event({?MODULE, page, new}) -> % {{{2
                #dd{
                   id=sitemap,
                   value=none,
-                  options=sitemap_frequencies()
+                  options=sitemap:sitemap_frequencies()
                  }
               ]);
 event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P),
-    ?LOG("~nconstruct page:~p",[PID]),
     Block = common:q(block_select, "page"),
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
@@ -1128,7 +1120,6 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
     AllBlocks = db:get_all_blocks(PID),
-    ?LOG("~nconstruct page(2) Block:~p",[Block]),
     ParentBlock=db:get_parent_block(PID,Block),
     ParentBody=case ParentBlock of
       S when is_list(S) ->
@@ -1244,7 +1235,6 @@ event({?MODULE, block, change, module}) -> % {{{2
 event({?MODULE, block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    % ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
@@ -1524,7 +1514,6 @@ api_event(Name, Tag, Args) -> % {{{2
     ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
 
 sort_event({PID, Block}, Blocks) -> % {{{2
-    % ?LOG("Blocks: ~p", [Blocks]),
     lists:foreach(fun({N, {block, _PID, B}}) ->
                           db:update(B, B#cms_mfa{sort=N})
                   end,
@@ -1539,49 +1528,8 @@ modules() -> % {{{2
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 
 cms_roles() -> % {{{2
-?LOG("cms_roles: ~p", [ [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()]]),
     [{Id, Name} || #{ role := Id, name := Name} <- db:get_roles()].
 
 collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
-
-sitemap_frequencies() -> % {{{2
-  [{always,"always"},{hourly,"hourly"}, {daily,"daily"}, {weekly,"weekly"},
-    {monthly,"monthly"}, {yearly,"yearly"}, {never,"never"}, {none,"none"}].
-
-
-%% @doc Helper function to generate XML from a data structure and print it
-serialize_xml(Data) ->
-    Prolog = ["<?xml version=\"1.0\" encoding=\"UTF-8\"?>"],
-    Xml = lists:flatten(xmerl:export_simple(Data, xmerl_xml,[{prolog,Prolog}])),
-    io:format("~s~n", [Xml]).
-
-%% @doc Prints <?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\
-%% <url><loc>url_n</loc>><changefreq_n>nl</changefreq></url>...</urlset>
-generate_sitemap() -> % % {{{2
-    Ns1 = "http://www.sitemaps.org/schemas/sitemap/0.9",
-    Pages = db:get_pages(),
-    BaseUrl = application:get_env(nitrogen, host, "http://site.com") ++ "/",
-    RootElem = #xmlElement{name=urlset,
-                           namespace=#xmlNamespace{default=Ns1},
-                           attributes=[#xmlAttribute{name=xmlns, value=Ns1}],
-                           content = 
-                              lists:map(
-                                fun(I) ->
-                                  {url, [#xmlElement{ name=loc,
-                                                      content=[BaseUrl++maps:get(id,I)]
-                                                    },
-                                         case maps:get(sitemap,I) of
-                                            none -> [];
-                                            Fr -> 
-                                               #xmlElement{ name=changefreq,
-                                                            content=[atom_to_list(Fr)]
-                                                          }
-                                          end
-                                        ]
-                                  }
-                                end, Pages
-                              )
-                          },
-    serialize_xml([RootElem]).
