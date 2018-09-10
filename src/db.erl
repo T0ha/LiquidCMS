@@ -300,6 +300,23 @@ update("1.0.0"=VSN) ->
 update("1.0.1"=VSN) -> % {{{1 : add social-btn images
     admin:get_social_files("static/images"),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.2"=VSN) -> % {{{1 : add sitemap column for cms_page table
+    CurTime = calendar:universal_time(),
+    mnesia:transform_table(cms_page, fun({cms_page, Id,D,M,Ar,T,CT,_UT,A,S}) -> 
+                                         #cms_page{
+                                            id=Id,
+                                            description=D,
+                                            module=M,
+                                            accepted_role=Ar,
+                                            title=T,
+                                            settings=S,
+                                            created_at=CT,
+                                            updated_at=CurTime,
+                                            active=A,
+                                            sitemap=never
+                                           }
+                                    end, record_info(fields, cms_page)),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
