@@ -108,15 +108,17 @@ email_field(Page, Block, Classes) -> % {{{2
 email_field(Page, Block, Required, Classes) -> % {{{2
 
     case Required of
-        on ->  wf:defer(submit,
-            email,
-            #validate{
-                validators=[
-                            #is_email{text="Not a valid email."}
-                ]
-            }
-        );
-                                
+        on ->  
+            ValidatorBlock = common:sub_block(Block, "validate"),
+            wf:defer(submit,
+                     email,
+                     #validate{
+                        validators=[
+                                    #is_email{text=common:parallel_block(Page, ValidatorBlock)}
+                                   ]
+                       }
+                    );
+
         _ -> ok
     end,
     #panel{
@@ -212,7 +214,7 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp}) -> % {{{2
             Body = lists:concat([Text]),
             gen_smtpc:send(AuthData, ToEmail, Subject, Body, Options);
         _ ->
-            smtp:send_html(FromEmailForm, ToEmail, Subject, Text)
+            smtp:send_html(FromEmailForm, ToEmail, Subject, Text, Email)
     end,
     ?LOG("Send email to ~p from ~p", [ToEmail, Email]),
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
