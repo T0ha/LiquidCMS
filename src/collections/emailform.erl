@@ -224,6 +224,7 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp}) -> % {{{2
     end,
     ?LOG("Send email to ~p from ~p", [ToEmail, Email]),
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
+    coldstrap:close_modal(),
     wf:flash(FlashID, Flash);
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
