@@ -890,3 +890,7 @@ update_timestamps(#cms_asset{}=Rec) -> % {{{1
 update_timestamps(#cms_template{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_template{updated_at=CT}.
+
+datetime_tostr(Date) ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
+    _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w+00:00",[Year,Month,Day,Hour,Minute,Second])).
