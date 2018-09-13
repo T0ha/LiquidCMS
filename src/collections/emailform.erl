@@ -68,6 +68,9 @@ form_data(email_field, A) -> % {{{2
      Block,
      Classes
     };
+form_data(submit, [Page, Block, ToEmail, Classes]) -> % {{{2
+    form_data(submit, [Page, Block, ToEmail, off, Classes]);
+
 form_data(submit, A) -> % {{{2
     [_, Block, ToEmail, Smtp, Classes] = admin:maybe_empty(A, 5),
     {[
@@ -163,6 +166,7 @@ rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> 
 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
     submit(Page, Block, ToEmail, off, Classes).
+
 submit(Page, Block, ToEmail, Smtp, Classes) -> % {{{2
     #btn{
         %type=success,
