@@ -13,25 +13,28 @@ generate_sitemap() ->  % {{{2
     PagesAll = db:get_pages(),
     OnlyActive = fun(I) -> maps:get(active,I)==true end,
     Pages = lists:filter(OnlyActive, PagesAll),
-    BaseUrl = application:get_env(nitrogen, host, "http://site.com") ++ "/",
+    BaseUrl = application:get_env(nitrogen, host, "http://site.com") ++ "/?page=",
     RootElem = #xmlElement{name=urlset,
                            namespace=#xmlNamespace{default=Ns1},
                            attributes=[#xmlAttribute{name=xmlns, value=Ns1}],
                            content = 
                               lists:map(
                                 fun(I) -> 
-                                	case maps:get(sitemap,I) of
+                                  case maps:get(sitemap,I) of
                                         none ->
-                                        	"";
+                                          "";
                                         Fr ->
-		                                  	{url, [#xmlElement{ name=loc,
-		                                              content=[BaseUrl++maps:get(id,I)]
-		                                            },
-		                                         #xmlElement{ name=changefreq,
-		                                                    content=[atom_to_list(Fr)]
-		                                                  }
-		                                          ]
-		                                    }
+                                        {url, [ #xmlElement{ name=loc,
+                                                  content=[BaseUrl++maps:get(id,I)]
+                                                },
+                                                #xmlElement{ name=changefreq,
+                                                          content=[atom_to_list(Fr)]
+                                                },
+                                                #xmlElement{ name=lastmod,
+                                                          content=[db:datetime_tostr(maps:get(updated_at,I))]
+                                                }
+                                              ]
+                                        }
                                     end                                        
                                 end, Pages
                               )

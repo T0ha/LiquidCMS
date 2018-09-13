@@ -227,6 +227,3 @@ cast(Value, Type) -> % {{{1
     wf:warning("Can't cast ~p to ~p", [Value, Type]),
     Value.
 
-datetime_tostr(Date) ->
-    {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
-    _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])).

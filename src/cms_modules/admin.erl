@@ -1319,7 +1319,8 @@ event({?MODULE, block, save, OldMFA}) -> % {{{2
                                           apply_element_transform(
                                             rec_from_qs(OldMFA)),
                                           OldMFA))),
-
+    [Page]=db:get_page(PID),
+    db:save(Page),
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 event({?MODULE, block, remove, B}) -> % {{{2

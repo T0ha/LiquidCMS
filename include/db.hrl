@@ -68,7 +68,7 @@
           title = <<"LiquidCMS">> :: binary(),
           ?TIMESTAMPS,
           active=true :: boolean(),
-          sitemap = never :: atom(),
+          sitemap = none :: atom(),
           settings = #{} :: map()
          }).
 
