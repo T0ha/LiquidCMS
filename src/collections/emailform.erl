@@ -95,6 +95,8 @@ save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
     ShowClear = wf:to_atom(common:q(show_clear, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Classes, _DataAttr]}}=Rec) -> % {{{2
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, off, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Smtp, Classes, _DataAttr]}}=Rec) -> % {{{2
     Smtp = wf:to_atom(common:q(use_smtp, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Classes]}};
