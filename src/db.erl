@@ -894,3 +894,11 @@ update_timestamps(#cms_template{}=Rec) -> % {{{1
 datetime_tostr(Date) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
     _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w+00:00",[Year,Month,Day,Hour,Minute,Second])).
+
+clear_page_by_id(PID)->
+  transaction(fun() -> 
+    Elements = mnesia:match_object(#cms_mfa{id={PID,'_'}, _='_'}),
+    lists:foreach(fun(MFA) ->
+                          mnesia:delete_object(MFA)
+                  end, Elements)
+  end).
