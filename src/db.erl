@@ -542,6 +542,10 @@ get_forms() -> % {{{1
                         Forms = mnesia:match_object(#cms_form{active=true, _='_'}),
                         [record_to_map(A) || A <- Forms]
                 end).
+get_api(ApiName) -> % {{{1
+    transaction(fun() ->
+                        mnesia:match_object(#cms_api{name=ApiName, active=true, _='_'}) 
+                end).
 
 get_apis() -> % {{{1
     transaction(fun() ->
