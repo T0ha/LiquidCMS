@@ -18,6 +18,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
     ?CREATE_TABLE(cms_form, set, []),
+    ?CREATE_TABLE(cms_api, set, []),
     {ok, VSN} = application:get_key(nitrogen, vsn),
     DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
@@ -317,6 +318,23 @@ update("1.0.2"=VSN) -> % {{{1 : add sitemap column for cms_page table
                                            }
                                     end, record_info(fields, cms_page)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.3"=VSN) -> % {{{1 : added Apis table in admin menu
+    ?CREATE_TABLE(cms_api, set, []),
+    mnesia:transaction(
+      fun() ->
+              [maps:map(
+                 fun(_K, V) ->
+                         lists:foreach(
+                           fun(#cms_mfa{}=R) ->
+                                   mnesia:write(
+                                     fix_sort(
+                                       update_timestamps(R)))
+                           end,
+                           lists:flatten(V))
+                 end,
+                admin:append_apis_menu())]
+      end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -523,6 +541,16 @@ get_forms() -> % {{{1
     transaction(fun() ->
                         Forms = mnesia:match_object(#cms_form{active=true, _='_'}),
                         [record_to_map(A) || A <- Forms]
+                end).
+get_api(ApiName) -> % {{{1
+    transaction(fun() ->
+                        mnesia:match_object(#cms_api{name=ApiName, active=true, _='_'}) 
+                end).
+
+get_apis() -> % {{{1
+    transaction(fun() ->
+                        APIs = mnesia:match_object(#cms_api{active=true, _='_'}),
+                        [record_to_map(A) || A <- APIs]
                 end).
 
 fix_sort(Recs) when is_list(Recs) -> % {{{1
@@ -747,7 +775,9 @@ fields(cms_role) -> % {{{1
 fields(cms_template) -> % {{{1
     record_info(fields, cms_template);
 fields(cms_form) -> % {{{1
-    record_info(fields, cms_form).
+    record_info(fields, cms_form);
+fields(cms_api) -> % {{{1
+    record_info(fields, cms_api).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
     CT = calendar:universal_time(),
@@ -857,6 +887,9 @@ update_timestamps(#cms_page{created_at=undefined}=Rec) -> % {{{1
 update_timestamps(#cms_form{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_form{created_at=CT, updated_at=CT};
+update_timestamps(#cms_api{created_at=undefined}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_api{created_at=CT, updated_at=CT};
 update_timestamps(#cms_user{created_at=undefined}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{created_at=CT, updated_at=CT};
@@ -878,6 +911,9 @@ update_timestamps(#cms_page{}=Rec) -> % {{{1
 update_timestamps(#cms_form{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_form{updated_at=CT};
+update_timestamps(#cms_api{}=Rec) -> % {{{1
+    CT = calendar:universal_time(),
+    Rec#cms_api{updated_at=CT};
 update_timestamps(#cms_user{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_user{updated_at=CT};
@@ -894,3 +930,11 @@ update_timestamps(#cms_template{}=Rec) -> % {{{1
 datetime_tostr(Date) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
     _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w+00:00",[Year,Month,Day,Hour,Minute,Second])).
+
+clear_page_by_id(PID)->
+  transaction(fun() -> 
+    Elements = mnesia:match_object(#cms_mfa{id={PID,'_'}, _='_'}),
+    lists:foreach(fun(MFA) ->
+                          mnesia:delete_object(MFA)
+                  end, Elements)
+  end).
