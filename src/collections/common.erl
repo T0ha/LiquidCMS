@@ -339,10 +339,10 @@ apply_filters(["", "", Role]) -> % {{{2
 apply_filters([K, V, ""]) -> % {{{2
     D = wf:q(wf:to_atom(K)),
     ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
-    D == wf:to_list(V);
+    wf:to_list(D) == wf:to_list(V);
 apply_filters([K, V, R]) -> % {{{2
     #cms_user{role=Role} = account:user(),
-    (Role == wf:to_atom(R)) and wf:q(wf:to_atom(K)) == wf:to_list(V);
+    (Role == wf:to_atom(R)) and wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V);
 apply_filters(_) -> % {{{2
     true.
 
