@@ -317,6 +317,20 @@ update("1.0.2"=VSN) -> % {{{1 : add sitemap column for cms_page table
                                            }
                                     end, record_info(fields, cms_page)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.3"=VSN) -> % update submit button
+    transaction(
+      fun() -> 
+        ReplElements = mnesia:match_object(#cms_mfa{mfa={emailform,submit, ['_','_','_']}, _='_'}),
+        lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Email, Classes]}}=MFA) ->
+                        New_mfa = MFA#cms_mfa{mfa={M, F, [Block, Email, false, [], Classes]},
+                                              updated_at=calendar:universal_time()},
+                        % ?LOG("~nReplace ~p to ~p",[MFA, New_mfa]),
+                        mnesia:delete_object(MFA),
+                        mnesia:write(New_mfa)
+                      end,
+                      ReplElements)
+      end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 

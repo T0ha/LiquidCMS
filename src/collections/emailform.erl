@@ -69,19 +69,30 @@ form_data(email_field, A) -> % {{{2
      Classes
     };
 form_data(submit, [Page, Block, ToEmail, Classes]) -> % {{{2
-    form_data(submit, [Page, Block, ToEmail, off, Classes]);
+    form_data(submit, [Page, Block, ToEmail, false, Classes]);
+
+form_data(submit, [Page, Block, ToEmail, Smtp, Classes]) -> % {{{2
+    form_data(submit, [Page, Block, ToEmail, Smtp, [], Classes]);
 
 form_data(submit, A) -> % {{{2
-    [_, Block, ToEmail, Smtp, Classes] = admin:maybe_empty(A, 5),
+    [_, Block, ToEmail, Smtp, Apicall, Classes] = admin:maybe_empty(A, 6),
     {[
-      {"Email to send form", {to_email, ToEmail}}
+      {"Email to send form", {to_email, ToEmail}},
+        #checkbox{
+                text="Use Smtp",
+                label_position=before,
+                id=use_smtp,
+                checked=Smtp
+        },
+        {"API call:",
+            #txtbx{
+                id=api,
+                text=Apicall,
+                placeholder="https://api.name/method?email={{email}}"
+            }
+        }
      ],
-     [#checkbox{
-         text="Use Smtp",
-         label_position=before,
-         id=use_smtp,
-         checked=Smtp
-        }],
+     [],
      Block,
      Classes};
 form_data(_F, [_, Block, Classes]) -> % {{{2
@@ -95,17 +106,18 @@ save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
     ShowClear = wf:to_atom(common:q(show_clear, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, off, Classes]}};
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Smtp, Classes, _DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Apicall, Classes, _DataAttr]}}=Rec) -> % {{{2
     Smtp = wf:to_atom(common:q(use_smtp, false)),
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Classes]}};
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Apicall, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, email_field=Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
     Required = wf:to_atom(common:q(email_required, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Required, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
-
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}};
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  A}}=Rec) -> % {{{2
+    ?LOG("save block last:~p",[A])
+    ,Rec#cms_mfa{mfa={?MODULE, Fun, A}}
+    .
 
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
@@ -167,9 +179,10 @@ rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> 
                     ]}.
 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
-    submit(Page, Block, ToEmail, off, Classes).
-
+    submit(Page, Block, ToEmail, false, Classes).
 submit(Page, Block, ToEmail, Smtp, Classes) -> % {{{2
+    submit(Page, Block, ToEmail, Smtp, [], Classes).
+submit(Page, Block, ToEmail, Smtp, Apicall, Classes) -> % {{{2
     #btn{
         %type=success,
         id=submit,
@@ -177,12 +190,12 @@ submit(Page, Block, ToEmail, Smtp, Classes) -> % {{{2
         html_id=common:block_to_html_id(Block),
         class=["btn-block"|Classes],
         body=common:parallel_block(Page, Block),
-        postback={submit, Page, Block, ToEmail, Smtp},
+        postback={submit, Page, Block, ToEmail, Smtp, Apicall},
         delegate=?MODULE
        }.
 
 %% Event handlers % {{{1
-event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp}) -> % {{{2
+event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall}) -> % {{{2
     Phone = wf:to_list(common:q(phone, "")),
     RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
     % ?LOG("Ratings: ~p~n", [RatingsPL]),
@@ -210,19 +223,28 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp}) -> % {{{2
                     target=FlashID,
                     actions=#hide{effect=blind, speed=40}
                    }),
-        
-    case Smtp of
-        on ->
-            AuthData = application:get_env(esmpt, smtp_auth_data),
-            HostSmtp = application:get_env(esmpt, host),
-            Port = application:get_env(esmpt, port, 465),
-            Options = [{use_ssl, true}, {host, HostSmtp}, {port, Port}],
-            Body = lists:concat([Text]),
-            gen_smtpc:send(AuthData, ToEmail, Subject, Body, Options);
-        _ ->
-            smtp:send_html(FromEmailForm, ToEmail, Subject, Text, Email)
+    case Apicall of
+        [] -> 
+            case Smtp of
+                on ->
+                    AuthData = application:get_env(esmpt, smtp_auth_data),
+                    HostSmtp = application:get_env(esmpt, host),
+                    Port = application:get_env(esmpt, port, 465),
+                    Options = [{use_ssl, true}, {host, HostSmtp}, {port, Port}],
+                    Body = lists:concat([Text]),
+                    gen_smtpc:send(AuthData, ToEmail, Subject, Body, Options);
+                _ ->
+                    smtp:send_html(FromEmailForm, ToEmail, Subject, Text, Email)
+            end,
+            ?LOG("Send email to ~p from ~p", [ToEmail, Email]);
+        Url -> 
+            UrlWithEmail = re:replace(Url,"{{email}}",Email, [{return, list}]),
+            ?LOG("Apicall: ~p", [UrlWithEmail]),
+            {ok, {{_Version, 200, ResultPhrase}, _Headers, _Body}} = httpc:request(get, {UrlWithEmail, []}, [], []),
+            ?LOG("Result:~p",[ResultPhrase])
     end,
-    ?LOG("Send email to ~p from ~p", [ToEmail, Email]),
+
+    
     admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     coldstrap:close_modal(),
     wf:flash(FlashID, Flash);
@@ -235,8 +257,9 @@ get_form_rating_ids(#cms_page{id=PID}, Block) -> % {{{2
       fun() ->
               [#cms_mfa{id={PID, FormBlock}} | _] = mnesia:match_object(
                                                       #cms_mfa{id={PID, '_'},
-                                                               mfa={emailform, submit, [Block, '_', '_']},
+                                                               mfa={emailform, submit, [Block, '_', '_','_','_']},
                                                                _='_'}),
+
               Elements = mnesia:match_object(
                            #cms_mfa{id={PID, FormBlock}, 
                                     mfa={emailform, rating, '_'},
