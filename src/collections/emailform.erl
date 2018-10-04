@@ -113,12 +113,7 @@ save_block(#cms_mfa{id={_PID, _}, mfa={_M, email_field=Fun,  [B, Classes, _DataA
     Required = wf:to_atom(common:q(email_required, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Required, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}};
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  A}}=Rec) -> % {{{2
-    ?LOG("save block last:~p",[A])
-    ,Rec#cms_mfa{mfa={?MODULE, Fun, A}}
-    .
-
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
     email_field(Page, Block, on, Classes).
