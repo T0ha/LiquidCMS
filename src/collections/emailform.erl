@@ -239,8 +239,10 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall}) -> % {{{2
             ?LOG("Send email to ~p from ~p", [ToEmail, Email]);
         Url -> 
             UrlWithEmail = re:replace(Url,"{{email}}",Email, [{return, list}]),
-            ?LOG("Apicall: ~p", [UrlWithEmail]),
-            {ok, {{_Version, 200, ResultPhrase}, _Headers, _Body}} = httpc:request(get, {UrlWithEmail, []}, [], []),
+            UrlWithPhone = re:replace(UrlWithEmail,"{{phone}}",Phone, [{return, list}]),
+            UrlWithName = re:replace(UrlWithPhone,"{{name}}",wf:to_list(common:q(name, "")), [{return, list}]),
+            ?LOG("Apicall: ~p", [UrlWithName]),
+            {ok, {{_Version, 200, ResultPhrase}, _Headers, _Body}} = httpc:request(get, {UrlWithName, []}, [], []),
             ?LOG("Result:~p",[ResultPhrase])
     end,
 
