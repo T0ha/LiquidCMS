@@ -61,3 +61,13 @@
     width: fit-content;
     margin: auto;
 }
+
+.form-fields {
+    display: inline-block;
+    width: 128px;
+    margin-right: 5px;
+}
+
+.flex {
+    display: flex;
+}

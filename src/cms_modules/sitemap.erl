@@ -15,7 +15,7 @@ generate_sitemap() ->  % {{{2
     Pages = lists:filter(OnlyActive, PagesAll),
     Proto = application:get_env(nitrogen, protocol, "http"),
     Host = application:get_env(nitrogen, host, "site.com"),
-    BaseUrl = wf:f("~s://~s/?page=", [Proto, Host]),
+    BaseUrl = wf:f("~s://~s/", [Proto, Host]),
     RootElem = #xmlElement{name=urlset,
                            namespace=#xmlNamespace{default=Ns1},
                            attributes=[#xmlAttribute{name=xmlns, value=Ns1}],
@@ -26,17 +26,24 @@ generate_sitemap() ->  % {{{2
                                         none ->
                                           "";
                                         Fr ->
-                                        {url, [ #xmlElement{ name=loc,
-                                                  content=[BaseUrl++maps:get(id,I)]
-                                                },
-                                                #xmlElement{ name=changefreq,
-                                                          content=[atom_to_list(Fr)]
-                                                },
-                                                #xmlElement{ name=lastmod,
-                                                          content=[db:datetime_tostr(maps:get(updated_at,I))]
-                                                }
-                                              ]
-                                        }
+                                          Id = maps:get(id,I),
+                                          Url = case wf:to_atom(Id) of
+                                                  index -> 
+                                                      BaseUrl;
+                                                  _ ->
+                                                      wf:f("~s?page=~s", [BaseUrl, Id])
+                                                end,
+                                          {url, [ #xmlElement{ name=loc,
+                                                               content=[Url]
+                                                  },
+                                                  #xmlElement{ name=changefreq,
+                                                               content=[atom_to_list(Fr)]
+                                                  },
+                                                  #xmlElement{ name=lastmod,
+                                                               content=[db:datetime_tostr(maps:get(updated_at,I))]
+                                                  }
+                                                ]
+                                          }
                                     end                                        
                                 end, Pages
                               )
