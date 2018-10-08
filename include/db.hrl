@@ -103,11 +103,3 @@
           comment="" :: string(),
           ?TIMESTAMPS
          }).
-
--record(cms_api, {
-          name :: string(),
-          apikey :: string(),
-          ?TIMESTAMPS,
-          active=true :: boolean(),
-          settings = #{} :: map()
-         }).

@@ -70,47 +70,29 @@ form_data(email_field, A) -> % {{{2
     };
 form_data(submit, [Page, Block, ToEmail, Classes]) -> % {{{2
     form_data(submit, [Page, Block, ToEmail, false, Classes]);
-form_data(submit, [Page, Block, ToEmail, Smtp, Classes])-> % {{{2
-    form_data(submit, [Page, Block, ToEmail, Smtp, none, [], Classes]);
+
+form_data(submit, [Page, Block, ToEmail, Smtp, Classes]) -> % {{{2
+    form_data(submit, [Page, Block, ToEmail, Smtp, [], Classes]);
+
 form_data(submit, A) -> % {{{2
-    [_, Block, ToEmail, Smtp, Apicall, AddFields, Classes] = admin:maybe_empty(A, 7),
+    [_, Block, ToEmail, Smtp, Apicall, Classes] = admin:maybe_empty(A, 6),
     {[
-        {"Email to send form", {to_email, ToEmail}},
+      {"Email to send form", {to_email, ToEmail}},
         #checkbox{
                 text="Use Smtp",
                 label_position=before,
                 id=use_smtp,
                 checked=Smtp
         },
-        {"API call",#dd{ id=api,
-             value=Apicall,
-             options=[none | cms_apis()],
-             postback=switch_add_field,
-             delegate=?MODULE
-        }},
-        #btn{
-            id=add_field_btn,
-            size=md,
-            class=["btn-upload btn-block " ++ case lists:member(Apicall,cms_apis()) of
-                                                 false -> "hidden";  
-                                                 true-> "" 
-                                               end
-            ],
-            text="Add field(api)",
-            postback=add_field,
-            delegate=?MODULE
-        },
-        #p{id=for_pretty},
-        [#p{id=addfields,
-            body=[
-                
-                #txtbx{text=K, placeholder="field name", class="form-fields"},
-                #txtbx{text=V, placeholder="field value", class="form-fields"}
-            ]} || {K, V} <- AddFields
-        ],
-        #span{id=for_insert}
+        {"API call:",
+            #txtbx{
+                id=api,
+                text=Apicall,
+                placeholder="https://api.name/method?email={{email}}"
+            }
+        }
      ],
-     [ ],
+     [],
      Block,
      Classes};
 form_data(_F, [_, Block, Classes]) -> % {{{2
@@ -124,23 +106,14 @@ save_block(#cms_mfa{id={_PID, _}, mfa={_M, rating=Fun, A}}=Rec) -> % {{{2
     ShowClear = wf:to_atom(common:q(show_clear, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [Block, Min, Max, Step, Size, ShowCaption, ShowClear, Classes]}};
 
-save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun, [B, Email, Apicall, Classes, _DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={_PID, _}, mfa={_M, submit=Fun,  [B, Email, Apicall, Classes, _DataAttr]}}=Rec) -> % {{{2
     Smtp = wf:to_atom(common:q(use_smtp, false)),
-    AddFields =
-        case wf:to_atom(Apicall) of
-            none ->
-                [];
-            _ ->
-                Proplist = list_to_proplist(wf:qs(addfields)),
-                lists:filter(fun(I)-> I /={} end, Proplist)
-        end,
-    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Apicall, AddFields, Classes]}};
+    Rec#cms_mfa{mfa={?MODULE, Fun, [B, Email, Smtp, Apicall, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, email_field=Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
     Required = wf:to_atom(common:q(email_required, false)),
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Required, Classes]}};
 save_block(#cms_mfa{id={_PID, _}, mfa={_M, Fun,  [B, Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={?MODULE, Fun, [B, Classes]}}.
-
 %% Block renderers {{{1
 email_field(Page, Block, Classes) -> % {{{2
     email_field(Page, Block, on, Classes).
@@ -203,8 +176,8 @@ rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> 
 submit(Page, Block, ToEmail, Classes) -> % {{{2
     submit(Page, Block, ToEmail, false, Classes).
 submit(Page, Block, ToEmail, Smtp, Classes) -> % {{{2
-    submit(Page, Block, ToEmail, Smtp, none, [], Classes).
-submit(Page, Block, ToEmail, Smtp, Apicall, AddFields, Classes) -> % {{{2
+    submit(Page, Block, ToEmail, Smtp, [], Classes).
+submit(Page, Block, ToEmail, Smtp, Apicall, Classes) -> % {{{2
     #btn{
         %type=success,
         id=submit,
@@ -212,12 +185,12 @@ submit(Page, Block, ToEmail, Smtp, Apicall, AddFields, Classes) -> % {{{2
         html_id=common:block_to_html_id(Block),
         class=["btn-block"|Classes],
         body=common:parallel_block(Page, Block),
-        postback={submit, Page, Block, ToEmail, Smtp, Apicall, AddFields},
+        postback={submit, Page, Block, ToEmail, Smtp, Apicall},
         delegate=?MODULE
        }.
 
 %% Event handlers % {{{1
-event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall, AddFields}) -> % {{{2
+event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall}) -> % {{{2
     Phone = wf:to_list(common:q(phone, "")),
     RatingsPL = wf:q_pl(get_form_rating_ids(Page, Block)),
     % ?LOG("Ratings: ~p~n", [RatingsPL]),
@@ -245,10 +218,8 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall, AddFields}
                     target=FlashID,
                     actions=#hide{effect=blind, speed=40}
                    }),
-        
-    
     case Apicall of
-        none ->
+        [] -> 
             case Smtp of
                 on ->
                     AuthData = application:get_env(esmpt, smtp_auth_data),
@@ -260,44 +231,20 @@ event({submit, #cms_page{id=PID}=Page, Block, ToEmail, Smtp, Apicall, AddFields}
                 _ ->
                     smtp:send_html(FromEmailForm, ToEmail, Subject, Text, Email)
             end,
-            ?LOG("Send email to ~p from ~p", [ToEmail, Email]),
-            admin:add_form(PID, Phone, TextForm, Email, RatingsPL);
-        ApiName ->
-            case string:str(Apicall, "unisender") of % unisender api
-                Index when Index > 0 ->
-                    [#cms_api{apikey=Key}] = db:get_api(ApiName),
-                    PreUrl =  wf:f("~s?api_key=~s", [ApiName, Key]), 
-                    Args = lists:append([AddFields,[{"fields[email]",Email}]]),
-                    FormatFields = [wf:f("&~s=~s", [K, V])  || {K, V} <- Args],
-                    FullUrl = string:concat(PreUrl,FormatFields),
-                    ?LOG("FullUrl: ~s", [FullUrl]),
-                    {ok, {{_Version, 200, ResultPhrase}, _Headers, _Body}} = httpc:request(get, {FullUrl, []}, [], []),
-                    ?LOG("Result:~p",[ResultPhrase]);
-                _ ->
-                    undefined
-            end
+            ?LOG("Send email to ~p from ~p", [ToEmail, Email]);
+        Url -> 
+            UrlWithEmail = re:replace(Url,"{{email}}",Email, [{return, list}]),
+            UrlWithPhone = re:replace(UrlWithEmail,"{{phone}}",Phone, [{return, list}]),
+            UrlWithName = re:replace(UrlWithPhone,"{{name}}",wf:to_list(common:q(name, "")), [{return, list}]),
+            ?LOG("Apicall: ~p", [UrlWithName]),
+            {ok, {{_Version, 200, ResultPhrase}, _Headers, _Body}} = httpc:request(get, {UrlWithName, []}, [], []),
+            ?LOG("Result:~p",[ResultPhrase])
     end,
+
+    
+    admin:add_form(PID, Phone, TextForm, Email, RatingsPL),
     coldstrap:close_modal(),
     wf:flash(FlashID, Flash);
-event(switch_add_field) -> % {{{2
-    case wf:to_atom(common:q(api, "false")) of
-        none ->
-            wf:wire(add_field_btn, #add_class { class=hidden, speed=40 }),
-            wf:wire(addfields, #add_class { class=hidden, speed=40 });
-        _ ->
-            wf:wire(add_field_btn, #remove_class { class=hidden, speed=40 }),
-            wf:wire(addfields, #remove_class { class=hidden, speed=40 })
-    end;
-event(add_field) -> % {{{2
-    wf:insert_before(for_insert,
-          #p{id=addfields,
-             class="flex",
-             body=[
-                 #txtbx{placeholder="field name", class="form-fields"},
-                 #txtbx{placeholder="field value", class="form-fields"}
-                  ]
-            }
-    );
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]).
 
@@ -307,8 +254,9 @@ get_form_rating_ids(#cms_page{id=PID}, Block) -> % {{{2
       fun() ->
               [#cms_mfa{id={PID, FormBlock}} | _] = mnesia:match_object(
                                                       #cms_mfa{id={PID, '_'},
-                                                               mfa={emailform, submit, [Block, '_', '_']},
+                                                               mfa={emailform, submit, [Block, '_', '_','_','_']},
                                                                _='_'}),
+
               Elements = mnesia:match_object(
                            #cms_mfa{id={PID, FormBlock}, 
                                     mfa={emailform, rating, '_'},
@@ -323,11 +271,3 @@ add_if_not_empty(_Header, "") -> % {{{2
 add_if_not_empty(Header, Text) -> % {{{2
     [Header, Text, "\n"].
 %% Dropdown formatters {{{1
-
-list_to_proplist([]) -> [];
-list_to_proplist([K, V | Tail]) ->
-  [if K/="" ->{K, V};
-    true -> {} end | list_to_proplist(Tail)].
-
-cms_apis() -> % {{{2
-    [Name || #{ name := Name} <- db:get_apis()].

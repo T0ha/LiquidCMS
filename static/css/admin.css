@@ -67,14 +67,7 @@
     width: 128px;
     margin-right: 5px;
 }
-.chb-before-label {
-    font-weight: 700;
-    float:left;
-    margin-right: 5px;
-}
-.apicall-paragraph label{
-    display: block !important;
-}
+
 .flex {
     display: flex;
 }

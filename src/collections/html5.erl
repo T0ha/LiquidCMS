@@ -28,7 +28,8 @@ functions() -> % {{{2
      {main, "Main"},
      {section, "Section"},
      {time, "Time"},
-     {iframe, "Iframe"}
+     {iframe, "Iframe"},
+     {input, "Input"}
      ].
 
 format_block(block, [Block, Classes, DataAttr]) -> % {{{2
@@ -65,6 +66,29 @@ form_data(list, A) -> % {{{2
           id=numbered,
           checked=Numbered
          }
+     ],
+     [], Block, Classes, DataAttr};
+form_data(input,  A) -> % {{{2
+    [_, Block, Readonly, Maxlen, Text, Classes, DataAttr] = admin:maybe_empty(A, 7),
+    {[
+       #checkbox{
+          text="Readonly",
+          label_position=before,
+          id=readonly_input,
+          checked=Readonly
+         },
+        {"Max length (optional)",
+         #txtbx{
+            id=maxlength_input,
+            text=Maxlen,
+            placeholder=""
+           }},
+        {"Text (optional)",
+         #txtbx{
+            id=text_input,
+            text=Text,
+            placeholder=""
+           }}
      ],
      [], Block, Classes, DataAttr};
 form_data(link_url, A) -> % {{{2
@@ -162,15 +186,23 @@ form_data(article, A) -> % {{{2
     }.
 
 save_block(#cms_mfa{mfa={html5, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
-    Num = wf:to_atom(common:q(numbered, "false")),
+    Num = wf:to_atom(common:q(numbered, false)),
     Rec#cms_mfa{mfa={html5, list, [Block, Num, Classes, DataAttr]}};
+
+save_block(#cms_mfa{mfa={html5, input, [Block, Maxlen, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+    Readonly = wf:to_atom(common:q(readonly_input, false)),
+    Rec#cms_mfa{mfa={html5, input, [Block, Readonly, Maxlen, Text, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, iframe, [Block, URL, Width, Height, Classes, DataAttr]}}=Rec) -> % {{{2
     AllowFls = wf:to_atom(common:q(allowfullscreen, false)),
     Rec#cms_mfa{mfa={html5, iframe, [Block, URL, Width, Height, AllowFls, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, header, [Block, Level, Classes, DataAttr]}}=Rec) -> % {{{2
   L = try
       case list_to_integer(Level) of
@@ -419,3 +451,13 @@ iframe(_Page, Block, URL, Width, Height, AllowFls, Classes, DataAttr) -> % {{{2
     height=Height,
     data_fields = DataAttr
 }.
+
+input(_Page, Block, Readonly, Maxlen, Text, Classes, DataAttr) -> % {{{2
+  #txtbx {
+    html_id=common:block_to_html_id(Block),
+    class=Classes,
+    text=Text,
+    readonly=Readonly,
+    maxlength=Maxlen,
+    data_fields = DataAttr
+  }.
