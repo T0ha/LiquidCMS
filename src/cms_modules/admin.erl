@@ -52,15 +52,11 @@ default_data() -> % {{{2
               add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({?MODULE, user, show}, ?MODULE)}),
               add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)}),
 
-              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)}),
-              add_navbar_button("admin", "sidebar-nav", "apis", {{"fa", "wpapis", ["fab"]}, "APIs"}, {event, ?POSTBACK({?MODULE, apis, show}, ?MODULE)})
+              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)})
              ]
 
  }.
-append_apis_menu()->#{
-  cms_mfa => [add_navbar_button("admin", "sidebar-nav", "apis", {{"fa", "wpapis", ["fab"]}, "APIs"}, {event, ?POSTBACK({?MODULE, apis, show}, ?MODULE)})
-             ]
-}.
+
 install() -> % {{{2
     lager:info("Installing ~p module", [?MODULE]),
     get_files_from_folder("static"),
@@ -88,11 +84,6 @@ add_form(PID, Phone, Text, Email, Rating) -> % {{{2
         text=wf:f("~ts", [Text]),
         email=Email,
         rating=Rating
-    }).
-add_api(Name, Key) -> % {{{2
-    db:save(#cms_api{
-        name = Name,
-        apikey = Key
     }).
 
 add_template(TemplatePath, Bindings) -> % {{{2
@@ -926,25 +917,6 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
-event({?MODULE, api, new}) -> % {{{2
-    new_modal("Add API",
-              {?MODULE, api, save},
-              api,
-              [
-               #span{text="Name"},
-               #txtbx{id=name,
-                      placeholder="API name"},
-
-               #span{text="Api Key"},
-               #txtarea{id=apikey,
-                        placeholder=""}
-
-               %, #hidden{id=path}
-              ]);
-event({?MODULE, api, save}) -> % {{{2
-    add_api(wf:q(name), wf:q(apikey)),
-    coldstrap:close_modal(),
-    wf:wire(#event{postback={?MODULE, apis, show}, delegate=?MODULE});
 event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
               {?MODULE, template, save},
@@ -968,7 +940,7 @@ event({?MODULE, template, save}) -> % {{{2
     Path = wf:q(path),
     add_template(wf:q(name), wf:q(description), Path, []),
     coldstrap:close_modal(),
-    wf:wire(#event{postback={?MODULE, template, show}, delegate=?MODULE});
+    wf:wire(#event{postback={template, show}});
 event({?MODULE, template, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1045,45 +1017,6 @@ event({?MODULE, forms, show}) -> % {{{2
                }
              },
     wf:update(container, [
-                          #bs_row{
-                             body=#bs_col{
-                                     cols={lg, 12},
-                                     body=CRUD
-                                    }
-                            }]);
-event({?MODULE, apis, show}) -> % {{{2
-    CRUD = #crud{
-              pagination_class=["btn", "btn-default"],
-              button_class=["btn", "btn-link"],
-              table_class=["table-striped", "table-bordered", "table-hover"],
-              start=0,
-              count=10,
-              cols=[
-                    {name, "Name", tb}
-                   ],
-              funs=#{
-                list => fun db:get_apis/0,
-                update => fun db:update_map/1, 
-                delete => fun db:delete/1
-               }
-             },
-    wf:update(container, [#bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols={lg, 8},
-                                      body=#h1{text="APIs"}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
-                                      body=#button{
-                                              text="Add API",
-                                              class=["btn",
-                                                     "btn-success",
-                                                     "btn-block",
-                                                     "btn-upload"],
-                                              actions=?POSTBACK({?MODULE, api, new}, ?MODULE)
-                                             }}
-                                  ]},
                           #bs_row{
                              body=#bs_col{
                                      cols={lg, 12},
