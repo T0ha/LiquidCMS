@@ -22,12 +22,12 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    application:start(crypto),
-    application:start(nprocreg),
-    application:start(simple_bridge),
-    application:start(ct),
-    application:start(gen_smtpc),
-    application:start(inets),
-    application:start(ssl),
+    application:ensure_all_started(crypto),
+    application:ensure_all_started(nprocreg),
+    application:ensure_all_started(simple_bridge),
+    application:ensure_all_started(ct),
+    application:ensure_all_started(gen_smtpc),
+    application:ensure_all_started(inets),
+    application:ensure_all_started(ssl),
 
     {ok, { {one_for_one, 5, 10}, []} }.
