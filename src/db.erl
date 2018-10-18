@@ -916,3 +916,12 @@ clear_page_by_id(PID)->
                           mnesia:delete_object(MFA)
                   end, Elements)
   end).
+
+get_indexed_pages() ->
+%% get pages where sitemap is not none
+    transaction(fun() ->
+                      L = mnesia:match_object(#cms_page{active=true,  _='_'}),
+                      lists:filter(fun(#cms_page{sitemap=S}) -> 
+                                             S/=none
+                                        end, L)
+                end).
