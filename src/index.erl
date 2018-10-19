@@ -49,16 +49,16 @@ default_data() -> % {{{2
                                       {common, asset, [["js", "bootstrap"]]},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
-                                       #{filters => ["", "", "editor"]}},
+                                       #{filters => ["", "", "editor", ""]}},
 
                                       {{common, asset, [["js", "bootstrap-wysiwyg"]]},
-                                       #{filters => ["", "", "editor"]}},
+                                       #{filters => ["", "", "editor", ""]}},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
-                                       #{filters => ["", "", "admin"]}},
+                                       #{filters => ["", "", "admin", ""]}},
 
                                       {{common, asset, [["js", "bootstrap-wysiwyg"]]},
-                                       #{filters => ["", "", "admin"]}}
+                                       #{filters => ["", "", "admin", ""]}}
                                      ]),
 
                   %CSS
@@ -73,7 +73,7 @@ default_data() -> % {{{2
                   admin:add_to_block({"index", "body"},
                                      [
                                       {{router, common_redirect, [[], "/?page=admin"]},
-                                       #{filters => ["", "", "admin"]}},
+                                       #{filters => ["", "", "admin", ""]}},
                                       {router, common_redirect, [[], "/?page=register"]}
                                      ]),
 

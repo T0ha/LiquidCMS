@@ -52,7 +52,8 @@ default_data() -> % {{{2
               add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({?MODULE, user, show}, ?MODULE)}),
               add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)}),
 
-              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)})
+              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)}),
+              add_navbar_button("admin", "sidebar-nav", "languages", {{"fa", "globe", ["fab"]}, "Languages"}, {event, ?POSTBACK({?MODULE, languages, show}, ?MODULE)})
              ]
 
  }.
@@ -62,7 +63,9 @@ install() -> % {{{2
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
     get_files_from_folder("templates/internal"),
-
+    add_language("any","",false),
+    add_language("ru","flag_ru.png",true),
+    add_language("en","flag_en.png",false),
     ok.
 
 %% Different components adding to pages  {{{1
@@ -85,6 +88,12 @@ add_form(PID, Phone, Text, Email, Rating) -> % {{{2
         email=Email,
         rating=Rating
     }).
+
+add_language(Lid, ImageName, IsDefault) -> % {{{2
+    mnesia:transaction(
+      fun() ->
+        mnesia:write(#cms_language{id=Lid, icon=ImageName, default=IsDefault})
+      end).
 
 add_template(TemplatePath, Bindings) -> % {{{2
     add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
@@ -684,9 +693,10 @@ get_social_files("static/images"=SubFolder) -> % {{{2
     db:save(Assets).
 
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
+  ?LOG("Filters:~p",[Filters]),
     Filters;
 get_filters(_) -> % {{{2
-    ["", "", ""].
+    ["", "", "", ""].
 
 maybe_fix_sort(#cms_mfa{sort=new}=R, _) -> % {{{2
     db:fix_sort(R);
@@ -717,7 +727,7 @@ rec_from_qs(R) -> % {{{2
     Classes = get_with_prefix(M, wf:to_atom(F), classes),
     DataAttrs =extract_data_attrs(common:q(data_fields, "")),
 
-    Filters = wf:mq([qs_key, qs_val, role]),
+    Filters = wf:mq([qs_key, qs_val, role, translation]),
 
     R#cms_mfa{id={PID, Block}, 
               mfa={M, F, Args ++ [Classes] ++ [DataAttrs]},
@@ -1023,6 +1033,56 @@ event({?MODULE, forms, show}) -> % {{{2
                                      body=CRUD
                                     }
                             }]);
+event({?MODULE, languages, show}) -> % {{{2
+    AssetsDup = db:get_assets(image),
+    GetName = fun(Id)->
+                string:join(lists:reverse(Id),".")
+              end, 
+    Options =  [
+      {GetName(maps:get(id, K)), GetName(maps:get(id, K))}
+        || K <- AssetsDup
+    ],
+    CRUD = #crud{
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {id, "Id", none},
+                    {icon, "Icon", {select, Options}},
+                    {default, "Is default", {select, [{true,"true"},{false,"false"}]}}
+                   ],
+              funs=#{
+                list => fun db:get_languages/0,
+                update => fun db:update_language/1, 
+                delete => fun db:full_delete/1
+               }
+             },
+    wf:update(container, [
+                          #bs_row{
+                             body=[
+                                   #bs_col{
+                                      cols={lg, 10},
+                                      body=#h2{text="All languages"}
+                                     },
+                                   #bs_col{
+                                      cols={lg, 2},
+                                      body=#button{
+                                              text="Add language",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({?MODULE, language, new}, ?MODULE)
+                                             }}
+                                  ]},
+                          #bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]);
 event({?MODULE, page, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1254,7 +1314,13 @@ event({?MODULE, block, add, Block}) -> % {{{2
 event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
-    [QSKey, QSVal, Role] = get_filters(B),
+    [QSKey, QSVal, Role, Tr] = get_filters(B),
+    Translation = case Tr of
+      undefined -> any;
+      [] -> any;
+      Tr -> Tr
+    end,
+    LanguageOptions = [ {I, I} || #{id := I} <- db:get_languages()],
     Header = [
               "Add new block to page: ",
               #dropdown{
@@ -1302,10 +1368,41 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {
                                           {"Key", {qs_key, QSKey}},
                                           {"Value", {qs_val, QSVal}}
                                          ]},
-                                        {"Role", {role, Role}}
+                                        {"Role", {role, Role}},
+                                        {"Translation", #dd{
+                                          id=translation,
+                                          value=Translation,
+                                          options=LanguageOptions
+                                        }}
                                        ]}])
                  }
               ]);
+
+event({?MODULE, language, new}) -> % {{{2
+    new_modal("Add language", 
+              {?MODULE, language, save},
+              undefined,
+              [
+               #span{text="Name (ID)"},
+               #txtbx{id=id,
+                      placeholder="language_abbr"},
+
+               #span{id=icon,text="Icon"},
+               common:assets_dropdown(image),
+
+               #span{text="Default"},
+               #checkbox{id=default_language}
+              ]);
+event({?MODULE, language, save}) -> % {{{2    
+    AssetId=wf:q(asset_id),
+    IconName=string:join(lists:reverse(string:split(AssetId,".")),"."),
+    Default=case wf:q(default_language) of
+      "on"->true;
+      _->false
+    end,
+    add_language(wf:q(id),IconName,Default),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={?MODULE, languages, show}, delegate=?MODULE});
 
 event({?MODULE, block, move, Old}) -> % {{{2
     db:full_delete(Old),

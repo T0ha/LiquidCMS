@@ -180,7 +180,7 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
     try
       [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
-    catch  error:E -> 
+    catch  error2:E -> 
         ?LOG("~nError: ~p ~p ~p",[E,PID, Block]),
         wf:status_code(500),
         common:template(Page,"templates/500.html")
@@ -234,7 +234,7 @@ template(Page, TID) -> % {{{2
     template(Page, TID, []).
 
 template(Page, TID, AdditionalBindings) -> % {{{2
-    ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
+    % ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
     #template{file=File,
@@ -323,27 +323,39 @@ render_block(false, _, _) -> % {{{2
 render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> % {{{2
     apply(?MODULE, F, [Page, MFA | Args]);
 render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
+    % ?LOG("render_block: M:~p Args~p fun:~p", [M, Args,F]),
     apply(M, F, [Page | Args]);
 render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
     ?LOG("render_block: ~p fun:~p", [Page,Fun]),
     Fun(Page).
 
-apply_filters(["", "", ""]) -> % {{{2
+apply_filters(["", "", "", ""]) -> % {{{2
     true;
-apply_filters([undefined, undefined, undefined]) -> % {{{2
+apply_filters([undefined, undefined, undefined, undefined]) -> % {{{2
     true;
-apply_filters(["", "", Role]) -> % {{{2
-    #cms_user{role=R} = account:user(),
-    ?LOG("Am I ~p - ~p", [Role, wf:to_atom(Role) == R]),
-    wf:to_atom(Role) == R;
-apply_filters([K, V, ""]) -> % {{{2
-    D = wf:q(wf:to_atom(K)),
-    ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
-    wf:to_list(D) == wf:to_list(V);
-apply_filters([K, V, R]) -> % {{{2
+apply_filters([K, V, R, T]) -> % {{{2
+    % ?LOG("K: ~p, V: ~p, R: ~p, T:~p", [K, V, R, T]),
+    FilterKV = case K of
+      "" -> true;
+      K -> wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V)
+    end,
     #cms_user{role=Role} = account:user(),
-    (Role == wf:to_atom(R)) and wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V);
+    FilterRole = case R of
+      "" -> true;
+      R -> Role == wf:to_atom(R)
+    end,
+    FilterLang = case T of 
+      "" -> true;
+      "any" -> true;
+      Lang -> 
+           wf:to_atom(wf:qs(lang))==wf:to_atom(Lang)
+    end,
+    % ?LOG("result:~p",[FilterKV and FilterRole and FilterLang]),
+    FilterKV and FilterRole and FilterLang;
+
+
 apply_filters(_) -> % {{{2
+    ?LOG("apply_filters true", []),
     true.
 
 maybe_list(L) when is_list(L) -> % {{{2

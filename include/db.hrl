@@ -21,6 +21,7 @@
 
 -type role() :: 'admin' | 'editor' | 'nobody' | atom().
 -type asset_type() :: 'image' | 'script' | 'css' | 'less' | binary.
+-type language() :: 'any' | 'ru' | 'en' | atom().
 
 %% DB tables records goes here
 -record(cms_settings, {
@@ -103,3 +104,9 @@
           comment="" :: string(),
           ?TIMESTAMPS
          }).
+
+-record(cms_language, {
+          id :: language(),
+          icon :: string(),
+          default= false :: boolean()
+        }).

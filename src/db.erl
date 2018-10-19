@@ -7,6 +7,7 @@
 -compile([export_all]).
 -include("db.hrl").
 -include_lib("nitrogen_core/include/wf.hrl").
+-include("cms.hrl").
 
 %% Don't remove! This is is used to install your Mnesia DB backend  from CLI tool
 install([])-> % {{{1
@@ -18,6 +19,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
     ?CREATE_TABLE(cms_form, set, []),
+    ?CREATE_TABLE(cms_language, set, []),
     {ok, VSN} = application:get_key(nitrogen, vsn),
     DataModules = common:module_by_function({default_data, 0}),
     mnesia:transaction(
@@ -324,12 +326,56 @@ update("1.0.3"=VSN) -> % update submit button
         lists:foreach(fun(#cms_mfa{mfa={M, F, [Block, Email, Classes]}}=MFA) ->
                         New_mfa = MFA#cms_mfa{mfa={M, F, [Block, Email, false, [], Classes]},
                                               updated_at=calendar:universal_time()},
-                        % ?LOG("~nReplace ~p to ~p",[MFA, New_mfa]),
                         mnesia:delete_object(MFA),
                         mnesia:write(New_mfa)
                       end,
                       ReplElements)
       end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.4"=VSN) -> 
+%% update filter for Translation; create language table and fill it
+    transaction(
+      fun() -> 
+        ReplElements = mnesia:match_object(#cms_mfa{settings=#{filters => ['_','_','_']}, _='_'}),
+        ?LOG("~nUpdate 1.0.4: ~p blocks ", [length(ReplElements)]),
+        lists:foreach(fun(#cms_mfa{settings=#{filters :=  [K,V,R]}}=Item) ->
+                        New_item = Item#cms_mfa{settings=#{filters => [K,V,R,[]]},
+                                              updated_at=calendar:universal_time()},
+                        mnesia:delete_object(Item),
+                        mnesia:write(New_item)
+                      end,
+                      ReplElements)
+      end),
+    ?CREATE_TABLE(cms_language, set, []),
+    Languages_flags = ["flag_en.png","flag_ru.png"],
+    Path = "images",
+    lists:foreach(fun(Flag_name) ->
+                     Asset=admin:file_to_asset(Flag_name, Path),
+                     db:save(Asset)
+                  end,
+                  Languages_flags),
+    AddLangBtn = #{cms_mfa => [admin:add_navbar_button("admin", "sidebar-nav", "languages",
+      {{"fa", "globe", ["fab"]}, "Languages"}, {event, ?POSTBACK({admin, languages, show}, admin)})]},
+    mnesia:transaction(
+      fun() ->
+        [maps:map(
+           fun(_K, V) ->
+                   lists:foreach(
+                     fun(#cms_mfa{}=R) ->
+                             mnesia:write(
+                               fix_sort(
+                                 update_timestamps(R)));
+                        (R) ->
+                             mnesia:write(
+                                 update_timestamps(R))
+                     end,
+                     lists:flatten(V))
+           end,
+          AddLangBtn )]
+      end),
+    admin:add_language("ru","flag_ru.png",true),
+    admin:add_language("en","flag_en.png",false),
+    admin:add_language("any","",false),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
@@ -539,6 +585,12 @@ get_forms() -> % {{{1
                         [record_to_map(A) || A <- Forms]
                 end).
 
+get_languages() -> % {{{1
+    transaction(fun() ->
+                        Langs = mnesia:match_object(#cms_language{_='_'}),
+                        [record_to_map(A) || A <- Langs]
+                end).
+
 fix_sort(Recs) when is_list(Recs) -> % {{{1
     [fix_sort(Rec) || Rec <- Recs];
 fix_sort(#cms_mfa{sort=new}=Rec) -> % {{{1
@@ -592,8 +644,21 @@ update_map(Map) -> % {{{1
     update_map(Map, fun fields/1).
     
 update_map(Map, FieldsFun) -> % {{{1
-    io:format("~nDb update_map:", []),
+    % io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
+
+update_language(#{id := Id, icon:= Icon, default:=Default}) -> % {{{1
+    transaction(
+      fun() ->
+        case mnesia:match_object(#cms_language{id=Id, _='_'}) of
+          [] -> ok;
+          [DbItem] ->  
+            NewDbItem1 = update_record_field(DbItem, icon, Icon),
+            NewDbItem2 = update_record_field(NewDbItem1, default, Default),
+            mnesia:delete_object(DbItem),
+            mnesia:write(NewDbItem2)
+        end
+      end).
 
 rename_page(#{id := NewPID, old_value := OldValue} = Map) ->  % {{{1
     update_map(Map),
@@ -684,7 +749,6 @@ delete(#cms_page{id=PID}=Record) -> % {{{1
                         end,
                         UP = update_record_field(Record, updated_at, calendar:universal_time()),
                         DP = update_record_field(UP, active, false),
-                        io:format("Deleted page: ~p:~n", [DP]),
                         mnesia:delete_object(Record),
                         mnesia:write(DP)
             end),
@@ -699,15 +763,21 @@ delete(Record) -> % {{{1
                         mnesia:delete_object(Record),
                         mnesia:write(DP)
                 end).
+
+%% For convenience in install and update process
+delete(#{}=Map, FieldsFun) -> % {{{1
+    delete(map_to_record(Map, FieldsFun)).
+
+%% Delete item from DB
+full_delete(#{}=Map) -> % {{{1
+    full_delete_map(Map, fun fields/1);
 full_delete(Record) -> % {{{1 
     io:format("~nFull_delete: ~p~n", [Record]),
     transaction(fun() ->
                         mnesia:delete_object(Record)
                 end).
-%% For convenience in install and update process
-delete(#{}=Map, FieldsFun) -> % {{{1
-    % io:format("~nDelete map: ~p~n", [Map]),
-    delete(map_to_record(Map, FieldsFun)).
+full_delete_map(#{}=Map, FieldsFun) -> % {{{1
+    full_delete(map_to_record(Map, FieldsFun)).
 
 verify_create_table({atomic, ok}) -> ok; % {{{1
 verify_create_table({aborted, {already_exists, _Table}}) -> ok. % {{{1
@@ -761,7 +831,9 @@ fields(cms_role) -> % {{{1
 fields(cms_template) -> % {{{1
     record_info(fields, cms_template);
 fields(cms_form) -> % {{{1
-    record_info(fields, cms_form).
+    record_info(fields, cms_form);
+fields(cms_language) -> % {{{1
+    record_info(fields, cms_language).
 
 empty_mfa(PID, Block, Sort) -> % {{{1
     CT = calendar:universal_time(),
