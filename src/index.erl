@@ -106,6 +106,25 @@ head(_Page) ->  % {{{2
 title(#cms_page{title=Title}) ->  % {{{2
     Title.
 
+%% Func to Define language for a page in header: check QS and Default db language  {{{1
+language(_Page) ->  % {{{2
+    QLang=wf:qs(lang),
+    Langs=db:get_languages(),
+    LangsList=[Id || #{id := Id} <- Langs, Id/="any"],
+    DefLangs=[Id || #{id := Id, default := D} <- Langs, D==true],
+    DefLang=case DefLangs of
+      [] -> undefined;
+      L -> lists:nth(1,L)
+    end,
+    case QLang of
+      [Elem] -> case lists:member(Elem, LangsList) of 
+                    true ->Elem;
+                    false -> DefLang
+                end;
+      _ -> DefLang
+    end.
+
+
 body(Page) -> % {{{2
     wf:state(page, Page),
     maybe_add_editor(Page),

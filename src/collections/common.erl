@@ -180,7 +180,7 @@ save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}
 parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
     try
       [maybe_render_block(Page, MFA) || MFA <- db:get_mfa(PID, Block)]
-    catch  error2:E -> 
+    catch  error:E -> 
         ?LOG("~nError: ~p ~p ~p",[E,PID, Block]),
         wf:status_code(500),
         common:template(Page,"templates/500.html")
