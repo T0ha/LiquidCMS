@@ -57,3 +57,8 @@ a, a:visited {
 a:hover, a:active { 
     text-decoration: underline; 
 }
+
+img.flags-icon {
+    height: 20px;
+    margin-left: 5px;
+}
