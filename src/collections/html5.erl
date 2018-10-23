@@ -52,7 +52,6 @@ format_block(F, [Block, Data, Classes, DataAttr]) -> % {{{2
 format_block(F, [Block, Classes, DataAttr]) -> % {{{2
   {wf:f("html5(~s): (id:~p class=~p attr:~p)", [F, Block, Classes, DataAttr]), Block};
 format_block(F, A) -> % {{{2
-    % ?LOG("format_block: F:~p, A:~p",[F,A]),
     {wf:f("html5: ~s(~p)", [F, A]), undefined}.
 
 
@@ -262,8 +261,13 @@ link_url(Page, Block, URL) -> % {{{2
 link_url(Page, Block, URL, Classes) -> % {{{2
     link_url(Page, Block, URL, Classes, []).
 link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
+    LangId=index:language(Page),
+    UpdUrl=case re:run(URL,"\\w+\\.\\w+") of %check if html link contanis url with domain_name
+        nomatch->index:set_url_with_lang(URL, LangId);
+        _->URL
+    end,
     #link{
-       url=URL, 
+       url=UpdUrl, 
        html_id=common:block_to_html_id(Block),
        class=Classes,
        body=common:parallel_block(Page, Block),

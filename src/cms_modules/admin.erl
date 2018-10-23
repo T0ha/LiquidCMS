@@ -282,7 +282,8 @@ maybe_set(Id, Val) -> % {{{2
         "" ->
             wf:set(Id, Val);
         A ->
-            ?LOG("~s value is ~p", [Id, A])
+            ?LOG("~s value is ~p", [Id, A]),
+            ""
     end.
 
 update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
@@ -487,10 +488,12 @@ add_default_fields(Data, Formatting, Block, Classes, DataAttrs) -> % {{{2
     ].
 
 form_fields(M, F, A) -> % {{{2
+  % ?LOG("fe:~p A:~p",[ F, A]),
     try 
         apply(M, form_data, [F, A])
     catch error:E when E /= undef; 
                        E /= function_clause -> 
+              ?LOG("Error in form_fields:~p",[E]),
               [_, Block, Classes, DataAttrs] = maybe_empty(A, 4),
               {[], [], Block, Classes, DataAttrs}
     end.
@@ -645,7 +648,6 @@ maybe_empty(A, _N) -> % {{{2
 get_files_from_folder("static"=SubFolder) -> % {{{2
     %{ok, StaticFolders} = application:get_env(simple_bridge, static_paths),
     {ok, StaticFolders} = file:list_dir(SubFolder),
-    %io:format("Folders: ~p~n", [Folders]),
     {ok, OldCWD} = file:get_cwd(),
     file:set_cwd(SubFolder),
     Static = [{wf:f("~s", [Path]), Files} ||
@@ -653,13 +655,12 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
               filelib:is_dir(Path),
               {ok, Files} <- [file:list_dir(Path)],
               Path /= "nitrogen"],
-    io:format("Static: ~p~n", [Static]),
+    % ?LOG("Static: ~p~n", [Static]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
                          end,
                          [],
                          Static),
-    %io:format("Assets: ~p~n", [Assets]),
     NitrogenStatic = [
                       {"nitrogen/", 
                        ["bert.js", "bert.min.js",
@@ -672,7 +673,6 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
                      ],
     NitrogenAssets = [
                       file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
-    io:format("Assets NitrogenAssets: ~p~n", [Assets ++ NitrogenAssets]),
     db:save(Assets ++ NitrogenAssets),
     file:set_cwd(OldCWD);
 
@@ -683,7 +683,6 @@ get_files_from_folder(SubFolder) -> % {{{2
 get_social_files("static/images"=SubFolder) -> % {{{2
     {ok, StaticImages} = file:list_dir(SubFolder),
     Static = [{"images", StaticImages}],
-    % io:format("StaticImages: ~p~n", [StaticImages]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files,
                                   string:str(File, "_icon.png") > 0 ] ++ A
@@ -1582,7 +1581,8 @@ event({?MODULE, pages, merge}) -> % {{{2
 event({?MODULE, auth, call_restore_password}) -> % {{{2
     account:call_restore_password();
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]),
+    "".
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
     Val = db:update(Record, Field, Value),
@@ -1617,7 +1617,8 @@ finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     wf:set(path, URLPath).
 
 api_event(Name, Tag, Args) -> % {{{2
-    ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
+    ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]),
+    "".
 
 sort_event({PID, Block}, Blocks) -> % {{{2
     lists:foreach(fun({N, {block, _PID, B}}) ->

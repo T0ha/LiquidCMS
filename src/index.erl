@@ -66,7 +66,8 @@ default_data() -> % {{{2
                                      [
                                       {common, asset, [["css", "jquery-ui"]]},
                                       {common, asset, [["css", "bootstrap"]]},
-                                      {common, asset, [["css", "font-awesome"]]}
+                                      {common, asset, [["css", "font-awesome"]]},
+                                      {common, asset, [["css", "style"]]}
                                      ]),
 
                   % Index page
@@ -124,6 +125,16 @@ language(_Page) ->  % {{{2
       _ -> DefLang
     end.
 
+%% Make uri with choosen lang
+set_url_with_lang(URI,LangId) -> % {{{2
+  case re:run(URI,"lang=\\w+") of
+    {match,[{_S,_L}]} ->
+        re:replace(URI,"lang=\\w+","lang="++LangId,[{return,list}]);
+    _ -> case re:run(URI, "\\?\\w") of
+            {match,[{_S,_L}]} -> wf:f("~s&lang=~s",[URI, LangId]);
+            nomatch     -> wf:f("~s?lang=~s",[URI, LangId])
+         end
+  end.
 
 body(Page) -> % {{{2
     wf:state(page, Page),
@@ -154,7 +165,8 @@ event(display_source_code) -> % {{{2
             })
     end;
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]),
+    "".
 
 %% Block renderers {{{1
 maybe_block(_Page, "", _Classes) -> % {{{2

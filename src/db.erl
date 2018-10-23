@@ -248,7 +248,6 @@ update("1.0.0"=VSN) ->
                                                                         updated_at=calendar:universal_time()},
                                                   mnesia:delete_object(MFA),
                                                   mnesia:write(New_mfa)
-                                                  % io:format("~nReplace ~p to ~p",[MFA, New_mfa])
                                           end,
                                           Common_elements)
                           end,
@@ -292,7 +291,6 @@ update("1.0.0"=VSN) ->
                                                     updated_at=calendar:universal_time()},
                               mnesia:delete_object(MFA),
                               mnesia:write(New_mfa)
-                              % ,io:format("~nReplace ~p to ~p",[MFA, New_mfa])
                             end,
                             ReplElements)
           end,
@@ -388,9 +386,7 @@ update("fix_sort") -> % {{{1
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
                             New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            %io:format("~nold_sort ~p,new_sort: ~p", [Sort, New_sort]),
                             New_mfa = update_record_field(Cur_mfa, sort, New_sort),
-                            %io:format("~nupdate [~p]~p", [Sort, New_mfa]),
                             mnesia:delete_object(Cur_mfa),
                             mnesia:write(New_mfa);
                           true -> ok
@@ -503,7 +499,6 @@ get_mfa(Page, Block, Replaced) -> % {{{1
                         end
                             
                 end),
-    % io:format("~nget_mfa ~p",[lists:keysort(#cms_mfa.sort, Funs)]),
     lists:keysort(#cms_mfa.sort, Funs).
 get_all_blocks(PID) -> % {{{1
     Blocks = transaction(fun() ->
@@ -517,7 +512,6 @@ get_all_blocks(PID) -> % {{{1
                                   ]
                                 )
                          end),
-    % io:format("~n_block~p",[sets:from_list(Blocks)]),
     sets:to_list(sets:from_list(Blocks)).
 get_parent_block(PID, BID) -> % {{{1
     transaction(fun() ->
@@ -590,6 +584,10 @@ get_languages() -> % {{{1
                         Langs = mnesia:match_object(#cms_language{_='_'}),
                         [record_to_map(A) || A <- Langs]
                 end).
+get_language(Lid) -> % {{{1
+    transaction(fun() ->
+                        mnesia:match_object(#cms_language{id=Lid,_='_'})
+                end).
 
 fix_sort(Recs) when is_list(Recs) -> % {{{1
     [fix_sort(Rec) || Rec <- Recs];
@@ -613,7 +611,6 @@ update(OldRecord, NewRecord) -> % {{{1
                 end).
 
 update(Record, Field, Value) -> % {{{1
-    % io:format("Db update: ~p~n", [Record]),
     transaction(fun() ->
                         mnesia:delete_object(Record),
                         R1 = update_record_field(Record, Field, Value),
@@ -625,7 +622,6 @@ update(Record, Field, Value) -> % {{{1
 copy_page(#{id := PID}= Map) -> % {{{1
     NewPID = "copy_" ++ PID,
     NewMap = maps:update(id, NewPID, Map),
-    %io:format("~nDb copy PID: ~p to ~p~n", [PID, NewPID]),
     update_map(NewMap),
     transaction(fun() ->
                     case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
@@ -634,7 +630,6 @@ copy_page(#{id := PID}= Map) -> % {{{1
                         L -> 
                             lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
                                 NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
-                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
                                 mnesia:write(NewDbItem)
                                 end, L)
                     end
@@ -644,7 +639,6 @@ update_map(Map) -> % {{{1
     update_map(Map, fun fields/1).
     
 update_map(Map, FieldsFun) -> % {{{1
-    % io:format("~nDb update_map:", []),
     save(map_to_record(Map, FieldsFun)).
 
 update_language(#{id := Id, icon:= Icon, default:=Default}) -> % {{{1
@@ -662,7 +656,6 @@ update_language(#{id := Id, icon:= Icon, default:=Default}) -> % {{{1
 
 rename_page(#{id := NewPID, old_value := OldValue} = Map) ->  % {{{1
     update_map(Map),
-    %io:format("~nDb rename_page: ~p~n~p", [OldValue,Map]),
     transaction(fun() ->
                     case mnesia:match_object(#cms_mfa{id={OldValue, '_'}, _='_'}) of
                         [] ->
@@ -670,13 +663,11 @@ rename_page(#{id := NewPID, old_value := OldValue} = Map) ->  % {{{1
                         L -> 
                             lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
                                 NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
-                                % io:format("~nCopy NewDbItem: ~p~n", [NewDbItem]),
                                 mnesia:write(NewDbItem),
                                 mnesia:delete_object(DbItem)
                                 end, L)
                     end,
                     OldPages = mnesia:match_object(#cms_page{id=OldValue, _='_'}),
-                    % io:format("~ndelete_object: ~p", [OldPage ]),
                     [mnesia:delete_object(O) || O <- OldPages]
                 end).
                         
@@ -997,3 +988,6 @@ get_indexed_pages() ->
                                              S/=none
                                         end, L)
                 end).
+
+temp()->
+?CREATE_TABLE(cms_page, set, []).
