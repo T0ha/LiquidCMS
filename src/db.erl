@@ -988,6 +988,3 @@ get_indexed_pages() ->
                                              S/=none
                                         end, L)
                 end).
-
-temp()->
-?CREATE_TABLE(cms_page, set, []).
