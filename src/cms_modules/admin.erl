@@ -606,7 +606,7 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields(_Any) -> % {{{2
-    ?LOG("Other fields", []), %?LOG("Other fields: ~p", [Any]),
+    ?LOG("Other fields", []), 
     [].
 
 get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
@@ -625,8 +625,8 @@ get_fields(#panel{body=Body}) when is_list(Body) -> % {{{2
     [get_fields(E) || E <- Body];
 get_fields(#panel{body=Body}) -> % {{{2
     get_fields(Body);
-get_fields(D) -> % {{{2
-    ?LOG("Data: ~p", [D]),
+get_fields(_D) -> % {{{2
+    % ?LOG("Data: ~p", [D]),
     [].
 
 prefix_classes(Prefix, Classes) -> % {{{2
@@ -655,7 +655,6 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
               filelib:is_dir(Path),
               {ok, Files} <- [file:list_dir(Path)],
               Path /= "nitrogen"],
-    % ?LOG("Static: ~p~n", [Static]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
                          end,
@@ -742,7 +741,15 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
-event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
+event({common, edit, text, #cms_mfa{id={PID, Block}, sort=S}=MFA, Text}) -> % {{{2
+    {atomic, UpdText}=mnesia:transaction(
+        fun() ->
+          case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=S, _='_'}) of
+            L when is_list(L), length(L) > 0 ->
+              [ Itext || #cms_mfa{mfa={common,text, [Itext]}} <-L];
+            _ -> Text
+          end
+        end),
     new_modal("Edit text", 
               {?MODULE, block, move, MFA},
               undefined,
@@ -753,7 +760,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                #hidden{id=add_block, text=Block},
                #wysiwyg{class=["form-control"],
                         id=text_mfa,
-                        html=Text,
+                        html=UpdText,
                         buttons=[
                                  #panel{
                                     class="btn-group",
@@ -1408,8 +1415,16 @@ event({?MODULE, block, move, Old}) -> % {{{2
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
-event({?MODULE, block, save, OldMFA}) -> % {{{2
-    [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
+event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
+    mnesia:transaction( %% remove dublicating sort
+        fun() ->
+          case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=S, _='_'}) of
+            L when is_list(L), length(L) > 0 ->
+                [ mnesia:delete_object(Mfa) || Mfa<-L];
+            _ -> undefined
+          end
+        end),
+    [#cms_mfa{id={PID, Block}, sort=S, mfa=MFA}|_] = common:maybe_list(
                                       db:save(
                                         maybe_fix_sort(
                                           apply_element_transform(
@@ -1426,14 +1441,14 @@ event({?MODULE, block, save, OldMFA}) -> % {{{2
             db:save(Page)
     end,
     coldstrap:close_modal(),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
+    update_block_on_page(Block, MFA, S);
 event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
         {block, remove_block, B},
         []
     );
-
 event({?MODULE, block, remove_block, B}) -> % {{{2
     {PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
@@ -1640,3 +1655,16 @@ cms_roles() -> % {{{2
 collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
+
+update_block_on_page(Block, MFA, S) -> % {{{2
+    PageQs=wf:qs(page),
+    NewText=case MFA of 
+      {common, text, Text} -> Text;
+      _-> undefined
+    end,
+    ChangedBlock=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
+    case PageQs of
+      ["admin"] -> "";
+      _ -> 
+          wf:wire(#update{target=ChangedBlock, elements=NewText})
+    end.
