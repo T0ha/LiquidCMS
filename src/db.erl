@@ -375,6 +375,8 @@ update("1.0.4"=VSN) ->
     admin:add_language("en","flag_en.png",false),
     admin:add_language("any","",false),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+% update("1.0.5"=VSN) -> % 
+%     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -513,17 +515,24 @@ get_all_blocks(PID) -> % {{{1
                                 )
                          end),
     sets:to_list(sets:from_list(Blocks)).
-get_parent_block(PID, BID) -> % {{{1
+get_parent_block(PID, BID, DeleteBlock) -> % {{{1
+%% @doc "Return parent BlockId if it exists; unactive block without parent"
     transaction(fun() ->
                         P1=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_']}, active=true, _='_'}),
                         P2=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_']}, active=true, _='_'}),
                         P3=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_']}, active=true, _='_'}),
                         P4=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_']}, active=true, _='_'}),
                         P5=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_','_']}, active=true, _='_'}),
-                        P12=lists:append(P1,P2),
-                        P34=lists:append(P3,P4),
-                        P35=lists:append(P34,P5),
-                        P=lists:append(P12,P35),
+                        AB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_',BID,'_','_','_']}, active=true, _='_'}),
+                        AF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_','_',BID,'_','_']}, active=true, _='_'}),
+                        PB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_',BID,'_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                        PH=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,[BID,'_','_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                        PA=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_',BID,'_','_','_','_','_','_','_']}, active=true, _='_'}),
+                        PF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_','_',BID,'_','_','_','_','_','_']}, active=true, _='_'}),
+                        P1_5=lists:append([P1,P2,P3,P4,P5]),
+                        Arts=lists:append(AF,AB),
+                        Panels=lists:append([PB,PA,PH,PF]),
+                        P=lists:append([P1_5,Arts,Panels]),
                         case P of
                           L when is_list(L), length(L) > 1 ->
                               length(L);
@@ -531,7 +540,11 @@ get_parent_block(PID, BID) -> % {{{1
                                   {_, ParentID}=I#cms_mfa.id,
                                   ParentID;
                           
-                          _  ->  undefined
+                          _  -> case DeleteBlock of 
+                                  undefined -> undefined;
+                                  _Some -> delete(DeleteBlock)
+                                end
+
                         end
                 end).
 
@@ -630,7 +643,8 @@ copy_page(#{id := PID}= Map) -> % {{{1
                         L -> 
                             lists:foreach(fun(#cms_mfa{id={_, Block}}=DbItem) ->
                                 NewDbItem = update_record_field(DbItem, id, {NewPID, Block}),
-                                mnesia:write(NewDbItem)
+                                UR = update_record_field(NewDbItem, updated_at, calendar:universal_time()),
+                                mnesia:write(UR)
                                 end, L)
                     end
                 end).
@@ -730,13 +744,10 @@ delete(#cms_page{id=PID}=Record) -> % {{{1
                             [] ->
                                 ok;
                             L when is_list(L) -> 
-                                lists:foreach(fun(DbItem) ->
-                                  UR = update_record_field(DbItem, updated_at, calendar:universal_time()),
-                                  DR = update_record_field(UR, active, false),
-                                  mnesia:delete_object(DbItem),
-                                  mnesia:write(DR)
-                                  end, L)
-                                % [mnesia:delete_object(B1) || B1 <- L] % full_delete
+                            %     lists:foreach(fun(DbItem) ->
+                            %       delete(DbItem)
+                            %       end, L)
+                                [full_delete(B1) || B1 <- L] % full_delete
                         end,
                         UP = update_record_field(Record, updated_at, calendar:universal_time()),
                         DP = update_record_field(UP, active, false),
@@ -968,23 +979,78 @@ update_timestamps(#cms_template{}=Rec) -> % {{{1
     CT = calendar:universal_time(),
     Rec#cms_template{updated_at=CT}.
 
-datetime_tostr(Date) ->
+datetime_tostr(Date) -> % {{{1
     {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
     _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w+00:00",[Year,Month,Day,Hour,Minute,Second])).
 
-clear_page_by_id(PID)->
+clear_page_by_id(PID)-> % {{{1
   transaction(fun() -> 
     Elements = mnesia:match_object(#cms_mfa{id={PID,'_'}, _='_'}),
     lists:foreach(fun(MFA) ->
-                          mnesia:delete_object(MFA)
+                          full_delete(MFA)
                   end, Elements)
   end).
 
-get_indexed_pages() ->
 %% get pages where sitemap is not none
+get_indexed_pages() -> % {{{1
     transaction(fun() ->
                       L = mnesia:match_object(#cms_page{active=true,  _='_'}),
                       lists:filter(fun(#cms_page{sitemap=S}) -> 
                                              S/=none
                                         end, L)
                 end).
+
+remove_old_unused_blocks() -> % {{{1
+%% @doc "Remove blocks from db: if its have new analog block"
+  transaction(
+    fun() ->
+        Unactive = mnesia:match_object(#cms_mfa{active=false,  _='_'}),
+        lists:foreach(fun(#cms_mfa{id=Id,mfa={M, F, A}}=MbDelete) ->
+          Args = case A of
+            [BlockId] -> [BlockId];
+            [BlockId, _A2] ->  [BlockId, '_'];
+            [BlockId, _A2, _A3] -> [BlockId, '_', '_'];
+            [BlockId, _A2, _A3, _A4] -> [BlockId, '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5] -> [BlockId, '_', '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5, _A6] -> [BlockId, '_', '_', '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5, _A6, _A7] -> [BlockId, '_', '_', '_', '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5, _A6, _A7, _A8] -> [BlockId, '_', '_', '_', '_', '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5, _A6, _A7, _A8, _A9] -> [BlockId, '_', '_', '_', '_', '_', '_', '_', '_'];
+            [BlockId, _A2, _A3, _A4, _A5, _A6, _A7, _A8, _A9, _A10] -> [BlockId, '_', '_', '_', '_', '_', '_', '_', '_', '_'];
+            _ -> A
+          end,
+          case mnesia:match_object(#cms_mfa{id=Id, active=true,mfa={M, F, Args},  _='_'}) of
+            [] ->
+                undefined;
+            _L -> 
+                full_delete(MbDelete)
+          end
+        end, Unactive)
+    end
+  ),
+  wf:wire(#alert{ text="Trash was cleared!"}).
+
+remove_blocks_without_parent() -> % {{{1
+%% @doc "Unactive all blocks if its havent parent"
+  transaction(
+      fun() ->
+        AllBlocks = mnesia:match_object(#cms_mfa{_ = '_'}),
+        Exclude_blocks = [css,body,page,router,script],
+        Exclude_pages = [admin,login,restore,register],
+        lists:foreach(fun(#cms_mfa{id={PID,BID}}=Block) ->
+          NotSubblock= 
+            case re:run(BID,"[(^\\+),(\\/)]",[global]) of
+              nomatch -> true;
+              _ -> false
+            end,
+          Condition = not lists:member(wf:to_atom(BID), Exclude_blocks) and NotSubblock
+            and not lists:member(wf:to_atom(PID), Exclude_pages),
+          case Condition of
+            false -> undefined;
+            _-> get_parent_block(PID,BID,Block)
+            
+          end
+        end, AllBlocks)
+      end
+  ),
+  wf:wire(#alert{ text="Database was defragmented!"}). 

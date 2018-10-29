@@ -71,3 +71,8 @@
 .flex {
     display: flex;
 }
+
+.right_manage_panel{
+    display: inline-block;
+    margin-top:2px;
+}
