@@ -76,3 +76,9 @@
     display: inline-block;
     margin-top:2px;
 }
+
+.panel-format-btn{
+    position: absolute;
+    margin-top: -35px;
+    right: 5px;
+}

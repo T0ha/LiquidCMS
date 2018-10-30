@@ -465,6 +465,23 @@ format_block(#cms_mfa{ % {{{2$
                      ]}
             ]}.
 
+format_subblock(#cms_mfa{ id={PID, Name}}=B) -> % {{{2
+    #sortitem{
+       tag={block, PID, B},
+       % class="well",
+       body=[
+             #span{
+                class="panel-format-btn",
+                body=[
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "arrow-right", []),
+                         % show_if=(Sub /= undefined),
+                         actions=?POSTBACK({?MODULE, page, construct, PID, [Name]}, ?MODULE)
+                        }
+                     ]}
+            ]}.
+
 add_default_fields({Data, Formatting}) -> % {{{2
     add_default_fields(Data, Formatting, "", "", "");
 add_default_fields({Data, Formatting, Block, Classes}) -> % {{{2
@@ -1184,6 +1201,7 @@ event({?MODULE, page, construct}) -> % {{{2
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
 event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
+    coldstrap:close_modal(),
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],

@@ -79,25 +79,41 @@ form_data(col, A) -> % {{{2
 form_data(panel, A) -> % {{{2
     [_, HeaderBlock, Block,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
     [Classes, Context] = admin:maybe_empty(Classes0, 2),
+    PID = common:q(add_page_select, "index"),
     {[
-      {"Block for panel header",
-      #txtbx{
-         id=panel_header_block,
-         text=HeaderBlock,
-         placeholder="Block name for panel header (leave blank for none)"
-        }},
-      {"Block for panel addons",
-      #txtbx{
-         id=panel_addons_block,
-         text=AddonsBlock,
-         placeholder="Block name for panel addons (leave blank for none)"
-        }},
-      {"Block for panel footer",
-      #txtbx{
-         id=panel_footer_block,
-         text=FooterBlock,
-         placeholder="Block name for panel footer (leave blank for none)"
-        }}
+      #panel{
+        body=[
+          #span{text="Block for panel header"},
+          #txtbx{
+             id=panel_header_block,
+             text=HeaderBlock,
+             placeholder="Block name for panel header (leave blank for none)"
+            },
+          [admin:format_subblock(B#cms_mfa{id={PID, BID}})
+              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, HeaderBlock)]
+      ]},
+      #panel{
+        body=[
+          #span{text="Block for panel addons"},
+          #txtbx{
+             id=panel_addons_block,
+             text=AddonsBlock,
+             placeholder="Block name for panel addons (leave blank for none)"
+            },
+          [admin:format_subblock(B#cms_mfa{id={PID, BID}})
+              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, AddonsBlock)]
+      ]},
+      #panel{
+        body=[
+          #span{text="Block for panel footer"},
+          #txtbx{
+             id=panel_footer_block,
+             text=FooterBlock,
+             placeholder="Block name for panel footer (leave blank for none)"
+            },
+          [admin:format_subblock(B#cms_mfa{id={PID, BID}})
+              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, FooterBlock)]
+      ]}
      ],
      [
       {"Context",
