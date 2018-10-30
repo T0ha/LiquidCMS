@@ -1039,7 +1039,7 @@ remove_blocks_without_parent() -> % {{{1
         Exclude_pages = [admin,login,restore,register],
         lists:foreach(fun(#cms_mfa{id={PID,BID}}=Block) ->
           NotSubblock= 
-            case re:run(BID,"[(^\\+),(\\/)]",[global]) of
+            case re:run(BID,"^\\+|\\/",[global]) of
               nomatch -> true;
               _ -> false
             end,
