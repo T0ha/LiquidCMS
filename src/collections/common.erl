@@ -31,7 +31,6 @@ format_block(asset, [AID]) -> % {{{2
     [#cms_asset{type=Type, file=File, name=Name}|_] = db:get_asset(AID),
     {wf:f("Asset ~s: ~s(~p)", [Type, Name, File]), undefined};
 format_block(F, A) -> % {{{2
-    % ?LOG("format_block: F:~p, A:~p",[F,A]),
     {wf:f("common:~s(~p)", [F, A]), undefined}.
 
 
@@ -129,7 +128,6 @@ form_data(template, A) -> % {{{2
        }
     ];
 form_data(img, A) -> % {{{2
-    ?LOG("Image: ~p", [A]),
     [_, AID, Classes] = admin:maybe_empty(A, 3),
 
     {[
@@ -139,7 +137,6 @@ form_data(img, A) -> % {{{2
     [], "", Classes};
 
 form_data(asset, A) -> % {{{2
-    ?LOG("Asset: ~p", [A]),
     [_, AID] = admin:maybe_empty(A, 2),
     Type = case db:get_asset(AID) of
                [] -> binary;
@@ -188,7 +185,6 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
-    % ?LOG("Waterfall: ~p", [Functions]),
     lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{}=P) ->
                         apply(M, F, [P | Args]);
                    (#cms_mfa{mfa=Fun}, #cms_page{}=P) when is_function(Fun) ->
@@ -234,7 +230,6 @@ template(Page, TID) -> % {{{2
     template(Page, TID, []).
 
 template(Page, TID, AdditionalBindings) -> % {{{2
-    ?LOG("Page for template: ~p, TID: ~p", [Page, TID]),
     [#cms_template{file=File,
                    bindings=Bindings}] = db:get_template(TID),
     #template{file=File,
@@ -270,7 +265,8 @@ event({asset, type, change}) -> % {{{2
     wf:replace(asset_id, assets_dropdown(AssetType));
 
 event(Ev) -> % {{{2
-    ?LOG("~p event(common.erl) ~p", [?MODULE, Ev]).
+    ?LOG("~p undefined event ~p", [?MODULE, Ev]),
+    undefined.
 
 %% Helpers {{{1
 block_to_html_id(Block) -> % {{{2
@@ -312,7 +308,6 @@ module_by_function(FunTuple) -> % {{{2
           F == FunTuple].
 
 maybe_render_block(Page, #cms_mfa{settings=#{filters := Filters}}=MFA) -> % {{{2
-    % ?LOG("Filters: ~p", [Filters]),
     render_block(apply_filters(Filters), Page, MFA);
 maybe_render_block(Page, MFA) -> % {{{2
     render_block(true, Page, MFA).
@@ -325,24 +320,31 @@ render_block(true, Page, #cms_mfa{id=_Id, mfa={?MODULE, text=F, Args}}=MFA) -> %
 render_block(true, Page, #cms_mfa{mfa={M, F, Args}}) -> % {{{2
     apply(M, F, [Page | Args]);
 render_block(true, Page, #cms_mfa{mfa=Fun}) when is_function(Fun) -> % {{{2
-    ?LOG("render_block: ~p fun:~p", [Page,Fun]),
     Fun(Page).
 
-apply_filters(["", "", ""]) -> % {{{2
+apply_filters(["", "", "", ""]) -> % {{{2
     true;
-apply_filters([undefined, undefined, undefined]) -> % {{{2
+apply_filters([undefined, undefined, undefined, undefined]) -> % {{{2
     true;
-apply_filters(["", "", Role]) -> % {{{2
-    #cms_user{role=R} = account:user(),
-    ?LOG("Am I ~p - ~p", [Role, wf:to_atom(Role) == R]),
-    wf:to_atom(Role) == R;
-apply_filters([K, V, ""]) -> % {{{2
-    D = wf:q(wf:to_atom(K)),
-    ?LOG("K: ~p, V: ~p, Q: ~p", [K, V, D]),
-    wf:to_list(D) == wf:to_list(V);
-apply_filters([K, V, R]) -> % {{{2
+apply_filters([K, V, R, T]) -> % {{{2
+    FilterKV = case K of
+      "" -> true;
+      K -> wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V)
+    end,
     #cms_user{role=Role} = account:user(),
-    (Role == wf:to_atom(R)) and wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V);
+    FilterRole = case R of
+      "" -> true;
+      R -> Role == wf:to_atom(R)
+    end,
+    FilterLang = case T of 
+      "" -> true;
+      "any" -> true;
+      Lang -> 
+           wf:to_atom(wf:qs(lang))==wf:to_atom(Lang)
+    end,
+    FilterKV and FilterRole and FilterLang;
+
+
 apply_filters(_) -> % {{{2
     true.
 
@@ -358,12 +360,17 @@ maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
     %% @doc "Return panel for edit a textblock if user have permission",
-    #panel{
-       id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
-       body=Text,
-       style="border: #c33 1px dashed; cursor: text;padding: 10px;",
-       actions=?POSTBACK({?MODULE, edit, text, MFA, Text}, admin)
-      }.
+    case string:find(Block, "/validate") of %% dirty hack prevent error
+      nomatch ->
+        #panel{   
+           id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
+           body=Text,
+           style="border: #c33 1px dashed; cursor: text;padding: 10px;",
+           actions=?POSTBACK({?MODULE, edit, text, MFA, Text}, admin)
+          };
+      _Some ->  
+        Text
+    end.
 
 
 %% Dropdown formatters {{{1

@@ -22,6 +22,10 @@ body {
     border-left: 1px solid #e7e7e7;
   }
 }
+.flex-panel{
+  display: flow-root;
+}
+
 .navbar-top-links {
   margin-right: 0;
 }

@@ -269,16 +269,13 @@ maybe_redirect_to_login(Page) -> % {{{2
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
-    % ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
-    ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
     case wf:role(Role) of 
         true ->
             ?LOG("Role: ~p", [Role]),
             Page;
         false ->
-            % ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
 

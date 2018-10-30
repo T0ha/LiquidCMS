@@ -49,16 +49,16 @@ default_data() -> % {{{2
                                       {common, asset, [["js", "bootstrap"]]},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
-                                       #{filters => ["", "", "editor"]}},
+                                       #{filters => ["", "", "editor", ""]}},
 
                                       {{common, asset, [["js", "bootstrap-wysiwyg"]]},
-                                       #{filters => ["", "", "editor"]}},
+                                       #{filters => ["", "", "editor", ""]}},
 
                                       {{common, asset, [["js", "hotkeys", "jquery"]]},
-                                       #{filters => ["", "", "admin"]}},
+                                       #{filters => ["", "", "admin", ""]}},
 
                                       {{common, asset, [["js", "bootstrap-wysiwyg"]]},
-                                       #{filters => ["", "", "admin"]}}
+                                       #{filters => ["", "", "admin", ""]}}
                                      ]),
 
                   %CSS
@@ -66,14 +66,15 @@ default_data() -> % {{{2
                                      [
                                       {common, asset, [["css", "jquery-ui"]]},
                                       {common, asset, [["css", "bootstrap"]]},
-                                      {common, asset, [["css", "font-awesome"]]}
+                                      {common, asset, [["css", "font-awesome"]]},
+                                      {common, asset, [["css", "style"]]}
                                      ]),
 
                   % Index page
                   admin:add_to_block({"index", "body"},
                                      [
                                       {{router, common_redirect, [[], "/?page=admin"]},
-                                       #{filters => ["", "", "admin"]}},
+                                       #{filters => ["", "", "admin", ""]}},
                                       {router, common_redirect, [[], "/?page=register"]}
                                      ]),
 
@@ -106,6 +107,35 @@ head(_Page) ->  % {{{2
 title(#cms_page{title=Title}) ->  % {{{2
     Title.
 
+%% Func to Define language for a page in header: check QS and Default db language  {{{1
+language(_Page) ->  % {{{2
+    QLang=wf:qs(lang),
+    Langs=db:get_languages(),
+    LangsList=[Id || #{id := Id} <- Langs, Id/="any"],
+    DefLangs=[Id || #{id := Id, default := D} <- Langs, D==true],
+    DefLang=case DefLangs of
+      [] -> undefined;
+      L -> lists:nth(1,L)
+    end,
+    case QLang of
+      [Elem] -> case lists:member(Elem, LangsList) of 
+                    true ->Elem;
+                    false -> DefLang
+                end;
+      _ -> DefLang
+    end.
+
+%% Make uri with choosen lang
+set_url_with_lang(URI,LangId) -> % {{{2
+  case re:run(URI,"lang=\\w+") of
+    {match,[{_S,_L}]} ->
+        re:replace(URI,"lang=\\w+","lang="++LangId,[{return,list}]);
+    _ -> case re:run(URI, "\\?\\w") of
+            {match,[{_S,_L}]} -> wf:f("~s&lang=~s",[URI, LangId]);
+            nomatch     -> wf:f("~s?lang=~s",[URI, LangId])
+         end
+  end.
+
 body(Page) -> % {{{2
     wf:state(page, Page),
     maybe_add_editor(Page),
@@ -135,7 +165,8 @@ event(display_source_code) -> % {{{2
             })
     end;
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]),
+    "".
 
 %% Block renderers {{{1
 maybe_block(_Page, "", _Classes) -> % {{{2
