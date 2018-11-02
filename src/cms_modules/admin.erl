@@ -144,11 +144,11 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={html5,
                                 link_url,
-                                [ItemLinkBlock, "", [{toggle,"dropdown"}]]}},
+                                [ItemLinkBlock, ""]}},
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={bootstrap,
                                 nav_items,
-                                [SubMenuBlock, ["dropdown-menu"]]}}
+                                [SubMenuBlock, ["nav-second-level", "collapse","dropdown-menu"]]}}
                  ],
     LinkMFAs = [
                 #cms_mfa{
