@@ -375,8 +375,39 @@ update("1.0.4"=VSN) ->
     admin:add_language("en","flag_en.png",false),
     admin:add_language("any","",false),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-% update("1.0.5"=VSN) -> % 
-%     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.5"=VSN) -> % update classes for admin elements
+    mnesia:transaction(
+      fun() -> 
+        % 1) classes: nav-second-level","collapse" ++ "dropdown-menu
+        case mnesia:match_object(#cms_mfa{id={"admin",'_'}, 
+                                  mfa={'_','_',['_',["nav-second-level","collapse"]]},
+                                  _='_'}) of
+            []-> ok;
+            L when is_list(L), length(L) > 1 ->
+                lists:foreach(fun(#cms_mfa{mfa={M,F,[HtmlId,["nav-second-level","collapse"]=Classes]}}=MFA) ->
+                                NewClasses=lists:append(Classes,["dropdown-menu"]),
+                                New_mfa = MFA#cms_mfa{mfa={M, F, [HtmlId,NewClasses]},
+                                                      updated_at=calendar:universal_time()},
+                                mnesia:delete_object(MFA),
+                                mnesia:write(New_mfa)
+                              end, L)
+        end,
+        % 2) "arrow" class -> "arrow-right" 
+        case mnesia:match_object(#cms_mfa{id={"admin",'_'}, 
+                                  mfa={common,icon,['_','_',["arrow"]]},
+                                  _='_'}) of
+            []-> ok;
+            L2 when is_list(L2), length(L2) > 1 ->
+                lists:foreach(fun(#cms_mfa{mfa={M,F,[Cl1,Cl2,["arrow"]]}}=MFA) ->
+                                NewCl3=["arrow-right"],
+                                New_mfa = MFA#cms_mfa{mfa={M, F, [Cl1,Cl2,NewCl3]},
+                                                      updated_at=calendar:universal_time()},
+                                mnesia:delete_object(MFA),
+                                mnesia:write(New_mfa)
+                              end, L2)
+        end
+      end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
