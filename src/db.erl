@@ -405,6 +405,12 @@ update("1.0.5"=VSN) -> % update classes for admin elements
                                 mnesia:delete_object(MFA),
                                 mnesia:write(New_mfa)
                               end, L2)
+        end,
+        case mnesia:match_object(#cms_asset{id=["js","metisMenu"],
+                                  file="css/metisMenu.min.js", _='_'}) of
+              [] -> ok;
+              [I] when length([I]) == 1 ->
+                full_delete(I)
         end
       end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
