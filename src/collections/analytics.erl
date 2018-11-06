@@ -26,7 +26,12 @@ default_data() -> % {{{2
                             file="templates/analytics/ya_analytics.html",
                             bindings=[],
                             description="Yandex Analytics",
-                            name="templates/analytics/ya_analytics.html"}
+                            name="templates/analytics/ya_analytics.html"},
+                  #cms_template{
+                            file="templates/analytics/google_tags.html",
+                            bindings=[],
+                            description="Google tags",
+                            name="templates/analytics/google_tags.html"}
                   ]}.
 
 %% CMS Module interface {{{1
@@ -34,7 +39,8 @@ functions() -> % {{{2
     [
      {metric_ga, "Google"},
      {metric_ya, "Yandex"},
-     {metric_hs, "Hubspot"}
+     {metric_hs, "Hubspot"},
+     {metric_gtags, "Google tags"}
     ].
 
 format_block(F, A) -> % {{{2
@@ -65,5 +71,11 @@ metric_ya(Page, AnalyticsId) -> % {{{2
 metric_ga(Page, AnalyticsId) -> % {{{2
     common:template(Page,
       "templates/analytics/ga_analytics.html",
+      [ {'AnalyticsId', AnalyticsId} ]
+    ).
+
+metric_gtags(Page, AnalyticsId) -> % {{{2
+    common:template(Page,
+      "templates/analytics/google_tags.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).
