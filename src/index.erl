@@ -132,7 +132,11 @@ set_url_with_lang(URI,LangId) -> % {{{2
         re:replace(URI,"lang=\\w+","lang="++LangId,[{return,list}]);
     _ -> case re:run(URI, "\\?\\w") of
             {match,[{_S,_L}]} -> wf:f("~s&lang=~s",[URI, LangId]);
-            nomatch     -> wf:f("~s?lang=~s",[URI, LangId])
+            nomatch  ->
+              if (URI == []) or (URI == "") ->
+                "#";
+              true -> wf:f("~s?lang=~s",[URI, LangId])
+            end
          end
   end.
 

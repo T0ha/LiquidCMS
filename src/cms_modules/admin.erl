@@ -55,7 +55,6 @@ default_data() -> % {{{2
               add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)}),
               add_navbar_button("admin", "sidebar-nav", "languages", {{"fa", "globe", ["fab"]}, "Languages"}, {event, ?POSTBACK({?MODULE, languages, show}, ?MODULE)})
              ]
-
  }.
 
 install() -> % {{{2
@@ -149,12 +148,12 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={bootstrap,
                                 nav_items,
-                                [SubMenuBlock, ["nav-second-level", "collapse"]]}}
+                                [SubMenuBlock, ["nav-second-level", "collapse","dropdown-menu"]]}}
                  ],
     LinkMFAs = [
                 #cms_mfa{
                    id={PID, ItemLinkBlock},
-                   mfa={common, icon, ["fa", "", ["arrow"]]}}
+                   mfa={common, icon, ["fa", "", ["arrow-right"]]}}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
     db:fix_sort(ButtonMFAs ++ LinkMFAs);
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> % {{{2
@@ -291,11 +290,11 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 10},{md, 9},{sm, 9}],
-                                      body=#h1{text=Header}
+                                      cols=[{lg, 10}, {md, 9},{sm, 9}],
+                                      body=#h2{text=Header}
                                      },
                                    #bs_col{
-                                      cols=[{lg, 2},{md, 3},{sm, 3}],
+                                      cols=[{lg, 2}, {md, 3},{sm, 3}],
                                       body=#button{
                                               text=ButtonText,
                                               class=["btn",
@@ -461,6 +460,23 @@ format_block(#cms_mfa{ % {{{2$
                                                text="Are you sure to delete?", 
                                                postback={?MODULE, block, remove_block, B},
                                                delegate=?MODULE}}
+                        }
+                     ]}
+            ]}.
+
+format_subblock(#cms_mfa{ id={PID, Name}}=B) -> % {{{2
+    #sortitem{
+       tag={block, PID, B},
+       % class="well",
+       body=[
+             #span{
+                class="panel-format-btn",
+                body=[
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "arrow-right", []),
+                         % show_if=(Sub /= undefined),
+                         actions=?POSTBACK({?MODULE, page, construct, PID, [Name]}, ?MODULE)
                         }
                      ]}
             ]}.
@@ -905,11 +921,11 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 8},
-                                      body=#h1{text=wf:f("Static Assets: ~s", [Type])}
+                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
+                                      body=#h2{text=wf:f("Static Assets: ~s", [Type])}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
                                               class=["btn",
@@ -919,7 +935,7 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                               actions=?POSTBACK({?MODULE, asset, refresh, Type}, ?MODULE)
                                              }},
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Upload Asset",
                                               class=["btn",
@@ -982,11 +998,11 @@ event({?MODULE, template, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 8},
-                                      body=#h1{text="Templates"}
+                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
+                                      body=#h2{text="Templates"}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
                                               class=["btn",
@@ -996,7 +1012,7 @@ event({?MODULE, template, show}) -> % {{{2
                                               actions=?POSTBACK({?MODULE, template, refresh}, ?MODULE)
                                              }},
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Upload Template",
                                               class=["btn",
@@ -1034,7 +1050,12 @@ event({?MODULE, forms, show}) -> % {{{2
                 delete => fun db:delete/1
                }
              },
-    wf:update(container, [
+    wf:update(container, [#bs_row{
+                            body=#bs_col{
+                                  cols=[{lg, 8},{md, 6}, {sm, 6}],
+                                  body=#h2{text="Forms"}
+                                 }
+                          },
                           #bs_row{
                              body=#bs_col{
                                      cols={lg, 12},
@@ -1071,11 +1092,11 @@ event({?MODULE, languages, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 10},
+                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
                                       body=#h2{text="All languages"}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add language",
                                               class=["btn",
@@ -1118,11 +1139,11 @@ event({?MODULE, page, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="All Pages"}
+                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
+                                      body=#h2{text="All Pages"}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add Page",
                                               class=["btn",
@@ -1184,6 +1205,7 @@ event({?MODULE, page, construct}) -> % {{{2
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
 event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
+    coldstrap:close_modal(),
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
@@ -1506,11 +1528,11 @@ event({?MODULE, user, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="Users"}
+                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
+                                      body=#h2{text="Users"}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create User",
                                               class=["btn",
@@ -1567,11 +1589,11 @@ event({?MODULE, role, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="Roles"}
+                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
+                                      body=#h2{text="Roles"}
                                      },
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create Role",
                                               class=["btn",
@@ -1703,3 +1725,13 @@ update_block_on_page([#cms_mfa{id={_,Block},mfa=MFA,sort=S}]) -> % {{{2
       _ -> 
           wf:wire(#update{target=ChangedBlock, elements=NewText})
     end.
+
+
+admin_logout_button()-> % {{{2
+  #btn{
+        body="<i class='fa fa-sign-out fa-fw'></i>",
+        class=["btn-logout"],
+        title="Logout",
+        postback={auth, logout},
+        delegate=account
+  }.

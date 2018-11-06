@@ -13,7 +13,7 @@
 }
 
 .btn-upload {
-    margin-top: 20px;
+    margin-top: 10px;
 }
 
 .upload-content {
@@ -75,4 +75,36 @@
 .right_manage_panel{
     display: inline-block;
     margin-top:2px;
+}
+
+.panel-format-btn{
+    position: absolute;
+    margin-top: -35px;
+    right: 5px;
+}
+
+.btn-logout {
+    position: absolute;
+    right: 5px;
+    top: 8px;
+}
+ul#sidebar-nav {
+    margin-right: 40px;
+    display: inline-block;
+}
+
+@media (max-width: 940px) and (min-width: 768px){
+    ul#sidebar-nav > li > a {
+        padding: 15px 7px;
+    }
+    ul#sidebar-nav > li > a > i {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 768px){
+    [class^='col-'] { 
+        padding-bottom: 5px;
+    }
+
 }
