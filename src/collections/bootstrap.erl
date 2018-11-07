@@ -79,7 +79,7 @@ form_data(col, A) -> % {{{2
 form_data(panel, A) -> % {{{2
     [_, HeaderBlock, Block,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
     [Classes, Context] = admin:maybe_empty(Classes0, 2),
-    PID = common:q(add_page_select, "index"),
+    PID = common:q(page_select, ""),
     {[
       #panel{
         body=[
