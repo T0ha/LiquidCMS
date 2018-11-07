@@ -414,6 +414,10 @@ update("1.0.5"=VSN) -> % update classes for admin elements
         end
       end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.6"=VSN) -> % added google tags element
+  TemplatePath="templates/analytics/google_tags.html",
+  admin:add_template(TemplatePath, "Google tags", TemplatePath, []),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
