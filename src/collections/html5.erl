@@ -164,7 +164,7 @@ form_data(header, A) -> % {{{2
      [], Block, Classes, DataAttr};
 form_data(article, A) -> % {{{2
     [_, HeaderBlock, Block, FooterBlock, Classes, DataAttr] = admin:maybe_empty(A, 6),
-    PID = common:q(add_page_select, "index"),
+    PID = common:q(page_select, ""),
     {[
       #panel{
         body=[

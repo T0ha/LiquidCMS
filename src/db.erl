@@ -50,6 +50,7 @@ update([]) -> % {{{1
             update(VSN)
     end;
 update("0.1.0"=VSN) -> % {{{1
+    ?CREATE_TABLE(cms_settings, set, []),
     transaction(fun() ->
                         A = mnesia:match_object(#cms_mfa{mfa={index, maybe_redirect_to_login, '_'}, _ = '_'}),
                         B = mnesia:match_object(#cms_mfa{mfa={index, maybe_change_module, '_'}, _ = '_'}),
@@ -66,12 +67,14 @@ update("0.1.0"=VSN) -> % {{{1
                                      end, record_info(fields, cms_user)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("0.1.1"=VSN) -> % {{{1
+    ?CREATE_TABLE(cms_settings, set, []),
     mnesia:backup("mnesia.lcms"),
     mnesia:delete_table(cms_user),
     ?CREATE_TABLE(cms_user, set, []),
     mnesia:restore("mnesia.lcms", []),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("0.1.2"=VSN) -> % {{{1
+    ?CREATE_TABLE(cms_settings, set, []),
     CT = calendar:universal_time(),
     mnesia:transform_table(cms_mfa, fun({cms_mfa, Id,Sort,M,S}) -> 
                                          #cms_mfa{
@@ -558,36 +561,65 @@ get_all_blocks(PID) -> % {{{1
     sets:to_list(sets:from_list(Blocks)).
 get_parent_block(PID, BID, DeleteBlock) -> % {{{1
 %% @doc "Return parent BlockId if it exists; unactive block without parent"
-    transaction(fun() ->
-                        P1=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_']}, active=true, _='_'}),
-                        P2=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_']}, active=true, _='_'}),
-                        P3=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_']}, active=true, _='_'}),
-                        P4=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_']}, active=true, _='_'}),
-                        P5=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_','_']}, active=true, _='_'}),
-                        AB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_',BID,'_','_','_']}, active=true, _='_'}),
-                        AF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_','_',BID,'_','_']}, active=true, _='_'}),
-                        PB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_',BID,'_','_','_','_','_','_','_','_']}, active=true, _='_'}),
-                        PH=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,[BID,'_','_','_','_','_','_','_','_','_']}, active=true, _='_'}),
-                        PA=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_',BID,'_','_','_','_','_','_','_']}, active=true, _='_'}),
-                        PF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_','_',BID,'_','_','_','_','_','_']}, active=true, _='_'}),
-                        P1_5=lists:append([P1,P2,P3,P4,P5]),
-                        Arts=lists:append(AF,AB),
-                        Panels=lists:append([PB,PA,PH,PF]),
-                        P=lists:append([P1_5,Arts,Panels]),
-                        case P of
-                          L when is_list(L), length(L) > 1 ->
-                              length(L);
-                          [I] ->  
-                                  {_, ParentID}=I#cms_mfa.id,
-                                  ParentID;
-                          
-                          _  -> case DeleteBlock of 
-                                  undefined -> undefined;
-                                  _Some -> delete(DeleteBlock)
-                                end
+  transaction(fun() ->
+    P1=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_']}, active=true, _='_'}),
+    P = 
+    case P1 of 
+      [] ->
+        P2=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_']}, active=true, _='_'}),
+        case P2 of 
+          [] -> P3=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_']}, active=true, _='_'}),
+            case P3 of 
+              [] -> P4=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_']}, active=true, _='_'}),
+                case P4 of 
+                  [] -> P5=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_','_','_','_','_']}, active=true, _='_'}),
+                    case P5 of 
+                      [] -> AB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_',BID,'_','_','_']}, active=true, _='_'}),
+                        case AB of 
+                          [] -> AF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_','_',BID,'_','_']}, active=true, _='_'}),
+                            case AF of 
+                              [] -> PB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_',BID,'_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                                  case PB of 
+                                    [] -> PH=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,[BID,'_','_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                                      case PH of 
+                                        [] -> PA=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_',BID,'_','_','_','_','_','_','_']}, active=true, _='_'}),
+                                          case PA of 
+                                            [] -> _PF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_','_',BID,'_','_','_','_','_','_']}, active=true, _='_'});
+                                            _ -> PA
+                                          end;
+                                        _ -> PH
+                                      end;
+                                    _ -> PB
+                                  end;
+                              _ -> AF
+                            end;
+                          _ -> AB
+                        end;
+                      _ -> P5
+                    end;
+                  _ -> P4
+                end;
+              _ -> P3
+            end;
+          _ -> P2
+        end;
+      _ -> P1
+    end,
+      
+    case P of
+      L when is_list(L), length(L) > 1 ->
+          length(L);
+      [I] ->  
+              {_, ParentID}=I#cms_mfa.id,
+              ParentID;
+      
+      _  -> case DeleteBlock of 
+              undefined -> undefined;
+              _Some -> delete(DeleteBlock)
+            end
 
-                        end
-                end).
+    end
+  end).
 
 get_users() -> % {{{1
     transaction(fun() ->
@@ -779,9 +811,9 @@ maybe_update(#cms_mfa{id={PID, Block}, sort=Sort}=B) -> % {{{1
 
 delete(#{}=Map) -> % {{{1
     delete(Map, fun fields/1);
-delete(#cms_page{id=PID}=Record) -> % {{{1
+delete(#cms_page{id=PID}=Record) ->
             transaction(fun() ->
-                        case mnesia:match_object(#cms_mfa{id={PID, '_'}, _='_'}) of
+                        case mnesia:match_object(#cms_mfa{id={PID, _Block='_'}, _='_'}) of
                             [] ->
                                 ok;
                             L when is_list(L) -> 
@@ -1075,7 +1107,7 @@ remove_blocks_without_parent() -> % {{{1
 %% @doc "Unactive all blocks if its havent parent"
   transaction(
       fun() ->
-        AllBlocks = mnesia:match_object(#cms_mfa{_ = '_'}),
+        AllBlocks = mnesia:match_object(#cms_mfa{_ = '_', active=true}),
         Exclude_blocks = [css,body,page,router,script],
         Exclude_pages = [admin,login,restore,register],
         lists:foreach(fun(#cms_mfa{id={PID,BID}}=Block) ->
