@@ -317,7 +317,7 @@ update("1.0.2"=VSN) -> % {{{1 : add sitemap column for cms_page table
                                            }
                                     end, record_info(fields, cms_page)),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("1.0.3"=VSN) -> % update submit button
+update("1.0.3"=VSN) -> % {{{1 update submit button
     transaction(
       fun() -> 
         ReplElements = mnesia:match_object(#cms_mfa{mfa={emailform,submit, ['_','_','_']}, _='_'}),
@@ -330,7 +330,7 @@ update("1.0.3"=VSN) -> % update submit button
                       ReplElements)
       end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("1.0.4"=VSN) -> 
+update("1.0.4"=VSN) ->  % {{{1
 %% update filter for Translation; create language table and fill it
     transaction(
       fun() -> 
@@ -375,7 +375,7 @@ update("1.0.4"=VSN) ->
     admin:add_language("en","flag_en.png",false),
     admin:add_language("any","",false),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("1.0.5"=VSN) -> % update classes for admin elements
+update("1.0.5"=VSN) -> % update classes for admin elements % {{{1
     mnesia:transaction(
       fun() -> 
         % 1) classes: nav-second-level","collapse" ++ "dropdown-menu
@@ -414,7 +414,7 @@ update("1.0.5"=VSN) -> % update classes for admin elements
         end
       end),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("1.0.6"=VSN) -> % added google tags element
+update("1.0.6"=VSN) -> % added google tags element % {{{1
   TemplatePath="templates/analytics/google_tags.html",
   admin:add_template(TemplatePath, "Google tags", TemplatePath, []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
