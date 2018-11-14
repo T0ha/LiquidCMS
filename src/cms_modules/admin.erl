@@ -290,10 +290,6 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 10}, {md, 9},{sm, 9}],
-                                      body=#h2{text=Header}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2}, {md, 3},{sm, 3}],
                                       body=#button{
                                               text=ButtonText,
@@ -309,7 +305,8 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      cols={lg, 12},
                                      body=Body
                                     }
-                            }]).
+                            }]),
+    wf:update(title, #panel{text=Header}).
 
 render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
                                                   is_atom(Delegate) ->
@@ -921,10 +918,6 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                      body=#h2{text=wf:f("Static Assets: ~s", [Type])}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
@@ -950,7 +943,8 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Static Assets"});
 event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
               {?MODULE, template, save},
@@ -998,10 +992,6 @@ event({?MODULE, template, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                      body=#h2{text="Templates"}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
@@ -1027,7 +1017,8 @@ event({?MODULE, template, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Templates"});
 event({?MODULE, forms, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1051,17 +1042,12 @@ event({?MODULE, forms, show}) -> % {{{2
                }
              },
     wf:update(container, [#bs_row{
-                            body=#bs_col{
-                                  cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                  body=#h2{text="Forms"}
-                                 }
-                          },
-                          #bs_row{
                              body=#bs_col{
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Forms"});
 event({?MODULE, languages, show}) -> % {{{2
     AssetsDup = db:get_assets(image),
     GetName = fun(Id)->
@@ -1090,12 +1076,7 @@ event({?MODULE, languages, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="All languages"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add language",
@@ -1111,7 +1092,8 @@ event({?MODULE, languages, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All languages"});
 event({?MODULE, page, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1137,12 +1119,7 @@ event({?MODULE, page, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="All Pages"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add Page",
@@ -1158,7 +1135,8 @@ event({?MODULE, page, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All Pages"});
 event({?MODULE, page, new}) -> % {{{2
     new_modal("Create Page", 
               {?MODULE, page, save},
@@ -1525,12 +1503,7 @@ event({?MODULE, user, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="Users"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create User",
@@ -1546,7 +1519,8 @@ event({?MODULE, user, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Users"});
 event({?MODULE, user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
@@ -1586,12 +1560,7 @@ event({?MODULE, role, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="Roles"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create Role",
@@ -1607,7 +1576,8 @@ event({?MODULE, role, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Roles"});
 event({?MODULE, role, new}) -> % {{{2
     new_modal("Create Role", 
               {?MODULE, role, save},
