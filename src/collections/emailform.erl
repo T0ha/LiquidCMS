@@ -133,32 +133,26 @@ email_field(Page, Block, Required, Classes) -> % {{{2
 
         _ -> ok
     end,
-    #panel{
-        class="form-group",
-        body=#txtbx{
-                id=email,
-                html_id=common:block_to_html_id(Block),
-                class=Classes,
-                placeholder=common:parallel_block(Page, Block)}
+    #txtbx{
+       id=email,
+       html_id=common:block_to_html_id(Block),
+       class=Classes,
+       placeholder=common:parallel_block(Page, Block)
     }.
 
 phone_field(Page, Block, Classes) -> % {{{2
-     #panel{
-        class="form-group",
-        body=#txtbx{
-                id=phone,
-                html_id=common:block_to_html_id(Block),
-                class=Classes,
-                placeholder=common:parallel_block(Page, Block)}}.
+    #txtbx{
+       id=phone,
+       html_id=common:block_to_html_id(Block),
+       class=Classes,
+       placeholder=common:parallel_block(Page, Block)}.
 
 body_field(Page, Block, Classes) -> % {{{2
-     #panel{
-        class="form-group",
-        body=#txtarea{
-                id=text,
-                html_id=common:block_to_html_id(Block),
-                class=Classes,
-                placeholder=common:parallel_block(Page, Block)}}.
+    #txtarea{
+       id=text,
+       html_id=common:block_to_html_id(Block),
+       class=Classes,
+       placeholder=common:parallel_block(Page, Block)}.
 
 rating(_Page, Block, Min, Max, Step, Size, ShowCaption, ShowClear, _Classes) -> % {{{2
     #textbox{id=common:block_to_html_id(Block),
