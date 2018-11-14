@@ -1205,7 +1205,6 @@ event({?MODULE, page, construct}) -> % {{{2
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
 event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
-    coldstrap:close_modal(),
     Pages = get_pages(),
     Blocks = [format_block(B#cms_mfa{id={PID, BID}})
               || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
