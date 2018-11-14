@@ -1222,7 +1222,8 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                       #span{text=" / "},
                       #dropdown{
                          id=block_select,
-                         options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
+                         options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, 
+                          not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
                          value=Block,
                          delegate=?MODULE,
                          postback={?MODULE, page, construct}
@@ -1239,53 +1240,8 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                        text=" Parent: "
                       },
                       ParentBody]
-                },
-                #panel{
-                class="right_manage_panel pull-right",
-                body=[
-                  #btn{
-                     body="<i class='fa fa-trash'></i>",
-                     title="Clear trash",
-                     % text="",
-                     class=["pull-right "],
-                     style="margin-left: 5px;",
-                     % type=warning,
-                     actions=?POSTBACK({?MODULE, db, clean}, ?MODULE)
-                    },
-                  #btn{
-                     body="<i class='fa fa-puzzle-piece'></i>",
-                     class=["pull-right"],
-                     title="Defragmentation db",
-                     style="margin-left: 5px;",
-                     % type=warning,
-                     actions=?POSTBACK({?MODULE, db, defragment}, ?MODULE)
-                    },
-                  #btn{
-                     text=" Export Pages",
-                     class=["pull-right"],
-                     body="<i class='fa fa-download'></i>",
-                     style="margin-left: 5px;",
-                     type=success,
-                     actions=?POSTBACK({?MODULE, pages, export}, ?MODULE)
-                    },
-                  #btn{
-                   body="<i class='fa fa-code-fork'></i>",
-                   text=" Merge Pages",
-                   class=["pull-right"],
-                   style="margin-left: 5px;",
-                   type=info,
-                   actions=?POSTBACK({?MODULE, pages, merge}, ?MODULE)
-                  },
-                  #btn{
-                     text=" Import Pages",
-                     class=["pull-right"],
-                     body="<i class='fa fa-upload'></i>",
-                     type=warning,
-                     actions=?POSTBACK({?MODULE, pages, import}, ?MODULE)
-                    }
-                  ]
-                  }
-                 ],
+                }
+    ],
     Sort = #sortblock{
               tag={PID, Block},
               class="panel-body", %"page-block-sort",

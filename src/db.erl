@@ -421,6 +421,38 @@ update("1.0.6"=VSN) -> % added google tags element % {{{1
   TemplatePath="templates/analytics/google_tags.html",
   admin:add_template(TemplatePath, "Google tags", TemplatePath, []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.7"=VSN) -> % buttons managing db to Pages menu % {{{1
+  ManageDbBtns = #{
+    cms_mfa => [
+      admin:add_navbar_button("admin", "pages-menu", "pages-import",
+        {{"fa", "upload", []}, "Import Pages"}, {event, ?POSTBACK({admin, pages, import}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "pages-export",
+        {{"fa", "download", []}, "Export Pages"}, {event, ?POSTBACK({admin, pages, export}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "pages-merge",
+        {{"fa", "code-fork", []}, "Merge Pages"}, {event, ?POSTBACK({admin, pages, merge}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "db-defragment",
+        {{"fa", "th-large", []}, "Defragment db"}, {event, ?POSTBACK({admin, db, defragment}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "db-clean",
+        {{"fa", "trash", []}, "Clear db trash"}, {event, ?POSTBACK({admin, db, clean}, admin)})
+    ]},
+    mnesia:transaction(
+      fun() ->
+        [maps:map(
+           fun(_K, V) ->
+                   lists:foreach(
+                     fun(#cms_mfa{}=R) ->
+                             mnesia:write(
+                               fix_sort(
+                                 update_timestamps(R)));
+                        (R) ->
+                             mnesia:write(
+                                 update_timestamps(R))
+                     end,
+                     lists:flatten(V))
+           end,
+          ManageDbBtns )]
+      end),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
