@@ -1336,17 +1336,17 @@ event({?MODULE, block, add}) -> % {{{2
     Block = common:q(block_select, "body"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
-event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
+event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role, Tr] = get_filters(B),
@@ -1391,10 +1391,13 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {
                   delegate=?MODULE,
                   options=(M):functions()
                  },
+
                #panel{
                   id=block_data,
                   body=form_elements(M, F, [PID | A])
                  },
+               #span{text="Sort"},
+               #txtbx{id=sort, text=S},
                #panel{
                   body=render_fields([{"Filters", 
                                        [
@@ -1445,19 +1448,34 @@ event({?MODULE, block, move, Old}) -> % {{{2
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
+    NewSort=
+      try
+          list_to_integer(wf:q(sort))
+      catch error:badarg ->
+          S
+      end,
     mnesia:transaction( %% remove dublicating sort
         fun() ->
-          case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=S, _='_'}) of
+          case mnesia:select(cms_mfa, 
+                                  [{#cms_mfa{id={PID, Block}, active=true, sort=$1, _='_'},
+                                    [
+                                      {'or', {'==', '$1', S}, {'==', '$1', NewSort}}
+                                    ],
+                                    []}
+                                  ]
+                                ) of
             L when is_list(L), length(L) > 0 ->
                 [ mnesia:delete_object(Mfa) || Mfa<-L];
             _ -> undefined
           end
         end),
+    
+    MFA=OldMFA#cms_mfa{sort=NewSort},
     Saved= common:maybe_list(db:save(
                               maybe_fix_sort(
                                 apply_element_transform(
-                                  rec_from_qs(OldMFA)),
-                                OldMFA))),
+                                  rec_from_qs(MFA)),
+                                MFA))),
 
     % [#cms_mfa{id={PID, Block}}]=Saved,
     case PID of
