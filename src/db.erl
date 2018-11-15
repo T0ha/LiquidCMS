@@ -457,20 +457,18 @@ update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
           fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
-                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
-                      [] ->
-                          ok;
+                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, active=true, _='_'}) of
                       L when is_list(L), length(L) > 1 ->
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
-                            New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            New_mfa = update_record_field(Cur_mfa, sort, New_sort),
+                            Max_sort=find_max_sort(ID),
+                            New_mfa = update_record_field(Cur_mfa, sort, Max_sort+1),
                             mnesia:delete_object(Cur_mfa),
                             mnesia:write(New_mfa);
                           true -> ok
-                          end                          
-                          || Cur_mfa <- L, Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID];
-                      _Else -> ok
+                          end                  
+                          || Cur_mfa <- L]; % , Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID
+                      _ -> ok
                   end,
               ok
           end,
@@ -564,7 +562,6 @@ get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1 
     Funs = transaction(fun() ->
-                        % ?LOG("read:~p", [mnesia:match_object(#cms_mfa{id={"*", "body"},_='_'})]),
                         G = mnesia:read(cms_mfa, {"*", Block}),
                         T = mnesia:read(cms_mfa, {Page, Block}),
                         lists:filter(fun(#cms_mfa{sort=S, active=A}) -> 
@@ -1160,3 +1157,13 @@ remove_blocks_without_parent() -> % {{{1
       end
   ),
   wf:wire(#alert{ text="Database was defragmented!"}). 
+
+find_max_sort({PID,Block}) -> % {{{1
+%% @doc "return max sort among choosen mfa id"
+  transaction(
+    fun() ->
+      Blocks=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
+      Sorts=[S || #cms_mfa{sort=S} <-Blocks],
+      _Max_sort = lists:max(Sorts)
+    end
+  ).
