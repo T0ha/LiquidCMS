@@ -1167,3 +1167,33 @@ find_max_sort({PID,Block}) -> % {{{1
       _Max_sort = lists:max(Sorts)
     end
   ).
+
+update_children(PID, NewBlockId, OldBlockId) -> % {{{1
+%% @doc "update children of Block by old Block Id"
+  if (NewBlockId/=undefined) and (OldBlockId/=undefined) ->
+    transaction(
+      fun() ->
+        OldChldrenBlocks=mnesia:match_object(#cms_mfa{id={PID,OldBlockId},active=true, _='_'}),
+        lists:foreach(
+          fun(Block) ->
+              NewBlock=Block#cms_mfa{id={PID, NewBlockId},
+                                   updated_at=calendar:universal_time()},
+              full_delete(Block),
+              mnesia:write(NewBlock)
+          end, 
+        OldChldrenBlocks)
+      end
+    );
+  true->ok
+  end.
+
+extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
+%% @doc "extract block name from mfa if possible"
+  Exclude_functions=[text,template],
+  HasBlockName = is_list(Args) and (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
+  case HasBlockName of
+    true  ->
+      [H|_]=Args,
+      H;
+    _ -> undefined
+  end.

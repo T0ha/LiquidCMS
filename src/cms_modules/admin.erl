@@ -1427,13 +1427,13 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
         end),
     
     MFA=OldMFA#cms_mfa{sort=NewSort},
-    Saved= common:maybe_list(db:save(
-                              maybe_fix_sort(
-                                apply_element_transform(
-                                  rec_from_qs(MFA)),
-                                MFA))),
-
-    % [#cms_mfa{id={PID, Block}}]=Saved,
+    Saved=db:save(maybe_fix_sort(
+                    apply_element_transform(
+                      rec_from_qs(MFA)),
+                    MFA)),
+    NewMFABlock = common:q(block, undefined),
+    OldMFABlock = db:extract_mfa_block_name(OldMFA),
+    db:update_children(PID, NewMFABlock, OldMFABlock),
     case PID of
       "*" ->
             Pages=db:get_indexed_pages(),
@@ -1656,7 +1656,7 @@ collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 
-update_block_on_page([#cms_mfa{id={_,Block},mfa=MFA,sort=S}]) -> % {{{2
+update_block_on_page(#cms_mfa{id={_,Block},mfa=MFA,sort=S}) -> % {{{2
     PageQs=wf:qs(page),
     NewText=case MFA of 
       {common, text, Text} -> Text;
