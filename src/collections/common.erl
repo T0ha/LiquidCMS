@@ -307,10 +307,11 @@ module_by_function(FunTuple) -> % {{{2
           F <- M:module_info(exports),
           F == FunTuple].
 
-maybe_render_block(Page, #cms_mfa{settings=#{filters := Filters}}=MFA) -> % {{{2
-    render_block(apply_filters(Filters), Page, MFA);
-maybe_render_block(Page, MFA) -> % {{{2
-    render_block(true, Page, MFA).
+maybe_render_block(Page, #cms_mfa{active=A, settings=#{filters := Filters}}=MFA) -> % {{{2
+    Check=apply_filters(Filters) and A,
+    render_block(Check, Page, MFA);
+maybe_render_block(Page, #cms_mfa{active=A}=MFA) -> % {{{2
+    render_block(A, Page, MFA).
 
 render_block(false, _, _) -> % {{{2
     % ?PRINT("Dont't show"),

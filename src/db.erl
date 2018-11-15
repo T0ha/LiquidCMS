@@ -564,10 +564,11 @@ get_mfa(Page, Block) -> % {{{1
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1 
     Funs = transaction(fun() ->
+                        % ?LOG("read:~p", [mnesia:match_object(#cms_mfa{id={"*", "body"},_='_'})]),
                         G = mnesia:read(cms_mfa, {"*", Block}),
                         T = mnesia:read(cms_mfa, {Page, Block}),
-                        lists:filter(fun(#cms_mfa{sort=S}) -> 
-                                             not lists:keymember(S, #cms_mfa.sort, T)
+                        lists:filter(fun(#cms_mfa{sort=S, active=A}) -> 
+                                             not lists:keymember(S, #cms_mfa.sort, T) and A==true
                                              end, G) ++ 
                         case Replaced of
                             true ->
