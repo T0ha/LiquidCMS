@@ -36,7 +36,7 @@
 
 #wysiwyg_editor {
     padding: 5px;
-    margin: 15px;
+    /*margin: 15px;*/
     border-radius: 5px;
     overflow-y: auto;
     height: 300px;
@@ -89,7 +89,7 @@
     top: 8px;
 }
 ul#sidebar-nav {
-    margin-right: 40px;
+    margin-right: 45px;
     display: inline-block;
 }
 
@@ -97,8 +97,12 @@ ul#sidebar-nav {
     ul#sidebar-nav > li > a {
         padding: 15px 7px;
     }
-    ul#sidebar-nav > li > a > i {
-        display: none;
+    ul#sidebar-nav > li > a > i:last-child  {
+        font-size: 10px;
+        /*display: none;*/
+    }
+    .navbar-header{
+        max-width: 190px;
     }
 }
 

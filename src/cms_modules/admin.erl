@@ -290,10 +290,6 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 10}, {md, 9},{sm, 9}],
-                                      body=#h2{text=Header}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2}, {md, 3},{sm, 3}],
                                       body=#button{
                                               text=ButtonText,
@@ -309,7 +305,8 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                      cols={lg, 12},
                                      body=Body
                                     }
-                            }]).
+                            }]),
+    wf:update(title, #panel{text=Header}).
 
 render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
                                                   is_atom(Delegate) ->
@@ -921,10 +918,6 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                      body=#h2{text=wf:f("Static Assets: ~s", [Type])}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
@@ -950,7 +943,8 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Static Assets"});
 event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
               {?MODULE, template, save},
@@ -998,10 +992,6 @@ event({?MODULE, template, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                      body=#h2{text="Templates"}
-                                     },
-                                   #bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
@@ -1027,7 +1017,8 @@ event({?MODULE, template, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Templates"});
 event({?MODULE, forms, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1051,17 +1042,12 @@ event({?MODULE, forms, show}) -> % {{{2
                }
              },
     wf:update(container, [#bs_row{
-                            body=#bs_col{
-                                  cols=[{lg, 8},{md, 6}, {sm, 6}],
-                                  body=#h2{text="Forms"}
-                                 }
-                          },
-                          #bs_row{
                              body=#bs_col{
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Forms"});
 event({?MODULE, languages, show}) -> % {{{2
     AssetsDup = db:get_assets(image),
     GetName = fun(Id)->
@@ -1090,12 +1076,7 @@ event({?MODULE, languages, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="All languages"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add language",
@@ -1111,7 +1092,8 @@ event({?MODULE, languages, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All languages"});
 event({?MODULE, page, show}) -> % {{{2
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
@@ -1137,12 +1119,7 @@ event({?MODULE, page, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="All Pages"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add Page",
@@ -1158,7 +1135,8 @@ event({?MODULE, page, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All Pages"});
 event({?MODULE, page, new}) -> % {{{2
     new_modal("Create Page", 
               {?MODULE, page, save},
@@ -1244,7 +1222,8 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                       #span{text=" / "},
                       #dropdown{
                          id=block_select,
-                         options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
+                         options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, 
+                          not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
                          value=Block,
                          delegate=?MODULE,
                          postback={?MODULE, page, construct}
@@ -1261,53 +1240,8 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                        text=" Parent: "
                       },
                       ParentBody]
-                },
-                #panel{
-                class="right_manage_panel pull-right",
-                body=[
-                  #btn{
-                     body="<i class='fa fa-trash'></i>",
-                     title="Clear trash",
-                     % text="",
-                     class=["pull-right "],
-                     style="margin-left: 5px;",
-                     % type=warning,
-                     actions=?POSTBACK({?MODULE, db, clean}, ?MODULE)
-                    },
-                  #btn{
-                     body="<i class='fa fa-puzzle-piece'></i>",
-                     class=["pull-right"],
-                     title="Defragmentation db",
-                     style="margin-left: 5px;",
-                     % type=warning,
-                     actions=?POSTBACK({?MODULE, db, defragment}, ?MODULE)
-                    },
-                  #btn{
-                     text=" Export Pages",
-                     class=["pull-right"],
-                     body="<i class='fa fa-download'></i>",
-                     style="margin-left: 5px;",
-                     type=success,
-                     actions=?POSTBACK({?MODULE, pages, export}, ?MODULE)
-                    },
-                  #btn{
-                   body="<i class='fa fa-code-fork'></i>",
-                   text=" Merge Pages",
-                   class=["pull-right"],
-                   style="margin-left: 5px;",
-                   type=info,
-                   actions=?POSTBACK({?MODULE, pages, merge}, ?MODULE)
-                  },
-                  #btn{
-                     text=" Import Pages",
-                     class=["pull-right"],
-                     body="<i class='fa fa-upload'></i>",
-                     type=warning,
-                     actions=?POSTBACK({?MODULE, pages, import}, ?MODULE)
-                    }
-                  ]
-                  }
-                 ],
+                }
+    ],
     Sort = #sortblock{
               tag={PID, Block},
               class="panel-body", %"page-block-sort",
@@ -1358,17 +1292,17 @@ event({?MODULE, block, add}) -> % {{{2
     Block = common:q(block_select, "body"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
-event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
+event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role, Tr] = get_filters(B),
@@ -1413,10 +1347,13 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {
                   delegate=?MODULE,
                   options=(M):functions()
                  },
+
                #panel{
                   id=block_data,
                   body=form_elements(M, F, [PID | A])
                  },
+               #span{text="Sort"},
+               #txtbx{id=sort, text=S},
                #panel{
                   body=render_fields([{"Filters", 
                                        [
@@ -1467,21 +1404,36 @@ event({?MODULE, block, move, Old}) -> % {{{2
 event({?MODULE, block, copy, Old}) -> % {{{2
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
+    NewSort=
+      try
+          list_to_integer(wf:q(sort))
+      catch error:badarg ->
+          S
+      end,
     mnesia:transaction( %% remove dublicating sort
         fun() ->
-          case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=S, _='_'}) of
+          case mnesia:select(cms_mfa, 
+                                  [{#cms_mfa{id={PID, Block}, active=true, sort=$1, _='_'},
+                                    [
+                                      {'or', {'==', '$1', S}, {'==', '$1', NewSort}}
+                                    ],
+                                    []}
+                                  ]
+                                ) of
             L when is_list(L), length(L) > 0 ->
                 [ mnesia:delete_object(Mfa) || Mfa<-L];
             _ -> undefined
           end
         end),
-    Saved= common:maybe_list(db:save(
-                              maybe_fix_sort(
-                                apply_element_transform(
-                                  rec_from_qs(OldMFA)),
-                                OldMFA))),
-
-    % [#cms_mfa{id={PID, Block}}]=Saved,
+    
+    MFA=OldMFA#cms_mfa{sort=NewSort},
+    Saved=db:save(maybe_fix_sort(
+                    apply_element_transform(
+                      rec_from_qs(MFA)),
+                    MFA)),
+    NewMFABlock = common:q(block, undefined),
+    OldMFABlock = db:extract_mfa_block_name(OldMFA),
+    db:update_children(PID, NewMFABlock, OldMFABlock),
     case PID of
       "*" ->
             Pages=db:get_indexed_pages(),
@@ -1525,12 +1477,7 @@ event({?MODULE, user, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="Users"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create User",
@@ -1546,7 +1493,8 @@ event({?MODULE, user, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Users"});
 event({?MODULE, user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
@@ -1586,12 +1534,7 @@ event({?MODULE, role, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols=[{lg, 10},{md, 9}, {sm, 9}],
-                                      body=#h2{text="Roles"}
-                                     },
-                                   #bs_col{
+                             body=[#bs_col{
                                       cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create Role",
@@ -1607,7 +1550,8 @@ event({?MODULE, role, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Roles"});
 event({?MODULE, role, new}) -> % {{{2
     new_modal("Create Role", 
               {?MODULE, role, save},
@@ -1712,7 +1656,7 @@ collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 
-update_block_on_page([#cms_mfa{id={_,Block},mfa=MFA,sort=S}]) -> % {{{2
+update_block_on_page(#cms_mfa{id={_,Block},mfa=MFA,sort=S}) -> % {{{2
     PageQs=wf:qs(page),
     NewText=case MFA of 
       {common, text, Text} -> Text;

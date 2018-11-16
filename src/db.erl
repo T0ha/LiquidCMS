@@ -421,24 +421,54 @@ update("1.0.6"=VSN) -> % added google tags element % {{{1
   TemplatePath="templates/analytics/google_tags.html",
   admin:add_template(TemplatePath, "Google tags", TemplatePath, []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("1.0.7"=VSN) -> % buttons managing db to Pages menu % {{{1
+  ManageDbBtns = #{
+    cms_mfa => [
+      admin:add_navbar_button("admin", "pages-menu", "pages-import",
+        {{"fa", "upload", []}, "Import Pages"}, {event, ?POSTBACK({admin, pages, import}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "pages-export",
+        {{"fa", "download", []}, "Export Pages"}, {event, ?POSTBACK({admin, pages, export}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "pages-merge",
+        {{"fa", "code-fork", []}, "Merge Pages"}, {event, ?POSTBACK({admin, pages, merge}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "db-defragment",
+        {{"fa", "th-large", []}, "Defragment db"}, {event, ?POSTBACK({admin, db, defragment}, admin)}),
+      admin:add_navbar_button("admin", "pages-menu", "db-clean",
+        {{"fa", "trash", []}, "Clear db trash"}, {event, ?POSTBACK({admin, db, clean}, admin)})
+    ]},
+    mnesia:transaction(
+      fun() ->
+        [maps:map(
+           fun(_K, V) ->
+                   lists:foreach(
+                     fun(#cms_mfa{}=R) ->
+                             mnesia:write(
+                               fix_sort(
+                                 update_timestamps(R)));
+                        (R) ->
+                             mnesia:write(
+                                 update_timestamps(R))
+                     end,
+                     lists:flatten(V))
+           end,
+          ManageDbBtns )]
+      end),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
           fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa}, _Acc) ->
-                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
-                      [] ->
-                          ok;
+                  case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, active=true, _='_'}) of
                       L when is_list(L), length(L) > 1 ->
                           [
                           if Cur_mfa#cms_mfa.mfa /= Mfa ->
-                            New_sort = Sort -1 + string:str(L, [Cur_mfa]),
-                            New_mfa = update_record_field(Cur_mfa, sort, New_sort),
+                            Max_sort=find_max_sort(ID),
+                            New_mfa = update_record_field(Cur_mfa, sort, Max_sort+1),
                             mnesia:delete_object(Cur_mfa),
                             mnesia:write(New_mfa);
                           true -> ok
-                          end                          
-                          || Cur_mfa <- L, Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID];
-                      _Else -> ok
+                          end                  
+                          || Cur_mfa <- L]; % , Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID
+                      _ -> ok
                   end,
               ok
           end,
@@ -534,8 +564,8 @@ get_mfa(Page, Block, Replaced) -> % {{{1
     Funs = transaction(fun() ->
                         G = mnesia:read(cms_mfa, {"*", Block}),
                         T = mnesia:read(cms_mfa, {Page, Block}),
-                        lists:filter(fun(#cms_mfa{sort=S}) -> 
-                                             not lists:keymember(S, #cms_mfa.sort, T)
+                        lists:filter(fun(#cms_mfa{sort=S, active=A}) -> 
+                                             not lists:keymember(S, #cms_mfa.sort, T) and A==true
                                              end, G) ++ 
                         case Replaced of
                             true ->
@@ -1127,3 +1157,43 @@ remove_blocks_without_parent() -> % {{{1
       end
   ),
   wf:wire(#alert{ text="Database was defragmented!"}). 
+
+find_max_sort({PID,Block}) -> % {{{1
+%% @doc "return max sort among choosen mfa id"
+  transaction(
+    fun() ->
+      Blocks=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
+      Sorts=[S || #cms_mfa{sort=S} <-Blocks],
+      _Max_sort = lists:max(Sorts)
+    end
+  ).
+
+update_children(PID, NewBlockId, OldBlockId) -> % {{{1
+%% @doc "update children of Block by old Block Id"
+  if (NewBlockId/=undefined) and (OldBlockId/=undefined) ->
+    transaction(
+      fun() ->
+        OldChldrenBlocks=mnesia:match_object(#cms_mfa{id={PID,OldBlockId},active=true, _='_'}),
+        lists:foreach(
+          fun(Block) ->
+              NewBlock=Block#cms_mfa{id={PID, NewBlockId},
+                                   updated_at=calendar:universal_time()},
+              full_delete(Block),
+              mnesia:write(NewBlock)
+          end, 
+        OldChldrenBlocks)
+      end
+    );
+  true->ok
+  end.
+
+extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
+%% @doc "extract block name from mfa if possible"
+  Exclude_functions=[text,template],
+  HasBlockName = is_list(Args) and (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
+  case HasBlockName of
+    true  ->
+      [H|_]=Args,
+      H;
+    _ -> undefined
+  end.
