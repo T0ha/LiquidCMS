@@ -1108,7 +1108,7 @@ remove_old_unused_blocks() -> % {{{1
   transaction(
     fun() ->
         Unactive = mnesia:match_object(#cms_mfa{active=false,  _='_'}),
-        lists:foreach(fun(#cms_mfa{id=Id,mfa={M, F, A}}=MbDelete) ->
+        lists:foreach(fun(#cms_mfa{id=Id,mfa={_M, _F, A}}=MbDelete) ->
           Args = case A of
             [BlockId] -> [BlockId];
             [BlockId, _A2] ->  [BlockId, '_'];
@@ -1122,10 +1122,10 @@ remove_old_unused_blocks() -> % {{{1
             [BlockId, _A2, _A3, _A4, _A5, _A6, _A7, _A8, _A9, _A10] -> [BlockId, '_', '_', '_', '_', '_', '_', '_', '_', '_'];
             _ -> A
           end,
-          case mnesia:match_object(#cms_mfa{id=Id, active=true,mfa={M, F, Args},  _='_'}) of
+          case mnesia:match_object(#cms_mfa{id=Id, active=true,mfa={'_', '_', Args},  _='_'}) of
             [] ->
                 undefined;
-            _L -> 
+            _Item -> 
                 full_delete(MbDelete)
           end
         end, Unactive)
