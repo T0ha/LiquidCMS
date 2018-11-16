@@ -421,7 +421,7 @@ format_block(#cms_mfa{ % {{{2$
                   catch
                       _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
                   end,
-
+    Children=db:get_children(PID,Sub),
     #sortitem{
        tag={block, PID, B},
        class="well",
@@ -440,7 +440,7 @@ format_block(#cms_mfa{ % {{{2$
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "arrow-right", []),
-                         show_if=(Sub /= undefined),
+                         show_if=((Sub /= undefined) and (length(Children)>0)),
                          actions=?POSTBACK({?MODULE, page, construct, PID, [Sub]}, ?MODULE)
                         },
                       #link{

@@ -1159,7 +1159,7 @@ remove_blocks_without_parent() -> % {{{1
   wf:wire(#alert{ text="Database was defragmented!"}). 
 
 find_max_sort({PID,Block}) -> % {{{1
-%% @doc "return max sort among choosen mfa id"
+%% @doc "return max sort among choosen id of cms_mfa"
   transaction(
     fun() ->
       Blocks=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
@@ -1196,4 +1196,14 @@ extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
       [H|_]=Args,
       H;
     _ -> undefined
+  end.
+
+get_children(PID, Block) -> % {{{1
+%% @doc "return children list of Block"
+  case Block of 
+    undefined -> [];
+    _ -> transaction(
+      fun() ->
+        mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'})
+      end)
   end.
