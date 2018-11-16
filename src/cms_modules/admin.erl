@@ -473,7 +473,7 @@ format_subblock(#cms_mfa{ id={PID, Name}}=B) -> % {{{2
                          class="btn btn-link",
                          body=common:icon("fa", "arrow-right", []),
                          % show_if=(Sub /= undefined),
-                         actions=?POSTBACK({?MODULE, page, construct, PID, [Name]}, ?MODULE)
+                         actions=?POSTBACK({?MODULE, page, close_and_construct, PID, [Name]}, ?MODULE)
                         }
                      ]}
             ]}.
@@ -895,6 +895,7 @@ event({?MODULE, asset, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, asset, show, Type}, delegate=?MODULE});
 event({?MODULE, asset, show, Type}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -970,6 +971,7 @@ event({?MODULE, template, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={template, show}});
 event({?MODULE, template, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1020,6 +1022,7 @@ event({?MODULE, template, show}) -> % {{{2
                             }]),
     wf:update(title, #panel{text="Templates"});
 event({?MODULE, forms, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1049,6 +1052,7 @@ event({?MODULE, forms, show}) -> % {{{2
                             }]),
     wf:update(title, #panel{text="Forms"});
 event({?MODULE, languages, show}) -> % {{{2
+    wf:session(history, undefined),
     AssetsDup = db:get_assets(image),
     GetName = fun(Id)->
                 string:join(lists:reverse(Id),".")
@@ -1095,6 +1099,7 @@ event({?MODULE, languages, show}) -> % {{{2
                             }]),
     wf:update(title, #panel{text="All languages"});
 event({?MODULE, page, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1192,7 +1197,7 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
       S when is_list(S) ->
           #button{
                 text=S,
-                class=["btn"],
+                class=["btn btn-link"],
                 actions=?POSTBACK({?MODULE, page, construct, PID, [ParentBlock]}, ?MODULE)
           };
       undefined -> 
@@ -1207,6 +1212,18 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
     end,
     ShowAll = (common:q(show_all, "false") /= "false"),
 
+    Session=case Blocks of
+      [] ->  wf:clear_session(),
+             [];
+      _ ->  
+        update_session_history(Block)
+    end,
+    ViewSession = [
+      #button{
+            text=B,
+            class=["btn btn-link session-btn"],
+            actions=?POSTBACK({?MODULE, page, construct, PID, [B]}, ?MODULE)
+      } || B <- Session],
     PageSelect = [
               #panel{id=left_manage_panel,
                     class="col-md-6",
@@ -1228,7 +1245,7 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                          delegate=?MODULE,
                          postback={?MODULE, page, construct}
                         },
-                      #span{text=" Show All "},
+                      #span{text="Show All ", class="cs-label"},
                       #checkbox{
                          text="",
                          id=show_all,
@@ -1237,9 +1254,19 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                          postback={?MODULE, page, construct}
                         },
                       #span{
-                       text=" Parent: "
+                       text="Parent:", class="cs-label"
                       },
-                      ParentBody]
+                      ParentBody,
+                      case ViewSession of
+                        [] -> [];
+                        _ ->
+                          [#span{
+                           text="History:" ,
+                           class="cs-label"
+                          },
+                          ViewSession]
+                      end
+                      ]
                 }
     ],
     Sort = #sortblock{
@@ -1459,6 +1486,7 @@ event({?MODULE, block, remove_block, B}) -> % {{{2
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
     coldstrap:close_modal();
 event({?MODULE, user, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1516,6 +1544,7 @@ event({?MODULE, user, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, user, show}, delegate=?MODULE});
 event({?MODULE, role, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1595,6 +1624,9 @@ event({?MODULE, db, clean}) -> % {{{2
     db:remove_old_unused_blocks();
 event({?MODULE, auth, call_restore_password}) -> % {{{2
     account:call_restore_password();
+event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
+    coldstrap:close_modal(),
+    event({?MODULE, page, construct, PID, [Block]});
 event(Ev) -> % {{{2
     ?LOG("~p event ~p", [?MODULE, Ev]),
     "".
@@ -1678,3 +1710,18 @@ admin_logout_button()-> % {{{2
         postback={auth, logout},
         delegate=account
   }.
+
+update_session_history(Block) -> % {{{2
+%% @doc "maybe update session history"
+  [LastHistory,Tail]=
+    case wf:session(history) of 
+      undefined -> [[],undefined];
+      BL when length(BL)>7 ->
+        [lists:sublist(BL,2,7), lists:last(BL)];
+      SL -> [SL, lists:last(SL)]
+    end,
+  if Tail/=Block ->
+    wf:session(history, lists:append(LastHistory, [Block]));
+  true -> ok
+  end,
+  LastHistory.

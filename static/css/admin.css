@@ -112,3 +112,16 @@ ul#sidebar-nav {
     }
 
 }
+
+.session-btn {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.session-btn:hover{
+    max-width:unset;
+    display: inline-block;
+}
+.cs-label{
+    margin-left: 5px;
+}
