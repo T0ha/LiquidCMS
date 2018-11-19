@@ -1108,7 +1108,7 @@ remove_old_unused_blocks() -> % {{{1
   transaction(
     fun() ->
         Unactive = mnesia:match_object(#cms_mfa{active=false,  _='_'}),
-        lists:foreach(fun(#cms_mfa{id=Id,mfa={M, F, A}}=MbDelete) ->
+        lists:foreach(fun(#cms_mfa{id=Id,mfa={_M, _F, A}}=MbDelete) ->
           Args = case A of
             [BlockId] -> [BlockId];
             [BlockId, _A2] ->  [BlockId, '_'];
@@ -1122,10 +1122,10 @@ remove_old_unused_blocks() -> % {{{1
             [BlockId, _A2, _A3, _A4, _A5, _A6, _A7, _A8, _A9, _A10] -> [BlockId, '_', '_', '_', '_', '_', '_', '_', '_', '_'];
             _ -> A
           end,
-          case mnesia:match_object(#cms_mfa{id=Id, active=true,mfa={M, F, Args},  _='_'}) of
+          case mnesia:match_object(#cms_mfa{id=Id, active=true,mfa={'_', '_', Args},  _='_'}) of
             [] ->
                 undefined;
-            _L -> 
+            _Item -> 
                 full_delete(MbDelete)
           end
         end, Unactive)
@@ -1159,7 +1159,7 @@ remove_blocks_without_parent() -> % {{{1
   wf:wire(#alert{ text="Database was defragmented!"}). 
 
 find_max_sort({PID,Block}) -> % {{{1
-%% @doc "return max sort among choosen mfa id"
+%% @doc "return max sort among choosen id of cms_mfa"
   transaction(
     fun() ->
       Blocks=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
@@ -1196,4 +1196,14 @@ extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
       [H|_]=Args,
       H;
     _ -> undefined
+  end.
+
+get_children(PID, Block) -> % {{{1
+%% @doc "return children list of Block"
+  case Block of 
+    undefined -> [];
+    _ -> transaction(
+      fun() ->
+        mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'})
+      end)
   end.

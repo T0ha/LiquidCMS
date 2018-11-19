@@ -185,6 +185,7 @@ parallel_block(#cms_page{id = PID} = Page, Block) -> % {{{2
 
 waterfall(#cms_page{id = PID} = Page, Block) -> % {{{2
     Functions = db:get_mfa(PID, Block),
+    wf:session(history, undefined),
     lists:foldl(fun(#cms_mfa{mfa={M, F, Args}}, #cms_page{}=P) ->
                         apply(M, F, [P | Args]);
                    (#cms_mfa{mfa=Fun}, #cms_page{}=P) when is_function(Fun) ->
