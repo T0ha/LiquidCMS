@@ -568,7 +568,7 @@ tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
 languages_menu(Page, Block, ShowText, ShowFlag, Classes, DataAttr) -> % {{{2
     Language = index:language(Page),
     [#cms_language{icon=LanguageIcon}]=db:get_language(Language),
-    AssetId=lists:reverse(string:split(LanguageIcon,".")),
+    AssetId=lists:reverse(string:words(LanguageIcon,".")),
     Current=#span{
       text=case ShowText of 
         on -> Language;
