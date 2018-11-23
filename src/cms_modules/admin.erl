@@ -1276,6 +1276,8 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
               items=Blocks,
               group=blocks},
 
+    Tree=build_html_tree_from_mfa(PID),
+
     Body  = #panel{
                class=["panel", "panel-default"],
                body=[
@@ -1283,9 +1285,11 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                         class=["panel-heading flex-panel"],
                         body=PageSelect
                        },
+                     #panel{body=Tree},
                      Sort
                     ]},
 
+    
     update_container("Construct Page", "Add Block", {?MODULE, block, add}, Body);
 
 event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
@@ -1725,3 +1729,68 @@ update_session_history(Block) -> % {{{2
   true -> ok
   end,
   LastHistory.
+
+
+build_html_tree_from_mfa(PID) -> % {{{2
+%% @doc "Function for building main html list from tree of cms_mfa table and calls function to deep building"
+  BlockWithoutParents=lists:sort(db:get_blocks_without_parent(PID)),
+  MbFilterBlocks=case PID of
+    "*" -> BlockWithoutParents;
+    _ -> lists:delete("router", BlockWithoutParents)
+  end,
+  ?LOG("BlockWithoutParents:~p",[MbFilterBlocks]),
+  lists:map(
+    fun(BlockId) ->
+          #list{body=#listitem{
+                         html_id=common:block_to_html_id(BlockId),
+                         body=[#panel{text=BlockId},
+                                #panel{body=build_list(PID, BlockId)}
+                         ],
+                         class=[]
+                      },
+                class=[]}
+    end, MbFilterBlocks
+  ).
+
+build_list(PID, Block) -> % {{{2
+%% @doc "Recursive function for building html list from tree of cms_mfa table"
+  Exclude_functions=[text,template,asset,img],
+  case db:get_children(PID, Block, global) of 
+    [] -> undefined;
+    L ->
+      SortedList=lists:keysort(#cms_mfa.sort, L),
+      lists:map(
+        fun(#cms_mfa{mfa={M,F,Args},sort=S}=B)->
+          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
+          ChildBlocks=case HasBlockName of
+            true  ->
+              case F of
+                panel ->
+                  [Ph,Pb,Pa,Pf|_]=Args,
+                  [{Ph,B},{Pb,B},{Pa,B},{Pf,B}];
+                article ->
+                  [Ah,Ab,Af|_]=Args,
+                  [{Ah,B},{Ab,B},{Af,B}];
+                _ ->[H|_]=Args,
+                    [{H,B}]
+              end;
+              _ -> [{wf:f("~s-~s-~p",[M,F,S]),B}]
+          end,
+          % ?LOG("ChildBlock ~p",[ChildBlock]),
+          Items=lists:map(
+            fun({ChildBlock,PBlock})->
+              #listitem{
+                     html_id=common:block_to_html_id(ChildBlock),
+                     body=[#link{text=ChildBlock, actions=?POSTBACK({?MODULE, block, edit, PBlock}, ?MODULE)},
+                            #panel{body=build_list(PID, ChildBlock)}
+                     ],
+                     class=[]
+              }
+            end, ChildBlocks
+          ),
+          #list{body=Items,
+                class=[]}
+        end, SortedList
+      )
+  end.
+
