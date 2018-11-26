@@ -1194,48 +1194,31 @@ event({?MODULE, page, construct}) -> % {{{2
     Block = common:q(selected_block_val, "body"), %common:q(block_select, "page"),
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
 
-event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
+event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
     Pages = get_pages(),
-    Blocks = [format_block(B#cms_mfa{id={PID, BID}})
-              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
-    _AllBlocks = db:get_all_blocks(PID),
-    ParentBlock=db:get_parent_block(PID,Block,undefined),
-    ParentBody=case ParentBlock of
-      S when is_list(S) ->
-          #button{
-                text=S,
-                class=["btn btn-link"],
-                actions=?POSTBACK({?MODULE, page, construct, PID, [ParentBlock]}, ?MODULE)
-          };
-      undefined -> 
-          #span{
-               id=parent_block,
-               text="none"
-          };
-      _ -> #span{
-                 id=parent_block,
-                 text=ParentBlock
-           }
-    end,
-    ShowAll = (common:q(show_all, "false") /= "false"),
+    % Blocks = [format_block(B#cms_mfa{id={PID, BID}})
+    %           || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
+    % _AllBlocks = db:get_all_blocks(PID),
+    % ShowAll = (common:q(show_all, "false") /= "false"),
 
-    Session=case Blocks of
-      [] ->  wf:clear_session(),
-             [];
-      _ ->  
-        update_session_history(Block)
-    end,
-    ViewSession = [
-      #button{
-            text=B,
-            class=["btn btn-link session-btn"],
-            actions=?POSTBACK({?MODULE, page, construct, PID, [B]}, ?MODULE)
-      } || B <- Session],
+    % Session=case Blocks of
+    %   [] ->  wf:clear_session(),
+    %          [];
+    %   _ ->  
+    %     update_session_history(Block)
+    % end,
+    % _ViewSession = [
+    %   #button{
+    %         text=B,
+    %         class=["btn btn-link session-btn"],
+    %         actions=?POSTBACK({?MODULE, page, construct, PID, [B]}, ?MODULE)
+    %   } || B <- Session],
     PageSelect = [
               #panel{id=left_manage_panel,
                     class="col-md-6",
                     style="width:auto;",
                     body=[
+                      #span{text="Page: "},
                       #dropdown{
                          id=page_select,
                          options=lists:keysort(1,  [{N, N} || #{id := N} <- Pages]),
@@ -1255,28 +1238,24 @@ event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
                       #span{
                         id=selected_block,
                         body=#dropdown{id=selected_block_val, class="collapse"}
-                      },
-                      #span{text="Show All ", class="cs-label"},
-                      #checkbox{
-                         text="",
-                         id=show_all,
-                         checked=ShowAll,
-                         delegate=?MODULE,
-                         postback={?MODULE, page, construct}
-                        },
-                      #span{
-                       text="Parent:", class="cs-label"
-                      },
-                      ParentBody,
-                      case ViewSession of
-                        [] -> [];
-                        _ ->
-                          [#span{
-                           text="History:" ,
-                           class="cs-label"
-                          },
-                          ViewSession]
-                      end
+                      }
+                      % ,#span{text="Show All ", class="cs-label"},
+                      % #checkbox{
+                      %    text="",
+                      %    id=show_all,
+                      %    checked=ShowAll,
+                      %    delegate=?MODULE,
+                      %    postback={?MODULE, page, construct}
+                      %   }
+                      % ,case ViewSession of
+                      %   [] -> [];
+                      %   _ ->
+                      %     [#span{
+                      %      text="History:" ,
+                      %      class="cs-label"
+                      %     },
+                      %     ViewSession]
+                      % end
                       ]
                 }
     ],
@@ -1345,7 +1324,7 @@ event({?MODULE, block, add}) -> % {{{2
     case check_if_block_can_has_subblocks(Block) of
       true->
         event({?MODULE, block, edit, B});
-      false -> wf:update(edited_block, #panel{})
+      false -> wf:update(edited_block, #panel{class="collapse"})
     end;
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
@@ -1365,7 +1344,7 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}
     end,
     LanguageOptions = [ {I, I} || #{id := I} <- db:get_languages()],
     Header = [
-              #panel{text="Add block to page: "},
+              #span{text="Add block to page: "},
               #dropdown{
                  id=add_page_select,
                  options=[{N, N} || #{id := N} <- Pages],
@@ -1376,7 +1355,8 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}
               " to block: ",
               #textbox{
                  id=add_block,
-                 text=Block
+                 text=Block,
+                 style="margin-bottom:1px"
                 }
              ],
     % new_modal(Title, SavePostback, CopyPostback, UploadTag, Form),
@@ -1707,7 +1687,7 @@ event({?MODULE, block, make_active, ChildBlock, PBlock}) -> % {{{2
     case PBlock of
       undefined ->
           wf:update(edited_block,
-            #panel{body=[]}
+            #panel{class="collapse"}
           );
       _Block ->
           event({?MODULE, block, edit, PBlock})
