@@ -552,7 +552,8 @@ render_field({Label, {ID, Text}}, Width) -> % {{{2
              #span{text=Label},
              #txtarea{
                 id=ID,
-                text=Text
+                text=Text,
+                rows=1
                }
             ]};
 render_field({Label, Any}, _Width) when is_list(Any) -> % {{{2
