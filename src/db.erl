@@ -224,7 +224,7 @@ update("0.1.3"=VSN) -> % {{{1
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("0.1.4"=VSN) -> % {{{1
     [AdminPage] = get_page("admin"),
-    db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
+    save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
 
     transaction(fun() ->
                         NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={html5, link_event, '_'}, _='_'}),
@@ -352,7 +352,7 @@ update("1.0.4"=VSN) ->  % {{{1
     Path = "images",
     lists:foreach(fun(Flag_name) ->
                      Asset=admin:file_to_asset(Flag_name, Path),
-                     db:save(Asset)
+                     save(Asset)
                   end,
                   Languages_flags),
     AddLangBtn = #{cms_mfa => [admin:add_navbar_button("admin", "sidebar-nav", "languages",
@@ -452,6 +452,34 @@ update("1.0.7"=VSN) -> % buttons managing db to Pages menu % {{{1
            end,
           ManageDbBtns )]
       end),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
+  TreeAssets=[
+    #cms_asset{
+              id=["js","bootstrap-treeview"],
+              name="bootstrap-treeview",
+              description="treeview",
+              file="js/bootstrap-treeview.min.js",
+              minified=true,
+              type=script,
+              active=true
+             },
+    #cms_asset{
+              id=["css","bootstrap-treeview"],
+              name="bootstrap-treeview",
+              description="treeview",
+              file="css/bootstrap-treeview.min.css",
+              minified=true,
+              type=css,
+              active=true
+             }
+  ],
+  lists:foreach(
+    fun(Asset)->
+      save(Asset)
+    end, TreeAssets
+  ),
+  ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
@@ -1239,8 +1267,16 @@ extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
   HasBlockName = is_list(Args) and (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
   case HasBlockName of
     true  ->
-      [H|_]=Args,
-      H;
+      case F of
+        panel ->
+          [_Ph,Pb|_]=Args,
+          Pb;
+        article ->
+          [_Ah,Ab|_]=Args,
+          Ab;
+        _ ->[H|_]=Args,
+            H
+      end;
     _ -> undefined
   end.
 
