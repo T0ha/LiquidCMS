@@ -627,7 +627,6 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields(_Any) -> % {{{2
-    % ?LOG("Other fields", []), 
     [].
 
 get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
@@ -737,9 +736,8 @@ fix_list_sort(List) -> % {{{2
 
 rec_from_qs(R) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),
-    F = wf:to_atom(common:q(function, "template")),
+    F = wf:to_atom(common:q(function, "text")),
     Args = admin:get_data(M, F),
-
     PID = common:q(add_page_select, "index"),
     Block = common:q(add_block, "body"),
 
@@ -751,11 +749,16 @@ rec_from_qs(R) -> % {{{2
       [undefined,undefined,undefined,undefined] -> R#cms_mfa.settings;
       _ -> #{filters => Filters}
     end,
-    R#cms_mfa{id={PID, Block}, 
+    case F of 
+      empty -> R#cms_mfa{mfa=undefined};
+      _ ->
+        R#cms_mfa{id={PID, Block}, 
               mfa={M, F, Args ++ [Classes] ++ [DataAttrs]},
-              settings=Settings}.
+              settings=Settings}
+    end.
 
-apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
+apply_element_transform(#cms_mfa{mfa=MFA}=Rec) -> % {{{2
+    {M,_F,_A}=parse_mfa_field(MFA),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
@@ -1335,11 +1338,10 @@ event({?MODULE, block, add, Block}) -> % {{{2
            mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
-event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> % {{{2
-    {M,F,A}=case MFA of
-            {A1,A2,A3} -> {A1,A2,A3};
-            _ -> {common,text,[]}
-          end,
+event({?MODULE, block, edit, #cms_mfa{id={PID_block, Block}, mfa=MFA, sort=S}=B}) -> % {{{2
+    {M,F,A}=parse_mfa_field(MFA), 
+    PID = common:q(page_select, "index"),
+    PagedBlock=B#cms_mfa{id={PID, Block}},
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role, Tr] = get_filters(B),
@@ -1355,15 +1357,17 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> %
                  id=add_page_select,
                  options=[{N, N} || #{id := N} <- Pages],
                  value=PID
-                 % delegate=?MODULE,
-                 % postback={?MODULE, page, construct}
                 },
               " to block: ",
               #textbox{
                  id=add_block,
                  text=Block,
                  style="margin-bottom:1px"
-                }
+                },
+              if (PID /= PID_block) and (PID_block=="*") -> 
+                #span{text=" inherited from * ", style="color: cornflowerblue;"};
+                true -> undefined
+              end
              ],
     % new_modal(Title, SavePostback, CopyPostback, UploadTag, Form),
 
@@ -1410,13 +1414,12 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> %
     Bottom = #panel{
       id=modal_bottom_buttons,
       body=[
-            render_save_button({?MODULE, block, move, B}),
+            render_save_button({?MODULE, block, move, PagedBlock}),
             render_copy_button({?MODULE, block, copy, B}),
             #btn{
                    type=info,
                    size=md,
                    text="Add Subblock",
-                   % show_if=check_if_block_can_has_subblocks(Block),
                    postback={?MODULE, block, add},
                    delegate=?MODULE
                   },
@@ -1429,7 +1432,7 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> %
                               type=click,
                               actions=#confirm{
                                          text="Are you sure to delete?", 
-                                         postback={?MODULE, block, remove_block, B},
+                                         postback={?MODULE, block, remove_block, PagedBlock},
                                          delegate=?MODULE}}
                   }
            ]
@@ -1442,8 +1445,7 @@ event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> %
                        body=Form},
                     Bottom
                    ]}
-    )
-    ;
+    );
 
 event({?MODULE, language, new}) -> % {{{2
     new_modal("Add language", 
@@ -1529,9 +1531,9 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
             [Page]=db:get_page(PID),
             db:save(Page)
     end,
+    PID_move = common:q(add_page_select, "index"),
     % coldstrap:close_modal(),
-    Move_PID = common:q(add_page_select, PID),
-    wf:wire(#event{postback={?MODULE, page, construct, Move_PID, [Block]}, delegate=?MODULE}),
+    wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}),
     update_block_on_page(Saved);
 event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
@@ -1833,10 +1835,7 @@ build_list(PID, Block, Lvl) -> % {{{2
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
         fun(#cms_mfa{mfa=MFA,sort=S}=B)->
-          {M,F,Args}=case MFA of
-            {A1,A2,A3} -> {A1,A2,A3};
-            _ -> {undefined,"",[]}
-          end,
+          {M,F,Args}=parse_mfa_field(MFA),
           HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
           ChildBlocks=case HasBlockName of
             true  ->
@@ -1873,9 +1872,14 @@ build_list(PID, Block, Lvl) -> % {{{2
 
 
 check_if_block_can_has_subblocks(Block) -> % {{{2
-  Exclude_re="^common-text|common-template|common-asset|common-img|router-|undefined",
+  Exclude_re="^common-text|common-template|common-asset|common-img|common-empty|router-",
   case re:run(Block, Exclude_re,[global]) of
     nomatch -> true;
     _ -> false
   end.
     
+parse_mfa_field(MFA) -> % {{{2
+  case MFA of
+    {A1,A2,A3} -> {A1,A2,A3};
+    _ -> {common,empty,[]}
+  end.
