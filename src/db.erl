@@ -224,7 +224,7 @@ update("0.1.3"=VSN) -> % {{{1
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("0.1.4"=VSN) -> % {{{1
     [AdminPage] = get_page("admin"),
-    db:save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
+    save(AdminPage#cms_page{module=index, updated_at=calendar:universal_time()}),
 
     transaction(fun() ->
                         NavBarEvents = mnesia:match_object(#cms_mfa{id={"admin", '_'}, mfa={html5, link_event, '_'}, _='_'}),
@@ -352,7 +352,7 @@ update("1.0.4"=VSN) ->  % {{{1
     Path = "images",
     lists:foreach(fun(Flag_name) ->
                      Asset=admin:file_to_asset(Flag_name, Path),
-                     db:save(Asset)
+                     save(Asset)
                   end,
                   Languages_flags),
     AddLangBtn = #{cms_mfa => [admin:add_navbar_button("admin", "sidebar-nav", "languages",
@@ -452,6 +452,34 @@ update("1.0.7"=VSN) -> % buttons managing db to Pages menu % {{{1
            end,
           ManageDbBtns )]
       end),
+  mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
+  TreeAssets=[
+    #cms_asset{
+              id=["js","bootstrap-treeview"],
+              name="bootstrap-treeview",
+              description="treeview",
+              file="js/bootstrap-treeview.min.js",
+              minified=true,
+              type=script,
+              active=true
+             },
+    #cms_asset{
+              id=["css","bootstrap-treeview"],
+              name="bootstrap-treeview",
+              description="treeview",
+              file="css/bootstrap-treeview.min.css",
+              minified=true,
+              type=css,
+              active=true
+             }
+  ],
+  lists:foreach(
+    fun(Asset)->
+      save(Asset)
+    end, TreeAssets
+  ),
+  ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
@@ -589,7 +617,7 @@ get_all_blocks(PID) -> % {{{1
                                 )
                          end),
     sets:to_list(sets:from_list(Blocks)).
-get_parent_block(PID, BID, DeleteBlock) -> % {{{1
+get_parent_block(PID, BID, ActionOrBlock) -> % {{{1
 %% @doc "Return parent BlockId if it exists; unactive block without parent"
   transaction(fun() ->
     P1=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={'_','_',[BID,'_']}, active=true, _='_'}),
@@ -643,9 +671,10 @@ get_parent_block(PID, BID, DeleteBlock) -> % {{{1
               {_, ParentID}=I#cms_mfa.id,
               ParentID;
       
-      _  -> case DeleteBlock of 
+      _  -> case ActionOrBlock of 
               undefined -> undefined;
-              _Some -> delete(DeleteBlock)
+              return_if_none -> {none, BID};
+              _Some -> delete(ActionOrBlock)
             end
 
     end
@@ -1158,6 +1187,51 @@ remove_blocks_without_parent() -> % {{{1
   ),
   wf:wire(#alert{ text="Database was defragmented!"}). 
 
+get_blocks_without_parent(PID) -> % {{{1
+%% @doc "Return list of block names which havent parent"
+  AllBlocks = transaction(
+      fun() ->
+        PageBlocks=mnesia:match_object(
+                #cms_mfa{id={PID,'_'},
+                         active=true,
+                         _='_'}
+        ),
+        case PID of
+            "*" -> PageBlocks;
+            _->
+              GlobalBlocks=mnesia:match_object(
+                #cms_mfa{id={"*",'_'},
+                         active=true,
+                         _='_'}
+              ),
+              
+              FGb=lists:filter(
+                fun(#cms_mfa{id={_,Bid}, sort=S}) -> 
+                  case mnesia:match_object(#cms_mfa{id={PID,Bid},sort=S,active=true,_='_'}) of
+                    [] -> true;
+                    _ -> ?LOG("  Replaced block: {\"*\",~p},sort=~p on Page:~p", [Bid,S,PID]),
+                        false
+                  end
+                end, GlobalBlocks),
+              FGb ++ PageBlocks
+        end
+      end
+  ),
+  ListBlocks=lists:filtermap(
+          fun(#cms_mfa{id={PID2,BID}}) ->
+            case get_parent_block(PID2,BID,return_if_none) of
+              {none, BID} -> {true,BID};
+              _->false
+            end
+          end, AllBlocks),
+  ListWithBody=
+    case lists:member("body",[ListBlocks]) of
+      true -> ListBlocks;
+      false -> lists:append(["body"],ListBlocks)
+    end,
+  Set = sets:from_list(ListWithBody),
+  sets:to_list(Set).
+
 find_max_sort({PID,Block}) -> % {{{1
 %% @doc "return max sort among choosen id of cms_mfa"
   transaction(
@@ -1193,8 +1267,16 @@ extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
   HasBlockName = is_list(Args) and (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
   case HasBlockName of
     true  ->
-      [H|_]=Args,
-      H;
+      case F of
+        panel ->
+          [_Ph,Pb|_]=Args,
+          Pb;
+        article ->
+          [_Ah,Ab|_]=Args,
+          Ab;
+        _ ->[H|_]=Args,
+            H
+      end;
     _ -> undefined
   end.
 
@@ -1205,5 +1287,24 @@ get_children(PID, Block) -> % {{{1
     _ -> transaction(
       fun() ->
         mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'})
+      end)
+  end.
+
+get_children(PID, Block, global) -> % {{{1
+%% @doc "return children list of Block of choosed Page or Global"
+  case Block of 
+    undefined -> [];
+    _ -> transaction(
+      fun() ->
+        PB=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
+        GB=mnesia:match_object(#cms_mfa{id={"*",Block},active=true, _='_'}),
+        FGb=lists:filter(
+          fun(#cms_mfa{id={_,Bid}, sort=S}) -> 
+            case mnesia:match_object(#cms_mfa{id={PID,Bid},sort=S,active=true,_='_'}) of
+              [] -> true;
+              _ -> false
+            end
+          end, GB),
+        FGb ++ PB
       end)
   end.

@@ -164,7 +164,6 @@ form_data(header, A) -> % {{{2
      [], Block, Classes, DataAttr};
 form_data(article, A) -> % {{{2
     [_, HeaderBlock, Block, FooterBlock, Classes, DataAttr] = admin:maybe_empty(A, 6),
-    PID = common:q(page_select, ""),
     {[
       #panel{
         body=[
@@ -173,9 +172,7 @@ form_data(article, A) -> % {{{2
              id=article_header_block,
              text=HeaderBlock,
              placeholder="Block name for article header (leave blank for none)"
-            },
-          [admin:format_subblock(B#cms_mfa{id={PID, BID}})
-              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, HeaderBlock)]
+            }
       ]},
       #panel{
         body=[
@@ -184,9 +181,7 @@ form_data(article, A) -> % {{{2
              id=article_footer_block,
              text=FooterBlock,
              placeholder="Block name for article footer (leave blank for none)"
-            },
-          [admin:format_subblock(B#cms_mfa{id={PID, BID}})
-              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, FooterBlock)]
+            }
       ]}
      ],
      [],
