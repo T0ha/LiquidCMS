@@ -28,12 +28,14 @@ default_data() -> % {{{2
                                               {common, asset, [["css", "font-awesome"]]},
                                               {common, asset, [["css", "metisMenu"]]},
                                               {common, asset, [["css", "sb-admin-2"]]},
-                                              {common, asset, [["css", "admin"]]}
+                                              {common, asset, [["css", "admin"]]},
+                                              {common, asset, [["css", "bootstrap-treeview"]]}
                                              ]),
 
               add_to_block({"admin", "script"}, [
                                                {common, asset, [["js", "metisMenu"]]},
-                                               {common, asset, [["js", "sb-admin-2"]]}
+                                               {common, asset, [["js", "sb-admin-2"]]},
+                                               {common, asset, [["js", "bootstrap-treeview"]]}
                                               ]),
                                                 
               add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
