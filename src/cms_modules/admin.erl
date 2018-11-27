@@ -1335,7 +1335,11 @@ event({?MODULE, block, add, Block}) -> % {{{2
            mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
-event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}, sort=S}=B}) -> % {{{2
+event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa=MFA, sort=S}=B}) -> % {{{2
+    {M,F,A}=case MFA of
+            {A1,A2,A3} -> {A1,A2,A3};
+            _ -> {common,text,[]}
+          end,
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
     [QSKey, QSVal, Role, Tr] = get_filters(B),
@@ -1695,7 +1699,7 @@ event({?MODULE, block, make_active, ChildBlock, PBlock}) -> % {{{2
           event({?MODULE, block, edit, PBlock})
     end;
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]),
+    ?LOG("Unhandled ~p event ~p", [?MODULE, Ev]),
     "".
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
@@ -1828,7 +1832,11 @@ build_list(PID, Block, Lvl) -> % {{{2
     L ->
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
-        fun(#cms_mfa{mfa={M,F,Args},sort=S}=B)->
+        fun(#cms_mfa{mfa=MFA,sort=S}=B)->
+          {M,F,Args}=case MFA of
+            {A1,A2,A3} -> {A1,A2,A3};
+            _ -> {undefined,"",[]}
+          end,
           HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
           ChildBlocks=case HasBlockName of
             true  ->
@@ -1865,7 +1873,7 @@ build_list(PID, Block, Lvl) -> % {{{2
 
 
 check_if_block_can_has_subblocks(Block) -> % {{{2
-  Exclude_re="^common-text|common-template|common-asset|common-img|router-",
+  Exclude_re="^common-text|common-template|common-asset|common-img|router-|undefined",
   case re:run(Block, Exclude_re,[global]) of
     nomatch -> true;
     _ -> false
