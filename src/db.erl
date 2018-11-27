@@ -479,6 +479,11 @@ update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
       save(Asset)
     end, TreeAssets
   ),
+  TreeStaticBlocks=[
+    #cms_mfa{id={"admin", "css"}, mfa={common, asset, [["css", "bootstrap-treeview"]]}},
+    #cms_mfa{id={"admin", "script"}, mfa={common, asset, [["js", "bootstrap-treeview"]]}}
+  ],
+  [ save(fix_sort(update_timestamps(B))) || B <- TreeStaticBlocks],
   ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
