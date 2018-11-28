@@ -655,7 +655,7 @@ prefix_classes(Prefix, Classes) -> % {{{2
 remove_prefix([]) -> % {{{2
     "";
 remove_prefix(Class) -> % {{{2
-    lists:last(string:split(Class, "-")).
+    lists:last(string:tokens(Class, "-")).
 
 maybe_empty([], N) -> % {{{2
     lists:duplicate(N, "");
@@ -1464,7 +1464,7 @@ event({?MODULE, language, new}) -> % {{{2
               ]);
 event({?MODULE, language, save}) -> % {{{2    
     AssetId=wf:q(asset_id),
-    IconName=string:join(lists:reverse(string:split(AssetId,".")),"."),
+    IconName=string:join(lists:reverse(string:tokens(AssetId,".")),"."),
     Default=case wf:q(default_language) of
       "on"->true;
       _->false
@@ -1534,7 +1534,12 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
     PID_move = common:q(add_page_select, "index"),
     % coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}),
-    update_block_on_page(Saved);
+    ?LOG("Saved block:~p",[Saved]),
+    case wf:qs(page) of
+      ["admin"] -> "";
+      _ -> update_block_on_page(Saved)
+    end;
+    
 event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
@@ -1766,18 +1771,12 @@ collections() -> % {{{2
     lists:map(fun(M) -> {M, M:description()} end, Modules).
 
 update_block_on_page(#cms_mfa{id={_,Block},mfa=MFA,sort=S}) -> % {{{2
-    PageQs=wf:qs(page),
     NewText=case MFA of 
       {common, text, Text} -> Text;
       _-> undefined
     end,
     ChangedBlock=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
-    case PageQs of
-      ["admin"] -> "";
-      _ -> 
-          wf:wire(#update{target=ChangedBlock, elements=NewText})
-    end.
-
+    wf:wire(#update{target=ChangedBlock, elements=NewText}).
 
 admin_logout_button()-> % {{{2
   #btn{
@@ -1829,6 +1828,7 @@ build_html_tree_from_mfa(PID) -> % {{{2
 build_list(PID, Block, Lvl) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
   Exclude_functions=[text,template,asset,img],
+  MaxLvl=99,
   case db:get_children(PID, Block, global) of 
     [] -> undefined;
     L ->
@@ -1836,7 +1836,7 @@ build_list(PID, Block, Lvl) -> % {{{2
       lists:map(
         fun(#cms_mfa{mfa=MFA,sort=S}=B)->
           {M,F,Args}=parse_mfa_field(MFA),
-          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
+          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions) and (Lvl<MaxLvl),
           ChildBlocks=case HasBlockName of
             true  ->
               case F of
@@ -1849,7 +1849,7 @@ build_list(PID, Block, Lvl) -> % {{{2
                 _ ->[H|_]=Args,
                     [{H,B}]
               end;
-              _ -> [{wf:f("~s-~s-~p",[M,F,S]),B}]
+            _ -> [{wf:f("~s-~s-~p",[M,F,S]),B}]
           end,
           % ?LOG("ChildBlock ~p",[ChildBlock]),
           Items=lists:map(
