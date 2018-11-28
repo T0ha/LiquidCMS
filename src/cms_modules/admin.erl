@@ -692,7 +692,7 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
                      ],
     NitrogenAssets = [
                       file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
-    db:save(Assets ++ NitrogenAssets),
+    db:maybe_save(Assets ++ NitrogenAssets),
     file:set_cwd(OldCWD);
 
 get_files_from_folder(SubFolder) -> % {{{2
