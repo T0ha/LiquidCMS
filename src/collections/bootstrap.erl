@@ -561,7 +561,7 @@ tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
 languages_menu(Page, Block, ShowText, ShowFlag, Classes, DataAttr) -> % {{{2
     Language = index:language(Page),
     [#cms_language{icon=LanguageIcon}]=db:get_language(Language),
-    AssetId=lists:reverse(string:words(LanguageIcon,".")),
+    AssetId=lists:reverse(string:tokens(LanguageIcon,".")),
     Current=#span{
       text=case ShowText of 
         on -> Language;
@@ -598,7 +598,7 @@ languages_items(Page, ShowText, ShowFlag) -> % {{{2
                     _ -> ""
                   end,
                   body=case ShowFlag of 
-                    on ->[common:img(Page, lists:reverse(string:split(Icon,".")), "flags-icon icon")];
+                    on ->[common:img(Page, lists:reverse(string:tokens(Icon,".")), "flags-icon icon")];
                     _ -> []
                   end
                 }]} || #{id := Id, icon := Icon} <- db:get_languages(), Id/="any"
