@@ -40,7 +40,8 @@ functions() -> % {{{2
      {metric_ga, "Google"},
      {metric_ya, "Yandex"},
      {metric_hs, "Hubspot"},
-     {metric_gtags, "Google tags"}
+     {metric_gtags, "Google tags"},
+     {metric_gtags_noscript, "Google tags (noscript)"}
     ].
 
 format_block(F, A) -> % {{{2
@@ -77,5 +78,10 @@ metric_ga(Page, AnalyticsId) -> % {{{2
 metric_gtags(Page, AnalyticsId) -> % {{{2
     common:template(Page,
       "templates/analytics/google_tags.html",
+      [ {'AnalyticsId', AnalyticsId} ]
+    ).
+metric_gtags_noscript(Page, AnalyticsId) -> % {{{2
+    common:template(Page,
+      "templates/analytics/google_tags_noscript.html",
       [ {'AnalyticsId', AnalyticsId} ]
     ).
