@@ -1196,8 +1196,13 @@ event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P), 
-    Block = common:q(selected_block_val, "body"), %common:q(block_select, "page"),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
+    Block = wf:session(selected_block),
+    BlockId = case Block of
+      undefined -> undefined;
+      B -> {_, BId} = B#cms_mfa.id,
+            BId
+    end,
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [BlockId]}, delegate=?MODULE});
 
 event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
     Pages = get_pages(),
@@ -1230,7 +1235,7 @@ event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
                          value=PID,
                          delegate=?MODULE,
                          postback={?MODULE, page, construct}
-                        },
+                        }
                       % #span{text=" / "},
                       % #dropdown{
                       %    id=block_select,
@@ -1240,10 +1245,6 @@ event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
                       %    delegate=?MODULE,
                       %    postback={?MODULE, page, construct}
                       %   },
-                      #span{
-                        id=selected_block,
-                        body=#dropdown{id=selected_block_val, class="collapse"}
-                      }
                       % ,#span{text="Show All ", class="cs-label"},
                       % #checkbox{
                       %    text="",
@@ -1321,7 +1322,7 @@ event({?MODULE, block, change, function}) -> % {{{2
     wf:update(block_data, admin:form_elements(M, F, []));
 event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
-    Block = common:q(selected_block_val, "body"), % common:q(block_select, "body"),
+    Block = wf:session(selected_block),
     B = #cms_mfa{
            id={PID, Block},
            mfa={common, text, []},
@@ -1534,7 +1535,6 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
     PID_move = common:q(add_page_select, "index"),
     % coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}),
-    ?LOG("Saved block:~p",[Saved]),
     case wf:qs(page) of
       ["admin"] -> "";
       _ -> update_block_on_page(Saved)
@@ -1694,9 +1694,8 @@ event({?MODULE, auth, call_restore_password}) -> % {{{2
 event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
     coldstrap:close_modal(),
     event({?MODULE, page, construct, PID, [Block]});
-event({?MODULE, block, make_active, ChildBlock, PBlock}) -> % {{{2
-    % Exclude_functions=[text,template,asset,img]
-    wf:update(selected_block, #dropdown{id=selected_block_val, value=ChildBlock, options=[ChildBlock]}),
+event({?MODULE, block, make_active, PBlock}) -> % {{{2
+    wf:session(selected_block, PBlock),
     case PBlock of
       undefined ->
           wf:update(edited_block,
@@ -1816,7 +1815,7 @@ build_html_tree_from_mfa(PID) -> % {{{2
             body=#listitem{
                body=[
                       % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
-                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, undefined}, ?MODULE)},
+                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, undefined}, ?MODULE)},
                       build_list(PID, BlockId,2)
                ],
                class=["branch item-1"]
@@ -1827,7 +1826,8 @@ build_html_tree_from_mfa(PID) -> % {{{2
 
 build_list(PID, Block, Lvl) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
-  Exclude_functions=[text,template,asset,img],
+  % Exclude_functions=[text,template,asset,img],
+  Exclude_modules=[analytics,common],
   MaxLvl=99,
   case db:get_children(PID, Block, global) of 
     [] -> undefined;
@@ -1836,7 +1836,7 @@ build_list(PID, Block, Lvl) -> % {{{2
       lists:map(
         fun(#cms_mfa{mfa=MFA,sort=S}=B)->
           {M,F,Args}=parse_mfa_field(MFA),
-          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions) and (Lvl<MaxLvl),
+          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(M), Exclude_modules) and (Lvl<MaxLvl),
           ChildBlocks=case HasBlockName of
             true  ->
               case F of
@@ -1851,14 +1851,13 @@ build_list(PID, Block, Lvl) -> % {{{2
               end;
             _ -> [{wf:f("~s-~s-~p",[M,F,S]),B}]
           end,
-          % ?LOG("ChildBlock ~p",[ChildBlock]),
           Items=lists:map(
             fun({ChildBlock,PBlock})->
               #listitem{
                      % html_id=common:block_to_html_id(ChildBlock),
                      body=[
                      % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
-                           #link{text=ChildBlock, actions=?POSTBACK({?MODULE, block, make_active, ChildBlock, PBlock}, ?MODULE)},
+                           #link{text=ChildBlock, actions=?POSTBACK({?MODULE, block, make_active, PBlock}, ?MODULE)},
                            build_list(PID, ChildBlock, Lvl+1)
                      ],
                      class=["branch item-"++wf:f("~p",[Lvl])]
@@ -1871,12 +1870,10 @@ build_list(PID, Block, Lvl) -> % {{{2
   end.
 
 
-check_if_block_can_has_subblocks(Block) -> % {{{2
-  Exclude_re="^common-text|common-template|common-asset|common-img|common-empty|router-",
-  case re:run(Block, Exclude_re,[global]) of
-    nomatch -> true;
-    _ -> false
-  end.
+check_if_block_can_has_subblocks(#cms_mfa{mfa=MFA}) -> % {{{2
+  {M,_,_}=parse_mfa_field(MFA),
+  Exclude_modules=[analytics,common],
+  not lists:member(wf:to_atom(M), Exclude_modules).
     
 parse_mfa_field(MFA) -> % {{{2
   case MFA of
