@@ -14,7 +14,7 @@ install([])-> % {{{1
     ?CREATE_TABLE(cms_settings, set, []),
     ?CREATE_TABLE(cms_mfa, bag, []),
     ?CREATE_TABLE(cms_template, set, []),
-    ?CREATE_TABLE(cms_asset, bag, [type, name]),
+    ?CREATE_TABLE(cms_asset, bag, [type, name, file]),
     ?CREATE_TABLE(cms_page, set, []),
     ?CREATE_TABLE(cms_user, set, []),
     ?CREATE_TABLE(cms_role, set, []),
@@ -486,6 +486,8 @@ update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
   [ save(fix_sort(update_timestamps(B))) || B <- TreeStaticBlocks],
   ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("2.0.1"=VSN) -> % added index to cms_asset.file
+    mnesia:add_table_index(cms_asset, file);
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -845,6 +847,15 @@ save(Record0) -> % {{{1
                         Record
                 end).
 
+maybe_save(Assets) when is_list(Assets) -> % {{{1
+    lists:foreach(fun(A) -> maybe_save(A) end, Assets);
+maybe_save(#cms_asset{file=Path}=Asset) -> % {{{1
+    transaction(fun() ->
+                        case mnesia:index_read(cms_asset, Path, #cms_asset.file) of
+                            [] -> mnesia:write(Asset);
+                            _ -> ok
+                        end
+                end).
 maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
     transaction(fun() ->
                         case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, active=true, _='_'}) of
