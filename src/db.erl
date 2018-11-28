@@ -1266,9 +1266,10 @@ update_children(PID, NewBlockId, OldBlockId) -> % {{{1
   true->ok
   end.
 
-extract_mfa_block_name(#cms_mfa{mfa={_M,F,Args}}) -> % {{{1
+extract_mfa_block_name(#cms_mfa{mfa=MFA}) -> % {{{1
 %% @doc "extract block name from mfa if possible"
-  Exclude_functions=[text,template],
+  {_M,F,Args}=admin:parse_mfa_field(MFA),
+  Exclude_functions=[text,template,img,asset,undefined],
   HasBlockName = is_list(Args) and (length(Args) > 0) and not lists:member(wf:to_atom(F), Exclude_functions),
   case HasBlockName of
     true  ->

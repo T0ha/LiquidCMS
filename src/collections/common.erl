@@ -15,7 +15,8 @@ functions() -> % {{{2
      {template, "Template"},
      %{icon, "Icon"},
      %{script, "Inline Script"},
-     {text, "Text with HTML"}
+     {text, "Text with HTML"},
+     {empty, "undefined"}
      ].
 
 

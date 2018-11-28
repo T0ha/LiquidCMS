@@ -129,6 +129,8 @@ ul#sidebar-nav {
 
 .wfid_selected_block_val{
     width: 0px;
+    position: fixed;
+    margin-left: -100%;
 }
 
 .wfid_modal_bottom_buttons{
