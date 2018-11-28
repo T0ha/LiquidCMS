@@ -429,7 +429,7 @@ format_block(#cms_mfa{ % {{{2$
                   catch
                       _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
                   end,
-    Children=db:get_children(PID,Sub),
+    Children=db:get_mfa(PID,Sub),
     #sortitem{
        tag={block, PID, B},
        class="well",
@@ -1196,11 +1196,12 @@ event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P), 
-    Block = wf:session(selected_block),
-    BlockId = case Block of
-      undefined -> undefined;
-      B -> {_, BId} = B#cms_mfa.id,
-            BId
+    SelectedBlock = wf:session(selected_block),
+    BlockId=case SelectedBlock of
+      undefined -> "body";
+      {_B, []} -> "body";
+      {_B, MFABlockId} -> MFABlockId
+      % MFA -> db:extract_mfa_block_name(MFA)
     end,
     wf:wire(#event{postback={?MODULE, page, construct, PID, [BlockId]}, delegate=?MODULE});
 
@@ -1236,15 +1237,6 @@ event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
                          delegate=?MODULE,
                          postback={?MODULE, page, construct}
                         }
-                      % #span{text=" / "},
-                      % #dropdown{
-                      %    id=block_select,
-                      %    options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, 
-                      %     not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
-                      %    value=Block,
-                      %    delegate=?MODULE,
-                      %    postback={?MODULE, page, construct}
-                      %   },
                       % ,#span{text="Show All ", class="cs-label"},
                       % #checkbox{
                       %    text="",
@@ -1322,12 +1314,17 @@ event({?MODULE, block, change, function}) -> % {{{2
     wf:update(block_data, admin:form_elements(M, F, []));
 event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
-    Block = wf:session(selected_block),
+    SelectedBlockSess = wf:session(selected_block),
+    {SelectedBlock, BlockId} =case SelectedBlockSess of
+      undefined -> {"body", "body"};
+      {A, []} when is_list(A)-> {A, A};
+      {A1, A2} -> {A1, A2}
+    end,
     B = #cms_mfa{
-           id={PID, Block},
+           id={PID, BlockId},
            mfa={common, text, []},
            sort=new},
-    case check_if_block_can_has_subblocks(Block) of
+    case check_if_block_can_has_subblocks(SelectedBlock) of
       true->
         event({?MODULE, block, edit, B});
       false -> wf:update(edited_block, #panel{class="collapse"})
@@ -1550,6 +1547,7 @@ event({?MODULE, block, remove_block, B}) -> % {{{2
     {PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
     common:script("","$('#tree').save_parent();"),
+    wf:session(selected_block, {Block, Block}),
     wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
     coldstrap:close_modal();
 event({?MODULE, user, show}) -> % {{{2
@@ -1694,15 +1692,15 @@ event({?MODULE, auth, call_restore_password}) -> % {{{2
 event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
     coldstrap:close_modal(),
     event({?MODULE, page, construct, PID, [Block]});
-event({?MODULE, block, make_active, PBlock}) -> % {{{2
-    wf:session(selected_block, PBlock),
-    case PBlock of
-      undefined ->
+event({?MODULE, block, make_active, Block, MFA}) -> % {{{2
+    wf:session(selected_block, {Block, MFA}),
+    case Block of
+      Text when is_list(Text) ->
           wf:update(edited_block,
             #panel{class="collapse"}
           );
       _Block ->
-          event({?MODULE, block, edit, PBlock})
+          event({?MODULE, block, edit, Block})
     end;
 event(Ev) -> % {{{2
     ?LOG("Unhandled ~p event ~p", [?MODULE, Ev]),
@@ -1815,7 +1813,7 @@ build_html_tree_from_mfa(PID) -> % {{{2
             body=#listitem{
                body=[
                       % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
-                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, undefined}, ?MODULE)},
+                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, []}, ?MODULE)},
                       build_list(PID, BlockId,2)
                ],
                class=["branch item-1"]
@@ -1826,38 +1824,57 @@ build_html_tree_from_mfa(PID) -> % {{{2
 
 build_list(PID, Block, Lvl) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
-  % Exclude_functions=[text,template,asset,img],
   Exclude_modules=[analytics,common],
   MaxLvl=99,
-  case db:get_children(PID, Block, global) of 
-    [] -> undefined;
-    L ->
+  case {db:get_mfa(PID, Block, true), (Lvl<MaxLvl)} of 
+    {[], _} -> undefined;
+    {_, false} -> undefined;
+    {L, true} ->
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
         fun(#cms_mfa{mfa=MFA,sort=S}=B)->
           {M,F,Args}=parse_mfa_field(MFA),
-          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(M), Exclude_modules) and (Lvl<MaxLvl),
+          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(M), Exclude_modules),
           ChildBlocks=case HasBlockName of
             true  ->
               case F of
                 panel ->
                   [Ph,Pb,Pa,Pf|_]=Args,
-                  [{Ph,B},{Pb,B},{Pa,B},{Pf,B}];
+                  [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
                 article ->
                   [Ah,Ab,Af|_]=Args,
-                  [{Ah,B},{Ab,B},{Af,B}];
+                  [{I,B} || I <- [Ah,Ab,Af], I /= []];
                 _ ->[H|_]=Args,
                     [{H,B}]
               end;
-            _ -> [{wf:f("~s-~s-~p",[M,F,S]),B}]
+            _ -> case F of 
+                  Asset when (Asset==img) or (Asset==asset) -> 
+                      [{wf:f("~s", [string:join(lists:reverse(lists:nth(1,Args)), ".")]), B}];
+                  template ->
+                      [{wf:f("~s",[Args]),B}];
+                  text ->
+                      [{wf:f("~s-~s-~p",[M,F,S]),B}];
+                  empty ->
+                      [{"empty_mfa",B}];
+                  _ ->
+                      [{wf:f("~s-~p",[F,S]),B}]
+                 end
           end,
+          ViewFunction=#span{text=wf:f(" (~s:~s)",[M,F]),
+                             class="sub-label"},
           Items=lists:map(
             fun({ChildBlock,PBlock})->
               #listitem{
                      % html_id=common:block_to_html_id(ChildBlock),
                      body=[
                      % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
-                           #link{text=ChildBlock, actions=?POSTBACK({?MODULE, block, make_active, PBlock}, ?MODULE)},
+                           #link{text=case ChildBlock of 
+                                        [] -> wf:f("~s",[F]);
+                                        _ -> ChildBlock
+                                      end,
+                                 actions=?POSTBACK({?MODULE, block, make_active, PBlock, ChildBlock}, ?MODULE)
+                           },
+                           ViewFunction,
                            build_list(PID, ChildBlock, Lvl+1)
                      ],
                      class=["branch item-"++wf:f("~p",[Lvl])]
@@ -1872,9 +1889,11 @@ build_list(PID, Block, Lvl) -> % {{{2
 
 check_if_block_can_has_subblocks(#cms_mfa{mfa=MFA}) -> % {{{2
   {M,_,_}=parse_mfa_field(MFA),
-  Exclude_modules=[analytics,common],
-  not lists:member(wf:to_atom(M), Exclude_modules).
-    
+  Exclude_modules=[analytics,common,router],
+  not lists:member(wf:to_atom(M), Exclude_modules);
+check_if_block_can_has_subblocks(_Text)->
+  true.
+
 parse_mfa_field(MFA) -> % {{{2
   case MFA of
     {A1,A2,A3} -> {A1,A2,A3};
