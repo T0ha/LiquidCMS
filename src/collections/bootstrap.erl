@@ -346,7 +346,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
                                mfa={bootstrap, dropdown, [Block]},
                                sort=1}),
             db:maybe_update(#cms_mfa{id={PID, common:sub_block(Block, "link")},
-                               mfa={common, text, [Text ++ "<b class='caret'></b>"]},
+                               mfa={common, text, [Text]},
                                sort=1}),
             [
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes], DataAttr]}}
