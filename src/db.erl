@@ -487,7 +487,8 @@ update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
   ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("2.0.1"=VSN) -> % added index to cms_asset.file
-    mnesia:add_table_index(cms_asset, file);
+    mnesia:add_table_index(cms_asset, file),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
@@ -499,7 +500,7 @@ update("fix_sort") -> % {{{1
                             Max_sort=find_max_sort(ID),
                             New_mfa = update_record_field(Cur_mfa, sort, Max_sort+1),
                             mnesia:delete_object(Cur_mfa),
-                            mnesia:write(New_mfa);
+                            save(New_mfa);
                           true -> ok
                           end                  
                           || Cur_mfa <- L]; % , Cur_mfa#cms_mfa.sort == Sort, Cur_mfa#cms_mfa.id == ID
@@ -594,19 +595,21 @@ read(Table, Id) -> % {{{1
     read(Table, [Id]).
 
 get_mfa(Page, Block) -> % {{{1
+%% @doc "return records list of blocks with id={Page, Block}"
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1 
+%% @doc "return records list of blocks with id={Page, Block} replaced from Page if it has dublicate from {"*", Block} "
     Funs = transaction(fun() ->
-                        G = mnesia:read(cms_mfa, {"*", Block}),
+                        G = mnesia:match_object(#cms_mfa{id={"*", Block}, active=true, _='_'}),
                         T = mnesia:match_object(#cms_mfa{id={Page, Block}, active=true, _='_'}),
-                        lists:filter(fun(#cms_mfa{sort=S, active=A}) -> 
-                                             not lists:keymember(S, #cms_mfa.sort, T) and A==true
+                        lists:filter(fun(#cms_mfa{sort=S}) -> 
+                                             not lists:keymember(S, #cms_mfa.sort, T)
                                              end, G) ++ 
                         case Replaced of
                             true ->
-                                [TE || #cms_mfa{active=Active}=TE <- T, Active == true];
+                                [TE || TE <- T];
                             _ ->
-                                [TE || #cms_mfa{mfa=MFA, active=Active}=TE <- T, MFA /= undefined, Active == true]
+                                [TE || #cms_mfa{mfa=MFA}=TE <- T, MFA /= undefined]
                         end
                             
                 end),
@@ -746,7 +749,7 @@ fix_sort(Recs) when is_list(Recs) -> % {{{1
 fix_sort(#cms_mfa{sort=new}=Rec) -> % {{{1
     fix_sort(Rec#cms_mfa{sort=1});
 fix_sort(#cms_mfa{id={PID, Block}, sort=Sort0}=Rec) -> % {{{1
-    Sort = case get_mfa(PID, Block) of
+    Sort = case get_mfa(PID, Block, true) of
                [] -> 0;
                MFAs ->
                    #cms_mfa{sort=S} = lists:last(
@@ -860,7 +863,10 @@ maybe_delete(#cms_mfa{id={PID, Block}, sort=Sort}) -> % {{{1
     transaction(fun() ->
                         case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, active=true, _='_'}) of
                             [] ->
-                                mnesia:write(empty_mfa(PID, Block, Sort));
+                                case Sort of
+                                  new -> [];
+                                  _ -> mnesia:write(empty_mfa(PID, Block, Sort))
+                                end;
                             L when is_list(L) -> 
                               lists:foreach(fun(DbItem) ->
                                 UR = update_record_field(DbItem, updated_at, calendar:universal_time()),
@@ -1295,33 +1301,4 @@ extract_mfa_block_name(#cms_mfa{mfa=MFA}) -> % {{{1
             H
       end;
     _ -> undefined
-  end.
-
-get_children(PID, Block) -> % {{{1
-%% @doc "return children list of Block"
-  case Block of 
-    undefined -> [];
-    _ -> transaction(
-      fun() ->
-        mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'})
-      end)
-  end.
-
-get_children(PID, Block, global) -> % {{{1
-%% @doc "return children list of Block of choosed Page or Global"
-  case Block of 
-    undefined -> [];
-    _ -> transaction(
-      fun() ->
-        PB=mnesia:match_object(#cms_mfa{id={PID,Block},active=true, _='_'}),
-        GB=mnesia:match_object(#cms_mfa{id={"*",Block},active=true, _='_'}),
-        FGb=lists:filter(
-          fun(#cms_mfa{id={_,Bid}, sort=S}) -> 
-            case mnesia:match_object(#cms_mfa{id={PID,Bid},sort=S,active=true,_='_'}) of
-              [] -> true;
-              _ -> false
-            end
-          end, GB),
-        FGb ++ PB
-      end)
   end.

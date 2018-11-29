@@ -127,12 +127,6 @@ ul#sidebar-nav {
     margin-left: 5px;
 }
 
-.wfid_selected_block_val{
-    width: 0px;
-    position: fixed;
-    margin-left: -100%;
-}
-
 .wfid_modal_bottom_buttons{
     padding-top:10px;
 }
@@ -162,4 +156,8 @@ ul#sidebar-nav {
         max-height: 60vh;
     }
 
+}
+.sub-label {
+    font-size: 75%;
+    color: grey;
 }
