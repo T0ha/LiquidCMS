@@ -1814,19 +1814,19 @@ build_html_tree_from_mfa(PID) -> % {{{2
                body=[
                       % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
                       #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, []}, ?MODULE)},
-                      build_list(PID, BlockId,2)
+                      build_list(PID, BlockId, 2, false)
                ],
-               class=["branch item-1"]
+               class=["branch lvl-1"]
             },
             class=["tree"]}
     end, MbFilterBlocks
   ).
 
-build_list(PID, Block, Lvl) -> % {{{2
+build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
   Exclude_modules=[analytics,common],
   MaxLvl=99,
-  case {db:get_mfa(PID, Block, true), (Lvl<MaxLvl)} of 
+  case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
     {[], _} -> undefined;
     {_, false} -> undefined;
     {L, true} ->
@@ -1865,9 +1865,7 @@ build_list(PID, Block, Lvl) -> % {{{2
           Items=lists:map(
             fun({ChildBlock,PBlock})->
               #listitem{
-                     % html_id=common:block_to_html_id(ChildBlock),
                      body=[
-                     % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
                            #link{text=case ChildBlock of 
                                         [] -> wf:f("~s",[F]);
                                         _ -> ChildBlock
@@ -1875,9 +1873,9 @@ build_list(PID, Block, Lvl) -> % {{{2
                                  actions=?POSTBACK({?MODULE, block, make_active, PBlock, ChildBlock}, ?MODULE)
                            },
                            ViewFunction,
-                           build_list(PID, ChildBlock, Lvl+1)
+                           build_list(PID, ChildBlock, Lvl+1, F==dropdown)
                      ],
-                     class=["branch item-"++wf:f("~p",[Lvl])]
+                     class=["branch lvl-"++wf:f("~p",[Lvl])]
               }
             end, ChildBlocks
           ),

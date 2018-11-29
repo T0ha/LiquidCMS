@@ -598,21 +598,28 @@ get_mfa(Page, Block) -> % {{{1
 %% @doc "return records list of blocks with id={Page, Block}"
     get_mfa(Page, Block, false).
 get_mfa(Page, Block, Replaced) -> % {{{1 
-%% @doc "return records list of blocks with id={Page, Block} replaced from Page if it has dublicate from {"*", Block} "
-    Funs = transaction(fun() ->
-                        G = mnesia:match_object(#cms_mfa{id={"*", Block}, active=true, _='_'}),
-                        T = mnesia:match_object(#cms_mfa{id={Page, Block}, active=true, _='_'}),
-                        lists:filter(fun(#cms_mfa{sort=S}) -> 
-                                             not lists:keymember(S, #cms_mfa.sort, T)
-                                             end, G) ++ 
-                        case Replaced of
-                            true ->
-                                [TE || TE <- T];
-                            _ ->
-                                [TE || #cms_mfa{mfa=MFA}=TE <- T, MFA /= undefined]
-                        end
-                            
-                end),
+%% @doc "-||- maybe replaced from Page if it has dublicate from {"*", Block} "
+    get_mfa(Page, Block, Replaced, false).
+get_mfa(Page, Block, Replaced, WithSubBlocks) -> % {{{1 
+%% @doc "-||- maybe with subblocks"
+    Funs = transaction(
+      fun() ->
+        G = mnesia:match_object(#cms_mfa{id={"*", Block}, active=true, _='_'}),
+        T = mnesia:match_object(#cms_mfa{id={Page, Block}, active=true, _='_'}),
+        Subblocks=case WithSubBlocks of 
+          true -> mnesia:match_object(#cms_mfa{id={Page, Block++"/link"}, active=true, _='_'});
+          false -> []
+        end,
+        lists:filter(fun(#cms_mfa{sort=S}) -> 
+                             not lists:keymember(S, #cms_mfa.sort, T)
+                             end, G) ++ Subblocks ++
+        case Replaced of
+            true ->
+                [TE || TE <- T];
+            _ ->
+                [TE || #cms_mfa{mfa=MFA}=TE <- T, MFA /= undefined]
+        end
+      end),
     lists:keysort(#cms_mfa.sort, Funs).
 get_all_blocks(PID) -> % {{{1
     Blocks = transaction(fun() ->
@@ -652,7 +659,15 @@ get_parent_block(PID, BID, ActionOrBlock) -> % {{{1
                                       case PH of 
                                         [] -> PA=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_',BID,'_','_','_','_','_','_','_']}, active=true, _='_'}),
                                           case PA of 
-                                            [] -> _PF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_','_',BID,'_','_','_','_','_','_']}, active=true, _='_'});
+                                            [] -> PF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_','_',BID,'_','_','_','_','_','_']}, active=true, _='_'}),
+                                            case PF of
+                                              [] -> P_Dp=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,dropdown,[BID]}, active=true, _='_'}),
+                                              case P_Dp of 
+                                                [] -> _P_Li=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,list_item,[BID]}, active=true, _='_'});
+                                                _ -> P_Dp
+                                              end;
+                                              _ -> PF
+                                            end;
                                             _ -> PA
                                           end;
                                         _ -> PH
@@ -1240,17 +1255,22 @@ get_blocks_without_parent(PID) -> % {{{1
       end
   ),
   ListBlocks=lists:filtermap(
-          fun(#cms_mfa{id={PID2,BID}}) ->
-            case get_parent_block(PID2,BID,return_if_none) of
+          fun(#cms_mfa{id={PID0,Bid0}}) ->
+            BID=case re:run(Bid0, "(\\S+)/link") of
+                    {match,[{_,_},{StartPos,Len}]} ->
+                      string:substr(Bid0, StartPos+1, Len);
+                    nomatch -> Bid0
+                  end,
+            case get_parent_block(PID0,BID,return_if_none) of
               {none, BID} -> {true,BID};
-              _->false
+              _-> false
             end
           end, AllBlocks),
-  ListWithBody=
-    case lists:member("body",[ListBlocks]) of
-      true -> ListBlocks;
-      false -> lists:append(["body"],ListBlocks)
-    end,
+  ListWithBody=lists:append(["body"],ListBlocks),
+    % case lists:member("body",[ListBlocks]) of
+    %   true -> ListBlocks;
+    %   false -> 
+    % end,
   Set = sets:from_list(ListWithBody),
   sets:to_list(Set).
 
