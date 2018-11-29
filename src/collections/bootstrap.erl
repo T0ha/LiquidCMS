@@ -336,7 +336,15 @@ save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, languages_menu, [Block, Classe
     ShowFlag = wf:to_atom(common:q(showflag, false)),
     Rec#cms_mfa{mfa={bootstrap, languages_menu, [Block, ShowText, ShowFlag, Classes, DataAttr]}};
 
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [BlockName, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+    BlockCutLi=case re:run(BlockName, "/li$") of
+      nomatch -> BlockName;
+      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+    end,
+    Block=case re:run(BlockCutLi, "^\\+") of
+      nomatch -> BlockCutLi;
+      {match,[{_, _}]} -> string:substr(BlockCutLi, 2)
+    end,
     NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
     case URL of

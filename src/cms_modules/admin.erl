@@ -711,7 +711,7 @@ get_social_files("static/images"=SubFolder) -> % {{{2
     db:save(Assets).
 
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
-  ?LOG("Filters:~p",[Filters]),
+  % ?LOG("Filters:~p",[Filters]),
     Filters;
 get_filters(_) -> % {{{2
     ["", "", "", ""].
@@ -1883,7 +1883,6 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
         end, SortedList
       )
   end.
-
 
 check_if_block_can_has_subblocks(#cms_mfa{mfa=MFA}) -> % {{{2
   {M,_,_}=parse_mfa_field(MFA),
