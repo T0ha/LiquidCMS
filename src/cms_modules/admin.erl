@@ -605,7 +605,12 @@ format_data_attrs(Attrs) -> % {{{2
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
-    Data = wf:mq([block | Fields]),
+    Data = case common:q(copy_block_name, undefined) of 
+      undefined->
+        wf:mq([block | Fields]);
+      _ ->
+        wf:mq([copy_block_name | Fields])
+    end,
     lists:map(fun(none) -> "";
                  (undefined) -> "";
                  ("") -> "";
@@ -1415,6 +1420,13 @@ event({?MODULE, block, edit, #cms_mfa{id={PID_block, Block}, mfa=MFA, sort=S}=B}
             render_save_button({?MODULE, block, move, PagedBlock}),
             render_copy_button({?MODULE, block, copy, B}),
             #btn{
+                   type=warning,
+                   size=md,
+                   text="Copy Structure",
+                   postback={?MODULE, block, maybe_copy_all_structure, B},
+                   delegate=?MODULE
+                  },
+            #btn{
                    type=info,
                    size=md,
                    text="Add Subblock",
@@ -1478,6 +1490,34 @@ event({?MODULE, block, move, Old}) -> % {{{2
 event({?MODULE, block, copy, Old}) -> % {{{2
     common:script("","$('#tree').save_parent();"),
     event({?MODULE, block, save, Old#cms_mfa{sort=new}});
+event({?MODULE, block, maybe_copy_all_structure, B}) -> % {{{2
+  OldBlockName=db:extract_mfa_block_name(B),
+  admin:new_modal(
+        "Please enter the values", 
+        {?MODULE, block, copy_all_structure, B},
+        [#panel{body=[
+              #p{text="Enter a New Block name:"},
+               #txtbx{id=copy_block_name, text=OldBlockName},
+               #p{text="Enter a Postfix for the subelements name:"},
+               #txtbx{id=copy_postfix, text="_copy"}],
+            class="container2"
+          }
+        ]
+    );
+event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBlock}) -> % {{{2
+    OldBlockName=db:extract_mfa_block_name(OldBlock),
+    CopyingBlock=common:q(copy_block_name, undefined),
+    Postfix=wf:q(copy_postfix),
+    case ((CopyingBlock==OldBlockName) or (CopyingBlock==undefined)) and (PID==wf:q(add_page_select)) of
+      true->
+        wf:wire(#alert { text="You need change Block name!" });
+      _ ->
+        common:script("","$('#tree').save_parent();"),
+        {_,F,_}=parse_mfa_field(MFA),
+        copy_subtree(PID, OldBlockName, F==dropdown, CopyingBlock, Postfix),
+        event({?MODULE, block, save, OldBlock#cms_mfa{sort=new}}),
+        coldstrap:close_modal()
+    end;
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
     NewSort=
       case S of
@@ -1702,6 +1742,8 @@ event({?MODULE, block, make_active, Block, MFA}) -> % {{{2
       _Block ->
           event({?MODULE, block, edit, Block})
     end;
+event(close_modal) -> % {{{2
+    coldstrap:close_modal();
 event(Ev) -> % {{{2
     ?LOG("Unhandled ~p event ~p", [?MODULE, Ev]),
     "".
@@ -1824,7 +1866,6 @@ build_html_tree_from_mfa(PID) -> % {{{2
 
 build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
-  Exclude_modules=[analytics,common],
   MaxLvl=99,
   case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
     {[], _} -> undefined;
@@ -1834,8 +1875,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
       lists:map(
         fun(#cms_mfa{mfa=MFA,sort=S}=B)->
           {M,F,Args}=parse_mfa_field(MFA),
-          HasBlockName = (length(Args) > 0) and not lists:member(wf:to_atom(M), Exclude_modules),
-          ChildBlocks=case HasBlockName of
+          ChildBlocks=case check_if_block_can_has_subblocks(B) of
             true  ->
               case F of
                 panel ->
@@ -1884,15 +1924,82 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
       )
   end.
 
+copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
+%% @doc "Recursive function for the coping a block structure"
+  NewPID = common:q(add_page_select, PID),
+  case db:get_mfa(PID, Block, true, SearchSublink) of 
+    [] -> undefined;
+    L  ->
+      SortedList=lists:keysort(#cms_mfa.sort, L),
+      lists:map(
+        fun(#cms_mfa{id={_,BID}}=B)->
+          ChildBlocks=extract_mfa_names(B),
+          
+          lists:map(
+            fun({ChildBlock, #cms_mfa{mfa=MFA}=PBlock})->
+              {M,F,Args}=parse_mfa_field(MFA),
+              NewBID=case NewBlockName of
+                undefined-> BID++Postfix;
+                _ -> NewBlockName
+              end,
+              NewMfa=case check_if_block_can_has_subblocks(PBlock) of
+                true  ->
+                  case F of
+                    panel ->
+                      [A1,A2,A3,A4|A5_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix,A3++Postfix,A4++Postfix], A5_N),
+                      
+                      {M,F,NewAgs};
+                    article ->
+                      [A1,A2|A3_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix],A3_N),
+                      {M,F,NewAgs};
+                    _ ->
+                      [A1|A2_N]=Args,
+                      NewAgs=lists:append([A1++Postfix], A2_N),
+                      {M,F,NewAgs}
+                    end;
+                _ -> 
+                  {M,F,Args}
+              end,
+              UpdMfa=PBlock#cms_mfa{mfa=NewMfa},
+              CopyBlock = db:update_record_field(UpdMfa, id, {NewPID, NewBID}),
+              db:save(CopyBlock),
+              copy_subtree(PID, ChildBlock, F==dropdown, undefined, Postfix)
+            end, ChildBlocks
+          )
+        end, SortedList
+      )
+  end.
+
 check_if_block_can_has_subblocks(#cms_mfa{mfa=MFA}) -> % {{{2
-  {M,_,_}=parse_mfa_field(MFA),
+  {M,_,Args}=parse_mfa_field(MFA),
   Exclude_modules=[analytics,common,router],
-  not lists:member(wf:to_atom(M), Exclude_modules);
-check_if_block_can_has_subblocks(_Text)->
+  (length(Args) > 0) and (not lists:member(wf:to_atom(M), Exclude_modules));
+check_if_block_can_has_subblocks(_Tree_head)->
   true.
 
 parse_mfa_field(MFA) -> % {{{2
   case MFA of
     {A1,A2,A3} -> {A1,A2,A3};
     _ -> {common,empty,[]}
+  end.
+
+extract_mfa_names(#cms_mfa{mfa=MFA}=B) -> % {{{2
+%% @doc "Return list [{mfa_name_in_block, cms_mfa_record}]
+  {_M,F,Args}=parse_mfa_field(MFA),
+  case check_if_block_can_has_subblocks(B) of
+    true  ->
+      case F of
+        panel ->
+          [Ph,Pb,Pa,Pf|_]=Args,
+          [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
+        article ->
+          [Ah,Ab,Af|_]=Args,
+          [{I,B} || I <- [Ah,Ab,Af], I /= []];
+        _ ->[H|_]=Args,
+            [{H,B}]
+      end;
+    _ -> 
+          [{undefined,B}]
   end.

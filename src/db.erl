@@ -1267,10 +1267,6 @@ get_blocks_without_parent(PID) -> % {{{1
             end
           end, AllBlocks),
   ListWithBody=lists:append(["body"],ListBlocks),
-    % case lists:member("body",[ListBlocks]) of
-    %   true -> ListBlocks;
-    %   false -> 
-    % end,
   Set = sets:from_list(ListWithBody),
   sets:to_list(Set).
 
