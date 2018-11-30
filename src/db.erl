@@ -489,6 +489,22 @@ update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
 update("2.0.1"=VSN) -> % added index to cms_asset.file
     mnesia:add_table_index(cms_asset, file),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
+update("2.0.2"=VSN) -> % update old panels
+    mnesia:transaction(
+      fun() -> 
+        case mnesia:match_object(#cms_mfa{ 
+                                  mfa={bootstrap,panel,['_','_','_','_','_']},
+                                  _='_'}) of
+            []-> ok;
+            L ->
+                lists:foreach(fun(#cms_mfa{mfa={M,F,[PH,PB,PA,PF,Classes]}}=MFA) ->
+                                New_mfa = MFA#cms_mfa{mfa={M, F, [PH,PB,PA,PF,"","","","",Classes,[]]}},
+                                mnesia:delete_object(MFA),
+                                save(New_mfa)
+                              end, L)
+        end
+      end),
+    mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
 update("fix_sort") -> % {{{1
     F = fun() ->
       FoldFun = 
