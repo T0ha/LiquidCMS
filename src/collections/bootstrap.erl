@@ -370,7 +370,15 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [BlockName, URL, Text
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes, DataAttr]}}
             ]
     end;
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [BlockName, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
+    BlockCutPostfix=case re:run(BlockName, "/navbar-ul$") of
+      nomatch -> BlockName;
+      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+    end,
+    Block=case re:run(BlockCutPostfix, "^\\+") of
+      nomatch -> BlockCutPostfix;
+      {match,[{_, _}]} -> string:substr(BlockCutPostfix, 2)
+    end,
     NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
@@ -380,6 +388,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
                              sort=1}),
     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}};
+
 save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2
     Fluid = case common:q(fluid, "") of
                 "" -> "container";
