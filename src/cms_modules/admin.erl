@@ -1365,7 +1365,7 @@ event({?MODULE, block, edit, #cms_mfa{id={PID_block, Block}, mfa=MFA, sort=S}=B}
               #textbox{
                  id=add_block,
                  text=Block,
-                 style="margin-bottom:1px"
+                 style="margin-bottom:1px; min-width: 200px;"
                 },
               if (PID /= PID_block) and (PID_block=="*") -> 
                 #span{text=" inherited from * ", style="color: cornflowerblue;"};
@@ -1867,6 +1867,7 @@ build_html_tree_from_mfa(PID) -> % {{{2
 build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
   MaxLvl=99,
+  Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
   case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
     {[], _} -> undefined;
     {_, false} -> undefined;
@@ -1902,6 +1903,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
           end,
           ViewFunction=#span{text=wf:f(" (~s:~s)",[M,F]),
                              class="sub-label"},
+          WithSublink=lists:member(F,Functions_with_sub_blocks),
           Items=lists:map(
             fun({ChildBlock,PBlock})->
               #listitem{
@@ -1913,7 +1915,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
                                  actions=?POSTBACK({?MODULE, block, make_active, PBlock, ChildBlock}, ?MODULE)
                            },
                            ViewFunction,
-                           build_list(PID, ChildBlock, Lvl+1, F==dropdown)
+                           build_list(PID, ChildBlock, Lvl+1, WithSublink)
                      ],
                      class=["branch lvl-"++wf:f("~p",[Lvl])]
               }
@@ -1926,6 +1928,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
 
 copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
 %% @doc "Recursive function for the coping a block structure"
+  Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
   NewPID = common:q(add_page_select, PID),
   case db:get_mfa(PID, Block, true, SearchSublink) of 
     [] -> undefined;
@@ -1962,10 +1965,11 @@ copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
                 _ -> 
                   {M,F,Args}
               end,
+              WithSublink=lists:member(F,Functions_with_sub_blocks),
               UpdMfa=PBlock#cms_mfa{mfa=NewMfa},
               CopyBlock = db:update_record_field(UpdMfa, id, {NewPID, NewBID}),
               db:save(CopyBlock),
-              copy_subtree(PID, ChildBlock, F==dropdown, undefined, Postfix)
+              copy_subtree(PID, ChildBlock, WithSublink, undefined, Postfix)
             end, ChildBlocks
           )
         end, SortedList

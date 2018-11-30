@@ -623,7 +623,8 @@ get_mfa(Page, Block, Replaced, WithSubBlocks) -> % {{{1
         G = mnesia:match_object(#cms_mfa{id={"*", Block}, active=true, _='_'}),
         T = mnesia:match_object(#cms_mfa{id={Page, Block}, active=true, _='_'}),
         Subblocks=case WithSubBlocks of 
-          true -> mnesia:match_object(#cms_mfa{id={Page, Block++"/link"}, active=true, _='_'});
+          true -> mnesia:match_object(#cms_mfa{id={Page, Block++"/link"}, active=true, _='_'})++
+                  mnesia:match_object(#cms_mfa{id={Page, Block++"/validate"}, active=true, _='_'});
           false -> []
         end,
         lists:filter(fun(#cms_mfa{sort=S}) -> 
@@ -1272,8 +1273,8 @@ get_blocks_without_parent(PID) -> % {{{1
   ),
   ListBlocks=lists:filtermap(
           fun(#cms_mfa{id={PID0,Bid0}}) ->
-            BID=case re:run(Bid0, "(\\S+)/link") of
-                    {match,[{_,_},{StartPos,Len}]} ->
+            BID=case re:run(Bid0, "(\\S+)/(link|validate)$") of
+                    {match,[{_,_},{StartPos,Len},{_,_}]} ->
                       string:substr(Bid0, StartPos+1, Len);
                     nomatch -> Bid0
                   end,
