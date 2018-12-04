@@ -486,10 +486,10 @@ update("2.0.0"=VSN) -> % admin: added tree of blocks % {{{1
   [ save(fix_sort(update_timestamps(B))) || B <- TreeStaticBlocks],
   ?LOG("~nUpdated to 2.0.0", []),
   mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("2.0.1"=VSN) -> % added index to cms_asset.file
+update("2.0.1"=VSN) -> % added index to cms_asset.file {{{1
     mnesia:add_table_index(cms_asset, file),
     mnesia:dirty_write(#cms_settings{key=vsn, value=VSN});
-update("2.0.2"=VSN) -> % update old panels
+update("2.0.2"=VSN) -> % update old panels {{{1
     mnesia:transaction(
       fun() -> 
         case mnesia:match_object(#cms_mfa{ 
