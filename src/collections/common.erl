@@ -363,8 +363,8 @@ maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
     %% @doc "Return panel for edit a textblock if user have permission",
-    case string:find(Block, "/validate") of %% dirty hack prevent error
-      nomatch ->
+    case string:str(Block, "/validate") of %% dirty hack prevent error
+      0 ->
         #panel{   
            id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
            body=Text,
