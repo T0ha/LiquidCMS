@@ -1586,13 +1586,15 @@ event({?MODULE, block, remove, B}) -> % {{{2
         []
     );
 event({?MODULE, block, remove_block, B}) -> % {{{2
-    {PID, Block} = B#cms_mfa.id,
+    {_PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
     common:script("","$('#tree').save_parent();"),
     wf:session(selected_block, {Block, Block}),
-    common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
-    coldstrap:close_modal();
+    common:script("","$('#tree').remove_active();"),
+    wf:update(edited_block, #panel{class="collapse"})
+    % wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
+    % coldstrap:close_modal()
+    ;
 event({?MODULE, user, show}) -> % {{{2
     wf:session(history, undefined),
     CRUD = #crud{
@@ -1873,7 +1875,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
   Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
   case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
     {[], _} -> undefined;
-    {_, false} -> undefined;
+    {_, false} -> ?LOG("~nMaxLvl~s", [MaxLvl]), undefined;
     {L, true} ->
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
