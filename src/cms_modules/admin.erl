@@ -1200,14 +1200,8 @@ event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P), 
-    SelectedBlock = wf:session(selected_block),
+    {_, BlockId} = get_selected_block(),
     common:script("","$('#tree').html('<div>&nbsp;loading...</div>'); "),
-    BlockId=case SelectedBlock of
-      undefined -> "body";
-      {_B, []} -> "body";
-      {_B, MFABlockId} -> MFABlockId
-      % MFA -> db:extract_mfa_block_name(MFA)
-    end,
     wf:wire(#event{postback={?MODULE, page, construct, PID, [BlockId]}, delegate=?MODULE});
 
 event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
@@ -1319,12 +1313,7 @@ event({?MODULE, block, change, function}) -> % {{{2
     wf:update(block_data, admin:form_elements(M, F, []));
 event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
-    SelectedBlockSess = wf:session(selected_block),
-    {SelectedBlock, BlockId} =case SelectedBlockSess of
-      undefined -> {"body", "body"};
-      {A, []} when is_list(A)-> {A, A};
-      {A1, A2} -> {A1, A2}
-    end,
+    {SelectedBlock, BlockId} = get_selected_block(),
     B = #cms_mfa{
            id={PID, BlockId},
            mfa={common, text, []},
@@ -1333,7 +1322,9 @@ event({?MODULE, block, add}) -> % {{{2
       true->
         event({?MODULE, block, edit, B});
       false -> wf:update(edited_block, #panel{class="collapse"})
-    end;
+    end,
+    wf:session(selected_block, {BlockId, []})
+    ;
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
@@ -1487,9 +1478,16 @@ event({?MODULE, block, move, Old}) -> % {{{2
     db:full_delete(Old),
     common:script("","$('#tree').save_parent();"),
     event({?MODULE, block, save, Old});
-event({?MODULE, block, copy, Old}) -> % {{{2
-    common:script("","$('#tree').save_parent();"),
-    event({?MODULE, block, save, Old#cms_mfa{sort=new}});
+event({?MODULE, block, copy, #cms_mfa{id={PID, _}}=Old}) -> % {{{2
+    OldBlockName=db:extract_mfa_block_name(Old),
+    NewBlockName=common:q(block, ""),
+    case (OldBlockName /= NewBlockName) or (PID /= wf:q(add_page_select)) of
+      true->
+        common:script("","$('#tree').save_parent();"),
+        event({?MODULE, block, save, Old#cms_mfa{sort=new}});
+      _ ->
+        wf:wire(#alert { text="You need change Block name!" })
+    end;
 event({?MODULE, block, maybe_copy_all_structure, B}) -> % {{{2
   OldBlockName=db:extract_mfa_block_name(B),
   admin:new_modal(
@@ -1519,7 +1517,6 @@ event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBloc
         coldstrap:close_modal()
     end;
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
-    % common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
     NewSort=
       case S of
         new -> new;
@@ -1572,9 +1569,25 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
     end,
     PID_move = common:q(add_page_select, "index"),
     % wf:wire(#event{postback={?MODULE, block, make_active, Saved, PID, MFA, true, 2}, delegate=?MODULE}),
-    common:script("","$('#tree').remove_tree();"),
+
+    {SelectedBlock, _} = get_selected_block(),
+    SelectedBlockName = case SelectedBlock of
+      Text when is_list(Text) ->
+        Text;
+      #cms_mfa{id={_PID, BID}} ->
+          BID
+    end,
+    AddToBlock = common:q(add_block, "body"),
+    % ?LOG("~nSelectedBlockName:~p; AddToBlock:~p",[SelectedBlockName, AddToBlock]),
+    case (SelectedBlockName == AddToBlock) and (PID_move == PID) of
+      false ->
+        common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
+        wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE});
+      true ->
+        common:script("","$('#tree').remove_tree();")
+    end,
     % coldstrap:close_modal(),
-    % wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}), TODO comment while
+    % 
     case wf:qs(page) of
       ["admin"] -> "";
       _ -> update_block_on_page(Saved)
@@ -1740,23 +1753,21 @@ event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
     event({?MODULE, page, construct, PID, [Block]});
 event({?MODULE, block, make_active, Block, PID, MFA, SearchSublink, Lvl}) -> % {{{2
     wf:session(selected_block, {Block, MFA}),
-    ?LOG("make_active:~p", [Block]),
+    % ?LOG("make_active:~p; MFA:~p", [Block, MFA]),
     case Block of
       Text when is_list(Text) ->
           wf:update(edited_block,
             #panel{class="collapse"}
           )
-          % ,
-          % SubTree=build_list(PID, Block, 2, false, 3),
-          % wf:wire(#insert_after{target=updating_subtree, elements=SubTree}),
-          % common:script("","$('#tree').update_tree();")
+          , SubTree=build_list(PID, Block, 2, false, 3),
+          wf:wire(#insert_after{target=updating_subtree_lvl1, elements=SubTree}),
+          common:script("","$('#tree').update_tree();")
           ;
-      #cms_mfa{id={_PID,_BID}} ->
+      _ -> %#cms_mfa{id={_PID,_BID}} 
           event({?MODULE, block, edit, Block}),
-          BlockName = db:extract_mfa_block_name(Block),
-          SubTree=build_list(PID, BlockName, Lvl, SearchSublink, Lvl+1),
+          % BlockName = db:extract_mfa_block_name(Block), TODOn replaced to MFA!
+          SubTree=build_list(PID, MFA, Lvl, SearchSublink, Lvl+1),
           wf:wire(#insert_after{target=updating_subtree, elements=SubTree}),
-          ?LOG("updating_subtree",[]),
           common:script("","$('#tree').update_tree();")
     end;
     
@@ -1868,6 +1879,7 @@ build_html_tree_from_mfa(PID) -> % {{{2
     _ -> lists:delete("router", BlockWithoutParents)
   end,
   MaxLvl=3,
+  % ?LOG("MbFilterBlocks ~p",[MbFilterBlocks]),
   lists:map(
     fun(BlockId) ->
         #list{
@@ -2038,4 +2050,12 @@ extract_mfa_names(#cms_mfa{mfa=MFA}=B) -> % {{{2
       end;
     _ -> 
           [{undefined,B}]
+  end.
+
+get_selected_block() -> % {{{2
+  SelectedBlockSess = wf:session(selected_block),
+  case SelectedBlockSess of
+    undefined -> {"body", "body"}; % default block for adding subblocks
+    {A, []} when is_list(A)-> {A, A};
+    {A1, A2} -> {A1, A2}
   end.
