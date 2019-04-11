@@ -1368,3 +1368,26 @@ remove_duplicates() -> % {{{1
     mnesia:foldl(FoldFun, ok, cms_mfa)
   end,
   mnesia:transaction(F).
+
+get_block_from_db(PID, Block, Sort) -> % {{{1
+  transaction(
+    fun() ->
+      case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=Sort, active=true, _='_'}) of
+        [] ->
+          undefined;
+        [DbItem] -> 
+          DbItem;
+        L when is_list(L), length(L) > 1 ->
+          lists:foreach(
+            fun(Cur_mfa) ->
+                Max_sort=find_max_sort({PID, Block}),
+                New_mfa = update_record_field(Cur_mfa, sort, Max_sort+1),
+                mnesia:delete_object(Cur_mfa),
+                save(New_mfa)
+              end, 
+            L),
+          get_block_from_db(PID, Block, Sort);
+        _ -> 
+          undefined
+      end
+    end).

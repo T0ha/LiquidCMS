@@ -716,7 +716,6 @@ get_social_files("static/images"=SubFolder) -> % {{{2
     db:save(Assets).
 
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
-  % ?LOG("Filters:~p",[Filters]),
     Filters;
 get_filters(_) -> % {{{2
     ["", "", "", ""].
@@ -1520,7 +1519,7 @@ event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBloc
         coldstrap:close_modal()
     end;
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
-    common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
+    % common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
     NewSort=
       case S of
         new -> new;
@@ -1572,8 +1571,10 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
             db:save(Page)
     end,
     PID_move = common:q(add_page_select, "index"),
+    % wf:wire(#event{postback={?MODULE, block, make_active, Saved, PID, MFA, true, 2}, delegate=?MODULE}),
+    common:script("","$('#tree').remove_tree();"),
     % coldstrap:close_modal(),
-    wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}),
+    % wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE}), TODO comment while
     case wf:qs(page) of
       ["admin"] -> "";
       _ -> update_block_on_page(Saved)
@@ -1737,19 +1738,31 @@ event({?MODULE, auth, call_restore_password}) -> % {{{2
 event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
     coldstrap:close_modal(),
     event({?MODULE, page, construct, PID, [Block]});
-event({?MODULE, block, make_active, Block, MFA}) -> % {{{2
+event({?MODULE, block, make_active, Block, PID, MFA, SearchSublink, Lvl}) -> % {{{2
     wf:session(selected_block, {Block, MFA}),
+    ?LOG("make_active:~p", [Block]),
     case Block of
       Text when is_list(Text) ->
           wf:update(edited_block,
             #panel{class="collapse"}
-          );
-      _Block ->
-          event({?MODULE, block, edit, Block})
+          )
+          % ,
+          % SubTree=build_list(PID, Block, 2, false, 3),
+          % wf:wire(#insert_after{target=updating_subtree, elements=SubTree}),
+          % common:script("","$('#tree').update_tree();")
+          ;
+      #cms_mfa{id={_PID,_BID}} ->
+          event({?MODULE, block, edit, Block}),
+          BlockName = db:extract_mfa_block_name(Block),
+          SubTree=build_list(PID, BlockName, Lvl, SearchSublink, Lvl+1),
+          wf:wire(#insert_after{target=updating_subtree, elements=SubTree}),
+          ?LOG("updating_subtree",[]),
+          common:script("","$('#tree').update_tree();")
     end;
+    
 event(close_modal) -> % {{{2
     coldstrap:close_modal();
-event(Ev) -> % {{{2
+event(Ev) -> % {{{2#
     ?LOG("Unhandled ~p event ~p", [?MODULE, Ev]),
     "".
 
@@ -1854,28 +1867,30 @@ build_html_tree_from_mfa(PID) -> % {{{2
     "*" -> BlockWithoutParents;
     _ -> lists:delete("router", BlockWithoutParents)
   end,
+  MaxLvl=3,
   lists:map(
     fun(BlockId) ->
         #list{
             body=#listitem{
                body=[
                       % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
-                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, []}, ?MODULE)},
-                      build_list(PID, BlockId, 2, false)
+                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, PID, [], false, 2}, ?MODULE)},
+                      build_list(PID, BlockId, 2, false, MaxLvl)
                ],
                class=["branch lvl-1"]
             },
-            class=["tree"]}
+            class=["tree treed"]}
     end, MbFilterBlocks
   ).
 
-build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
+build_list(PID, Block, Lvl, SearchSublink, MaxLvl) -> % {{{2
 %% @doc "Recursive function for building html list from tree of cms_mfa table"
-  MaxLvl=99,
+  % MaxLvl=99,
   Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
   case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
-    {[], _} -> undefined;
-    {_, false} -> ?LOG("~nMaxLvl~s", [MaxLvl]), undefined;
+    {[], _} ->  undefined;
+    {_, false} -> 
+      undefined;
     {L, true} ->
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
@@ -1916,14 +1931,17 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
             fun({ChildBlock,PBlock})->
               #listitem{
                      body=[
-                           #link{text=case ChildBlock of 
-                                        [] -> wf:f("~s",[F]);
-                                        _ -> ChildBlock
-                                      end,
-                                 actions=?POSTBACK({?MODULE, block, make_active, PBlock, ChildBlock}, ?MODULE)
+                           #link{body=[
+                                      ViewFunction
+                                      ],
+                                text=case ChildBlock of 
+                                  [] -> wf:f("~s",[F]);
+                                  _ -> ChildBlock
+                                end,
+                                class=["not-tree"],
+                                actions=?POSTBACK({?MODULE, block, make_active, PBlock, PID, ChildBlock, WithSublink, Lvl}, ?MODULE)
                            },
-                           ViewFunction,
-                           build_list(PID, ChildBlock, Lvl+1, WithSublink)
+                           build_list(PID, ChildBlock, Lvl+1, WithSublink, MaxLvl)
                      ],
                      class=["branch lvl-"++wf:f("~p",[Lvl])]
               }
