@@ -772,12 +772,12 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
-event({common, edit, text, #cms_mfa{id={PID, Block}, sort=S}=MFA, Text}) -> % {{{2
+event({common, edit, text, #cms_mfa{id={PID, Block}, sort=S}, Text}) -> % {{{2
+    MFA = db:get_block_from_db(PID, Block, S),
     {atomic, UpdText}=mnesia:transaction(
         fun() ->
-          case mnesia:match_object(#cms_mfa{id={PID, Block}, sort=S, _='_'}) of
-            L when is_list(L), length(L) > 0 ->
-              [ Itext || #cms_mfa{mfa={common,text, [Itext]}} <-L];
+          case MFA of
+            #cms_mfa{mfa={common,text, [Itext]}} -> Itext;
             _ -> Text
           end
         end),
@@ -1476,7 +1476,11 @@ event({?MODULE, language, save}) -> % {{{2
 
 event({?MODULE, block, move, Old}) -> % {{{2
     db:full_delete(Old),
-    common:script("","$('#tree').save_parent();"),
+    case wf:qs(page) of
+      ["admin"] ->
+        common:script("","$('#tree').save_parent();");
+      _ -> undefined
+    end,
     event({?MODULE, block, save, Old});
 event({?MODULE, block, copy, #cms_mfa{id={PID, _}}=Old}) -> % {{{2
     OldBlockName=db:extract_mfa_block_name(Old),
@@ -1518,15 +1522,12 @@ event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBloc
     end;
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
     NewSort=
-      case S of
-        new -> new;
-        _ ->
-          try
-            list_to_integer(wf:q(sort))
-          catch error:badarg ->
-              new
-          end
+      try
+        list_to_integer(wf:q(sort))
+      catch error:badarg ->
+          S
       end,
+
     mnesia:transaction( %% remove dublicating sort
         fun() ->
           case mnesia:select(cms_mfa, 
@@ -1567,32 +1568,14 @@ event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{
             [Page]=db:get_page(PID),
             db:save(Page)
     end,
-    PID_move = common:q(add_page_select, "index"),
-    % wf:wire(#event{postback={?MODULE, block, make_active, Saved, PID, MFA, true, 2}, delegate=?MODULE}),
-
-    {SelectedBlock, _} = get_selected_block(),
-    SelectedBlockName = case SelectedBlock of
-      Text when is_list(Text) ->
-        Text;
-      #cms_mfa{id={_PID, BID}} ->
-          BID
-    end,
-    AddToBlock = common:q(add_block, "body"),
-    % ?LOG("~nSelectedBlockName:~p; AddToBlock:~p",[SelectedBlockName, AddToBlock]),
-    case (SelectedBlockName == AddToBlock) and (PID_move == PID) of
-      false ->
-        common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
-        wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE});
-      true ->
-        common:script("","$('#tree').remove_tree();")
-    end,
-    % coldstrap:close_modal(),
-    % 
-    case wf:qs(page) of
-      ["admin"] -> "";
-      _ -> update_block_on_page(Saved)
-    end;
     
+    case wf:qs(page) of
+      ["admin"] -> reload_subtree(PID, Block);
+      _ -> 
+        coldstrap:close_modal(),
+        update_block_on_page(Saved)
+    end;
+
 event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
@@ -1879,7 +1862,6 @@ build_html_tree_from_mfa(PID) -> % {{{2
     _ -> lists:delete("router", BlockWithoutParents)
   end,
   MaxLvl=3,
-  % ?LOG("MbFilterBlocks ~p",[MbFilterBlocks]),
   lists:map(
     fun(BlockId) ->
         #list{
@@ -1939,30 +1921,43 @@ build_list(PID, Block, Lvl, SearchSublink, MaxLvl) -> % {{{2
           ViewFunction=#span{text=wf:f(" (~s:~s)",[M,F]),
                              class="sub-label"},
           WithSublink=lists:member(F,Functions_with_sub_blocks),
-          Items=lists:map(
-            fun({ChildBlock,PBlock})->
-              #listitem{
-                     body=[
-                           #link{body=[
-                                      ViewFunction
-                                      ],
-                                text=case ChildBlock of 
-                                  [] -> wf:f("~s",[F]);
-                                  _ -> ChildBlock
-                                end,
-                                class=["not-tree"],
-                                actions=?POSTBACK({?MODULE, block, make_active, PBlock, PID, ChildBlock, WithSublink, Lvl}, ?MODULE)
-                           },
-                           build_list(PID, ChildBlock, Lvl+1, WithSublink, MaxLvl)
-                     ],
-                     class=["branch lvl-"++wf:f("~p",[Lvl])]
-              }
-            end, ChildBlocks
-          ),
-          #list{body=Items}
+          Items=
+            case ChildBlocks of 
+              [{ChildBlock,PBlock}] ->
+                build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F);
+              ChildBlocks -> lists:map(
+                fun({ChildBlock,PBlock})->
+                  build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F)
+                  
+                end, ChildBlocks
+              )
+            end,
+          % #list{body=Items}
+          Items
         end, SortedList
       )
   end.
+
+build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F) -> % {{{2
+  MaxLvl = 3,
+  #list{body=
+     #listitem{
+         body=[
+           #link{body=[
+                      ViewFunction
+                      ],
+                text=case ChildBlock of 
+                  [] -> wf:f("~s",[F]);
+                  _ -> ChildBlock
+                end,
+                class=["not-tree"],
+                actions=?POSTBACK({?MODULE, block, make_active, PBlock, PID, ChildBlock, WithSublink, Lvl}, ?MODULE)
+           },
+           build_list(PID, ChildBlock, Lvl+1, WithSublink, MaxLvl)
+       ],
+       class=["branch lvl-"++wf:f("~p",[Lvl])]
+    }
+  }.
 
 copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
 %% @doc "Recursive function for the coping a block structure"
@@ -2058,4 +2053,24 @@ get_selected_block() -> % {{{2
     undefined -> {"body", "body"}; % default block for adding subblocks
     {A, []} when is_list(A)-> {A, A};
     {A1, A2} -> {A1, A2}
+  end.
+
+reload_subtree(PID, Block) -> % {{{2
+  PID_move = common:q(add_page_select, "index"),
+  % wf:wire(#event{postback={?MODULE, block, make_active, Saved, PID, MFA, true, 2}, delegate=?MODULE}),
+
+  {SelectedBlock, _} = get_selected_block(),
+  SelectedBlockName = case SelectedBlock of
+    Text when is_list(Text) ->
+      Text;
+    #cms_mfa{id={_PID, BID}} ->
+        BID
+  end,
+  AddToBlock = common:q(add_block, "body"),
+  case (SelectedBlockName == AddToBlock) and (PID_move == PID) of
+    false ->
+      common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
+      wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE});
+    true ->
+      common:script("","$('#tree').remove_tree();")
   end.
