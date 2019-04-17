@@ -13,7 +13,8 @@
 }
 
 .btn-upload {
-    margin-top: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .upload-content {
@@ -36,7 +37,7 @@
 
 #wysiwyg_editor {
     padding: 5px;
-    margin: 15px;
+    /*margin: 15px;*/
     border-radius: 5px;
     overflow-y: auto;
     height: 300px;
@@ -60,4 +61,109 @@
 #flash {
     width: fit-content;
     margin: auto;
+}
+
+.form-fields {
+    display: inline-block;
+    width: 128px;
+    margin-right: 5px;
+}
+
+.flex {
+    display: flex;
+}
+
+.right_manage_panel{
+    display: inline-block;
+    margin-top:2px;
+}
+
+.panel-format-btn{
+    position: absolute;
+    margin-top: -35px;
+    right: 5px;
+}
+
+.btn-logout {
+    position: absolute;
+    right: 5px;
+    top: 8px;
+}
+ul#sidebar-nav {
+    margin-right: 45px;
+    display: inline-block;
+}
+
+@media (max-width: 940px) and (min-width: 768px){
+    ul#sidebar-nav > li > a {
+        padding: 15px 7px;
+    }
+    ul#sidebar-nav > li > a > i:last-child  {
+        font-size: 10px;
+        /*display: none;*/
+    }
+    .navbar-header{
+        max-width: 190px;
+    }
+}
+
+@media screen and (max-width: 768px){
+    [class^='col-'] { 
+        padding-bottom: 5px;
+    }
+
+}
+
+.session-btn {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.session-btn:hover{
+    max-width:unset;
+    display: inline-block;
+}
+.cs-label{
+    margin-left: 5px;
+}
+
+.wfid_modal_bottom_buttons{
+    padding-top:10px;
+}
+.wfid_modal_bottom_buttons input{
+    margin-left: 5px;
+}
+.wfid_edited_block{
+    margin-top: -45px;
+}
+.wfid_edited_block >div:first-child {
+    padding: 5px;
+    /*max-width: 48vw;*/
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    background-color: #f5f5f5; /*whitesmoke;*/
+}
+.wfid_edited_block textarea{
+    max-width: 47vw;
+}
+#tree, .h-70 {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+@media screen and (max-height: 500px){
+    #tree{ 
+        max-height: 60vh;
+    }
+
+}
+a.not-tree:after{
+    content: " ...";
+}
+.sub-label {
+    font-size: 75%;
+    color: grey;
+}
+.container2 {
+    padding: 15px;
 }

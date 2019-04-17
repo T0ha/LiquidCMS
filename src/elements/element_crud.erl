@@ -188,7 +188,6 @@ event({update=Fun, Rec, Data, Field, ElementId, OldValue}) -> % {{{1
 event({show, Rec}=_E) -> % {{{1
     wf:replace(Rec#crud.id, Rec);
 event({Fun, Rec, Data}=_E) -> % {{{1
-    % io:format("Event: ~p~n", [E]),
     call(Fun, Rec, Data),
     wf:replace(Rec#crud.id, Rec);
 event(Ev) -> % {{{1
@@ -220,13 +219,10 @@ cast(Value, Old) when is_atom(Old) -> % {{{1
 cast(Value, Old) when is_list(Old) -> % {{{1
     wf:to_list(Value);
 cast(Value, Old) when is_binary(Old) -> % {{{1
-    wf:to_binary(Value);
+    unicode:characters_to_binary(Value);
 cast(Value, Old) when is_integer(Old) -> % {{{1
     wf:to_integer(Value);
 cast(Value, Type) -> % {{{1
     wf:warning("Can't cast ~p to ~p", [Value, Type]),
     Value.
 
-datetime_tostr(Date) ->
-    {{Year, Month, Day}, {Hour, Minute, Second}} = Date,
-    _StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])).

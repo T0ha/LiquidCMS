@@ -3,6 +3,7 @@
 -module (admin).
 -compile([export_all, {parse_transform, lager_transform}]).
 -include_lib("nitrogen_core/include/wf.hrl").
+-include_lib("xmerl/include/xmerl.hrl").
 -include("records.hrl").
 -include("db.hrl").
 -include("cms.hrl").
@@ -27,12 +28,14 @@ default_data() -> % {{{2
                                               {common, asset, [["css", "font-awesome"]]},
                                               {common, asset, [["css", "metisMenu"]]},
                                               {common, asset, [["css", "sb-admin-2"]]},
-                                              {common, asset, [["css", "admin"]]}
+                                              {common, asset, [["css", "admin"]]},
+                                              {common, asset, [["css", "bootstrap-treeview"]]}
                                              ]),
 
               add_to_block({"admin", "script"}, [
                                                {common, asset, [["js", "metisMenu"]]},
-                                               {common, asset, [["js", "sb-admin-2"]]}
+                                               {common, asset, [["js", "sb-admin-2"]]},
+                                               {common, asset, [["js", "bootstrap-treeview"]]}
                                               ]),
                                                 
               add_navbar_button("admin", "sidebar-nav", "assets", {{"fa", "hdd-o", []}, "Static Assets"}, {menu, "static-assets-menu"}),
@@ -51,9 +54,9 @@ default_data() -> % {{{2
               add_navbar_button("admin", "accounts-menu", "users-all", {{"fa", "user", []}, "Users"}, {event, ?POSTBACK({?MODULE, user, show}, ?MODULE)}),
               add_navbar_button("admin", "accounts-menu", "roles-all", {{"fa", "group", []}, "Roles"}, {event, ?POSTBACK({?MODULE, role, show}, ?MODULE)}),
 
-              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)})
+              add_navbar_button("admin", "sidebar-nav", "forms", {{"fa", "wpforms", ["fab"]}, "Forms"}, {event, ?POSTBACK({?MODULE, forms, show}, ?MODULE)}),
+              add_navbar_button("admin", "sidebar-nav", "languages", {{"fa", "globe", ["fab"]}, "Languages"}, {event, ?POSTBACK({?MODULE, languages, show}, ?MODULE)})
              ]
-
  }.
 
 install() -> % {{{2
@@ -61,17 +64,20 @@ install() -> % {{{2
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
     get_files_from_folder("templates/internal"),
-
+    add_language("any","",false),
+    add_language("ru","flag_ru.png",true),
+    add_language("en","flag_en.png",false),
     ok.
 
 %% Different components adding to pages  {{{1
-add_page(PID, Title, Description, Role, Module) -> % {{{2
+add_page(PID, Title, Description, Role, Module, Sitemap) -> % {{{2
     #cms_page{
        id=PID,
-       title=unicode:characters_to_binary(Title),
-       description=unicode:characters_to_binary(Description),
+       title=wf:f("~ts", [Title]),
+       description=wf:f("~ts", [Description]),
        accepted_role=Role,
-       module=Module
+       module=Module,
+       sitemap=Sitemap
       }.
 
 add_form(PID, Phone, Text, Email, Rating) -> % {{{2
@@ -79,10 +85,16 @@ add_form(PID, Phone, Text, Email, Rating) -> % {{{2
         id=crypto:hash(sha512, Email++Text),
         page=PID,
         phone=Phone,
-        text=unicode:characters_to_binary(Text),
+        text=wf:f("~ts", [Text]),
         email=Email,
         rating=Rating
     }).
+
+add_language(Lid, ImageName, IsDefault) -> % {{{2
+    mnesia:transaction(
+      fun() ->
+        mnesia:write(#cms_language{id=Lid, icon=ImageName, default=IsDefault})
+      end).
 
 add_template(TemplatePath, Bindings) -> % {{{2
     add_template(TemplatePath, TemplatePath, TemplatePath, Bindings).
@@ -138,12 +150,12 @@ add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {menu, SubMenuBlock})
                   #cms_mfa{id={PID, ItemBlock},
                            mfa={bootstrap,
                                 nav_items,
-                                [SubMenuBlock, ["nav-second-level", "collapse"]]}}
+                                [SubMenuBlock, ["nav-second-level", "collapse","dropdown-menu"]]}}
                  ],
     LinkMFAs = [
                 #cms_mfa{
                    id={PID, ItemLinkBlock},
-                   mfa={common, icon, ["fa", "", ["arrow"]]}}
+                   mfa={common, icon, ["fa", "", ["arrow-right"]]}}
                 | link_body_funs(PID, ItemLinkBlock, Icon, Text)],
     db:fix_sort(ButtonMFAs ++ LinkMFAs);
 add_navbar_button(PID, MenuBlock, ItemBlock, {Icon, Text}, {event, Actions}) -> % {{{2
@@ -271,7 +283,8 @@ maybe_set(Id, Val) -> % {{{2
         "" ->
             wf:set(Id, Val);
         A ->
-            ?LOG("~s vaue is ~p", [Id, A])
+            ?LOG("~s value is ~p", [Id, A]),
+            ""
     end.
 
 update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
@@ -279,11 +292,7 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text=Header}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2}, {md, 3},{sm, 3}],
                                       body=#button{
                                               text=ButtonText,
                                               class=["btn",
@@ -291,14 +300,21 @@ update_container(Header, ButtonText, ButtonPostBack, Body) -> % {{{2
                                                      "btn-block",
                                                      "btn-upload"],
                                               actions=?POSTBACK(ButtonPostBack, ?MODULE)
-                                             }}
-                                  ]},
-                          #bs_row{
-                             body=#bs_col{
-                                     cols={lg, 12},
-                                     body=Body
+                                            }
                                     }
-                            }]).
+                                  ]
+                          },
+                          #bs_row{
+                             body=[#bs_col{
+                                     cols=[{lg, 6}, {md, 6},{sm, 6}],
+                                     body=Body
+                                    },
+                                   #bs_col{
+                                     cols=[{lg, 6}, {md, 6},{sm, 6}],
+                                     id=edited_block
+                                    }]
+                            }]),
+    wf:update(title, #panel{text=Header}).
 
 render_save_button({SavePostback, Delegate}) when is_tuple(SavePostback), % {{{2
                                                   is_atom(Delegate) ->
@@ -340,7 +356,7 @@ render_copy_button(undefined) -> % {{{2
     "";
 render_copy_button(CopyPostback) -> % {{{2
     #btn{
-       type=success,
+       type=warning,
        size=md,
        text="Copy",
        postback=CopyPostback,
@@ -413,7 +429,7 @@ format_block(#cms_mfa{ % {{{2$
                   catch
                       _:_ -> {wf:f("~p, ~p(~p)", [Name, F, A]), undefined}
                   end,
-
+    Children=db:get_mfa(PID,Sub),
     #sortitem{
        tag={block, PID, B},
        class="well",
@@ -432,7 +448,7 @@ format_block(#cms_mfa{ % {{{2$
                       #link{
                          class="btn btn-link",
                          body=common:icon("fa", "arrow-right", []),
-                         show_if=(Sub /= undefined),
+                         show_if=((Sub /= undefined) and (length(Children)>0)),
                          actions=?POSTBACK({?MODULE, page, construct, PID, [Sub]}, ?MODULE)
                         },
                       #link{
@@ -449,6 +465,23 @@ format_block(#cms_mfa{ % {{{2$
                                                text="Are you sure to delete?", 
                                                postback={?MODULE, block, remove_block, B},
                                                delegate=?MODULE}}
+                        }
+                     ]}
+            ]}.
+
+format_subblock(#cms_mfa{ id={PID, Name}}=B) -> % {{{2
+    #sortitem{
+       tag={block, PID, B},
+       % class="well",
+       body=[
+             #span{
+                class="panel-format-btn",
+                body=[
+                      #link{
+                         class="btn btn-link",
+                         body=common:icon("fa", "arrow-right", []),
+                         % show_if=(Sub /= undefined),
+                         actions=?POSTBACK({?MODULE, page, close_and_construct, PID, [Name]}, ?MODULE)
                         }
                      ]}
             ]}.
@@ -480,8 +513,8 @@ form_fields(M, F, A) -> % {{{2
         apply(M, form_data, [F, A])
     catch error:E when E /= undef; 
                        E /= function_clause -> 
+              % ?LOG("Error in form_fields:~p",[E]),
               [_, Block, Classes, DataAttrs] = maybe_empty(A, 4),
-              ?LOG("~nErorr: ~p",[Block]),
               {[], [], Block, Classes, DataAttrs}
     end.
 
@@ -493,13 +526,11 @@ form_elements(M, F, A) -> % {{{2
 render_fields(Cols) -> % {{{2
     try 12 div length(Cols) of
         Width when Width >= 4 ->
-            %?LOG("Width: ~p", [Width]),
             [
              #bs_row{
                 body=[render_field(Col, Width) || Col <- Cols]
                }];
         _Width ->
-            %?LOG("Width: ~p", [Width]),
             {Row, Rows} = lists:split(3, Cols),
             [render_fields(Row) | render_fields(Rows)]
 
@@ -523,7 +554,8 @@ render_field({Label, {ID, Text}}, Width) -> % {{{2
              #span{text=Label},
              #txtarea{
                 id=ID,
-                text=Text
+                text=Text,
+                rows=1
                }
             ]};
 render_field({Label, Any}, _Width) when is_list(Any) -> % {{{2
@@ -561,7 +593,6 @@ extract_data_attrs([])  -> % {{{2
     [];
 extract_data_attrs(DataAttrs)  -> % {{{2
     Pairs = string:tokens(DataAttrs, ", "),
-    ?LOG("Pairs: ~p~n", [Pairs]),
     [{data_attr_key(K), V} || Pair <- Pairs, [K, V] <- [string:tokens(Pair, "=")]].
 
 data_attr_key([$d, $a, $t, $a, $- | K]) -> % {{{2
@@ -574,9 +605,12 @@ format_data_attrs(Attrs) -> % {{{2
 
 get_data(M, F) -> % {{{2
     Fields = data_fields(form_fields(M, F, [])),
-    ?LOG("Fields: ~p", [Fields]),
-    Data = wf:mq([block | Fields]),
-    ?LOG("Data: ~p", [Data]),
+    Data = case common:q(copy_block_name, undefined) of 
+      undefined->
+        wf:mq([block | Fields]);
+      _ ->
+        wf:mq([copy_block_name | Fields])
+    end,
     lists:map(fun(none) -> "";
                  (undefined) -> "";
                  ("") -> "";
@@ -598,7 +632,6 @@ formatting_fields({_, Formats, _, _}) -> % {{{2
 formatting_fields({_, Formats}) -> % {{{2
     [get_fields(F) || F <- Formats, get_fields(F) /= []];
 formatting_fields(_Any) -> % {{{2
-    ?LOG("Other fields", []), %?LOG("Other fields: ~p", [Any]),
     [].
 
 get_fields({_, {ID, _}}) when is_atom(ID) -> % {{{2
@@ -617,8 +650,8 @@ get_fields(#panel{body=Body}) when is_list(Body) -> % {{{2
     [get_fields(E) || E <- Body];
 get_fields(#panel{body=Body}) -> % {{{2
     get_fields(Body);
-get_fields(D) -> % {{{2
-    ?LOG("Data: ~p", [D]),
+get_fields(_D) -> % {{{2
+    % ?LOG("Data: ~p", [D]),
     [].
 
 prefix_classes(Prefix, Classes) -> % {{{2
@@ -627,7 +660,7 @@ prefix_classes(Prefix, Classes) -> % {{{2
 remove_prefix([]) -> % {{{2
     "";
 remove_prefix(Class) -> % {{{2
-    lists:last(string:split(Class, "-")).
+    lists:last(string:tokens(Class, "-")).
 
 maybe_empty([], N) -> % {{{2
     lists:duplicate(N, "");
@@ -640,7 +673,6 @@ maybe_empty(A, _N) -> % {{{2
 get_files_from_folder("static"=SubFolder) -> % {{{2
     %{ok, StaticFolders} = application:get_env(simple_bridge, static_paths),
     {ok, StaticFolders} = file:list_dir(SubFolder),
-    %io:format("Folders: ~p~n", [Folders]),
     {ok, OldCWD} = file:get_cwd(),
     file:set_cwd(SubFolder),
     Static = [{wf:f("~s", [Path]), Files} ||
@@ -648,13 +680,11 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
               filelib:is_dir(Path),
               {ok, Files} <- [file:list_dir(Path)],
               Path /= "nitrogen"],
-    io:format("Static: ~p~n", [Static]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files, File /= ".empty"] ++ A
                          end,
                          [],
                          Static),
-    %io:format("Assets: ~p~n", [Assets]),
     NitrogenStatic = [
                       {"nitrogen/", 
                        ["bert.js", "bert.min.js",
@@ -667,8 +697,7 @@ get_files_from_folder("static"=SubFolder) -> % {{{2
                      ],
     NitrogenAssets = [
                       file_to_asset(File, Path) || {Path, Files} <- NitrogenStatic, File <- Files],
-    io:format("Assets NitrogenAssets: ~p~n", [Assets ++ NitrogenAssets]),
-    db:save(Assets ++ NitrogenAssets),
+    db:maybe_save(Assets ++ NitrogenAssets),
     file:set_cwd(OldCWD);
 
 get_files_from_folder(SubFolder) -> % {{{2
@@ -678,7 +707,6 @@ get_files_from_folder(SubFolder) -> % {{{2
 get_social_files("static/images"=SubFolder) -> % {{{2
     {ok, StaticImages} = file:list_dir(SubFolder),
     Static = [{"images", StaticImages}],
-    % io:format("StaticImages: ~p~n", [StaticImages]),
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files,
                                   string:str(File, "_icon.png") > 0 ] ++ A
@@ -690,7 +718,7 @@ get_social_files("static/images"=SubFolder) -> % {{{2
 get_filters(#cms_mfa{settings=#{filters := Filters}}) -> % {{{2
     Filters;
 get_filters(_) -> % {{{2
-    ["", "", ""].
+    ["", "", "", ""].
 
 maybe_fix_sort(#cms_mfa{sort=new}=R, _) -> % {{{2
     db:fix_sort(R);
@@ -712,23 +740,29 @@ fix_list_sort(List) -> % {{{2
 
 rec_from_qs(R) -> % {{{2
     M = wf:to_atom(common:q(module, "common")),
-    F = wf:to_atom(common:q(function, "template")),
+    F = wf:to_atom(common:q(function, "text")),
     Args = admin:get_data(M, F),
-
     PID = common:q(add_page_select, "index"),
     Block = common:q(add_block, "body"),
 
     Classes = get_with_prefix(M, wf:to_atom(F), classes),
     DataAttrs =extract_data_attrs(common:q(data_fields, "")),
 
-    Filters = wf:mq([qs_key, qs_val, role]),
-
-    R#cms_mfa{id={PID, Block}, 
+    Filters=wf:mq([qs_key, qs_val, role, translation]),
+    Settings = case Filters of
+      [undefined,undefined,undefined,undefined] -> R#cms_mfa.settings;
+      _ -> #{filters => Filters}
+    end,
+    case F of 
+      empty -> R#cms_mfa{mfa=undefined};
+      _ ->
+        R#cms_mfa{id={PID, Block}, 
               mfa={M, F, Args ++ [Classes] ++ [DataAttrs]},
-              settings=#{filters => Filters}}.
+              settings=Settings}
+    end.
 
-apply_element_transform(#cms_mfa{mfa={M, _, _}}=Rec) -> % {{{2
-     % ?LOG("~nsave_block(apply_element_transform) ~p", [Rec]),
+apply_element_transform(#cms_mfa{mfa=MFA}=Rec) -> % {{{2
+    {M,_F,_A}=parse_mfa_field(MFA),
     try apply(M, save_block, [Rec])
     catch 
         error:undef -> Rec;
@@ -738,7 +772,15 @@ get_pages() -> % {{{2
     [#{id => "*"} | db:get_pages()].
 
 %% Event handlers {{{1
-event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
+event({common, edit, text, #cms_mfa{id={PID, Block}, sort=S}, Text}) -> % {{{2
+    MFA = db:get_block_from_db(PID, Block, S),
+    {atomic, UpdText}=mnesia:transaction(
+        fun() ->
+          case MFA of
+            #cms_mfa{mfa={common,text, [Itext]}} -> Itext;
+            _ -> Text
+          end
+        end),
     new_modal("Edit text", 
               {?MODULE, block, move, MFA},
               undefined,
@@ -749,7 +791,7 @@ event({common, edit, text, #cms_mfa{id={PID, Block}}=MFA, Text}) -> % {{{2
                #hidden{id=add_block, text=Block},
                #wysiwyg{class=["form-control"],
                         id=text_mfa,
-                        html=Text,
+                        html=UpdText,
                         buttons=[
                                  #panel{
                                     class="btn-group",
@@ -869,6 +911,7 @@ event({?MODULE, asset, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, asset, show, Type}, delegate=?MODULE});
 event({?MODULE, asset, show, Type}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -892,11 +935,7 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 8},
-                                      body=#h1{text=wf:f("Static Assets: ~s", [Type])}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
                                               class=["btn",
@@ -906,7 +945,7 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                               actions=?POSTBACK({?MODULE, asset, refresh, Type}, ?MODULE)
                                              }},
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Upload Asset",
                                               class=["btn",
@@ -921,7 +960,8 @@ event({?MODULE, asset, show, Type}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Static Assets"});
 event({?MODULE, template, new}) -> % {{{2
     new_modal("Upload Template",
               {?MODULE, template, save},
@@ -947,6 +987,7 @@ event({?MODULE, template, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={template, show}});
 event({?MODULE, template, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -969,11 +1010,7 @@ event({?MODULE, template, show}) -> % {{{2
                           #bs_row{
                              body=[
                                    #bs_col{
-                                      cols={lg, 8},
-                                      body=#h1{text="Templates"}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Refresh filesystem",
                                               class=["btn",
@@ -983,7 +1020,7 @@ event({?MODULE, template, show}) -> % {{{2
                                               actions=?POSTBACK({?MODULE, template, refresh}, ?MODULE)
                                              }},
                                    #bs_col{
-                                      cols={lg, 2},
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Upload Template",
                                               class=["btn",
@@ -998,8 +1035,10 @@ event({?MODULE, template, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Templates"});
 event({?MODULE, forms, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1021,14 +1060,62 @@ event({?MODULE, forms, show}) -> % {{{2
                 delete => fun db:delete/1
                }
              },
+    wf:update(container, [#bs_row{
+                             body=#bs_col{
+                                     cols={lg, 12},
+                                     body=CRUD
+                                    }
+                            }]),
+    wf:update(title, #panel{text="Forms"});
+event({?MODULE, languages, show}) -> % {{{2
+    wf:session(history, undefined),
+    AssetsDup = db:get_assets(image),
+    GetName = fun(Id)->
+                string:join(lists:reverse(Id),".")
+              end, 
+    Options =  [
+      {GetName(maps:get(id, K)), GetName(maps:get(id, K))}
+        || K <- AssetsDup
+    ],
+    CRUD = #crud{
+              pagination_class=["btn", "btn-default"],
+              button_class=["btn", "btn-link"],
+              table_class=["table-striped", "table-bordered", "table-hover"],
+              start=0,
+              count=10,
+              cols=[
+                    {id, "Id", none},
+                    {icon, "Icon", {select, Options}},
+                    {default, "Is default", {select, [{true,"true"},{false,"false"}]}}
+                   ],
+              funs=#{
+                list => fun db:get_languages/0,
+                update => fun db:update_language/1, 
+                delete => fun db:full_delete/1
+               }
+             },
     wf:update(container, [
+                          #bs_row{
+                             body=[#bs_col{
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
+                                      body=#button{
+                                              text="Add language",
+                                              class=["btn",
+                                                     "btn-success",
+                                                     "btn-block",
+                                                     "btn-upload"],
+                                              actions=?POSTBACK({?MODULE, language, new}, ?MODULE)
+                                             }}
+                                  ]},
                           #bs_row{
                              body=#bs_col{
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All languages"});
 event({?MODULE, page, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1041,6 +1128,7 @@ event({?MODULE, page, show}) -> % {{{2
                     {description, "Description", ta},
                     {module, "Module", {select, modules()}},
                     {accepted_role, "Assess role", {select, cms_roles()}},
+                    {sitemap, "Sitemap", {select, sitemap:sitemap_frequencies()}},
                     {undefined, "Actions", button}
                    ],
               funs=#{
@@ -1052,13 +1140,8 @@ event({?MODULE, page, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="All Pages"}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                             body=[#bs_col{
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Add Page",
                                               class=["btn",
@@ -1073,7 +1156,8 @@ event({?MODULE, page, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="All Pages"});
 event({?MODULE, page, new}) -> % {{{2
     new_modal("Create Page", 
               {?MODULE, page, save},
@@ -1103,111 +1187,103 @@ event({?MODULE, page, new}) -> % {{{2
                   id=role,
                   value=undefined,
                   options=cms_roles()
+                 },
+
+                #span{text="Sitemap frequency"},
+               #dd{
+                  id=sitemap,
+                  value=none,
+                  options=sitemap:sitemap_frequencies()
                  }
               ]);
 event({?MODULE, page, construct}) -> % {{{2
     Pages = get_pages(),
     [#{id := P} | _] = Pages,
-    PID = common:q(page_select, P),
-    ?LOG("~nconstruct page:~p",[PID]),
-    Block = common:q(block_select, "page"),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
+    PID = common:q(page_select, P), 
+    {_, BlockId} = get_selected_block(),
+    common:script("","$('#tree').html('<div>&nbsp;loading...</div>'); "),
+    wf:wire(#event{postback={?MODULE, page, construct, PID, [BlockId]}, delegate=?MODULE});
 
-event({?MODULE, page, construct, PID, [Block|_]}) -> % {{{2
+event({?MODULE, page, construct, PID, [_Block|_]}) -> % {{{2
     Pages = get_pages(),
-    Blocks = [format_block(B#cms_mfa{id={PID, BID}})
-              || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
-    AllBlocks = db:get_all_blocks(PID),
-    ?LOG("~nconstruct page(2) Block:~p",[Block]),
-    ParentBlock=db:get_parent_block(PID,Block),
-    ParentBody=case ParentBlock of
-      S when is_list(S) ->
-          #button{
-                text=S,
-                class=["btn"],
-                actions=?POSTBACK({?MODULE, page, construct, PID, [ParentBlock]}, ?MODULE)
-          };
-      undefined -> 
-          #span{
-               id=parent_block,
-               text="none"
-          };
-      _ -> #span{
-                 id=parent_block,
-                 text=ParentBlock
-           }
-    end,
-    ShowAll = (common:q(show_all, "false") /= "false"),
+    % Blocks = [format_block(B#cms_mfa{id={PID, BID}})
+    %           || #cms_mfa{id={_, BID}}=B <- db:get_mfa(PID, Block)],
+    % _AllBlocks = db:get_all_blocks(PID),
+    % ShowAll = (common:q(show_all, "false") /= "false"),
 
+    % Session=case Blocks of
+    %   [] ->  wf:clear_session(),
+    %          [];
+    %   _ ->  
+    %     update_session_history(Block)
+    % end,
+    % _ViewSession = [
+    %   #button{
+    %         text=B,
+    %         class=["btn btn-link session-btn"],
+    %         actions=?POSTBACK({?MODULE, page, construct, PID, [B]}, ?MODULE)
+    %   } || B <- Session],
     PageSelect = [
-                  #dropdown{
-                     id=page_select,
-                     options=lists:keysort(1,  [{N, N} || #{id := N} <- Pages]),
-                     value=PID,
-                     delegate=?MODULE,
-                     postback={?MODULE, page, construct}
-                    },
-                  #span{text=" / "},
-                  #dropdown{
-                     id=block_select,
-                     options=lists:keysort(1, [{N, N} ||  N <- AllBlocks, not common:is_private_block(N) or ShowAll, (N /= "router") or (PID == "*")]),
-                     value=Block,
-                     delegate=?MODULE,
-                     postback={?MODULE, page, construct}
-                    },
-                  #span{text=" Show All "},
-                  #checkbox{
-                     text="",
-                     id=show_all,
-                     checked=ShowAll,
-                     delegate=?MODULE,
-                     postback={?MODULE, page, construct}
-                    },
-                  #span{
-                   text=" Parent: "
-                  },
-                  ParentBody,
-                  #btn{
-                     text="Export Pages",
-                     class=["pull-right"],
-                     style="",
-                     type=success,
-                     actions=?POSTBACK({?MODULE, pages, export}, ?MODULE)
-                    },
-                  #btn{
-                   text="Merge Pages",
-                   class=["pull-right"],
-                   style="margin: 0 10px;",
-                   type=info,
-                   actions=?POSTBACK({?MODULE, pages, merge}, ?MODULE)
-                  },
-                  #btn{
-                     text="Import Pages",
-                     class=["pull-right"],
-                     type=warning,
-                     actions=?POSTBACK({?MODULE, pages, import}, ?MODULE)
-                    }
+              #panel{id=left_manage_panel,
+                    class="col-md-6",
+                    style="width:auto;",
+                    body=[
+                      #span{text="Page: "},
+                      #dropdown{
+                         id=page_select,
+                         options=lists:keysort(1,  [{N, N} || #{id := N} <- Pages]),
+                         value=PID,
+                         delegate=?MODULE,
+                         postback={?MODULE, page, construct}
+                        }
+                      % ,#span{text="Show All ", class="cs-label"},
+                      % #checkbox{
+                      %    text="",
+                      %    id=show_all,
+                      %    checked=ShowAll,
+                      %    delegate=?MODULE,
+                      %    postback={?MODULE, page, construct}
+                      %   }
+                      % ,case ViewSession of
+                      %   [] -> [];
+                      %   _ ->
+                      %     [#span{
+                      %      text="History:" ,
+                      %      class="cs-label"
+                      %     },
+                      %     ViewSession]
+                      % end
+                      ]
+                }
+    ],
+    % Sort = #sortblock{
+    %           tag={PID, Block},
+    %           class="panel-body", %"page-block-sort",
+    %           delegate=?MODULE,
+    %           items=Blocks,
+    %           group=blocks},
 
-
-                 ],
-    Sort = #sortblock{
-              tag={PID, Block},
-              class="panel-body", %"page-block-sort",
-              delegate=?MODULE,
-              items=Blocks,
-              group=blocks},
+     
+    Tree=build_html_tree_from_mfa(PID),
 
     Body  = #panel{
                class=["panel", "panel-default"],
                body=[
                      #panel{
-                        class=["panel-heading"],
+                        class=["panel-heading flex-panel"],
                         body=PageSelect
                        },
-                     Sort
+                     #panel{
+                        body=Tree,
+                        html_id="tree"
+                      }
+                     % Sort
                     ]},
-
-    update_container("Construct Page", "Add Block", {?MODULE, block, add}, Body);
+    
+    
+    update_container("Construct Page", "Add Block", {?MODULE, block, add}, Body),
+    common:script("","$('#tree').treed(); $('#tree').open_last_active();")
+    ;
 
 event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
     PID = wf:q(name),
@@ -1215,8 +1291,9 @@ event({?MODULE, page, save}) -> % {{{2 onclick <Save> btn
     Description = wf:q(description),
     Module = wf:to_atom(wf:q(module)),
     Role = wf:to_atom(wf:q(role)),
+    Sitemap = wf:to_atom(wf:q(sitemap)),
     db:save(
-      add_page(PID, Title, Description, Role, Module)),
+      add_page(PID, Title, Description, Role, Module, Sitemap)),
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, page, show}, delegate=?MODULE});
 event({?MODULE, block, change, module}) -> % {{{2
@@ -1233,107 +1310,290 @@ event({?MODULE, block, change, module}) -> % {{{2
 event({?MODULE, block, change, function}) -> % {{{2
     M = wf:to_atom(common:q(module, common)),
     F = wf:to_atom(common:q(function, common)),
-    % ?LOG("M: ~p, F: ~p", [M, F]),
     wf:update(block_data, admin:form_elements(M, F, []));
 event({?MODULE, block, add}) -> % {{{2
     PID = common:q(page_select, "index"),
-    Block = common:q(block_select, "body"),
+    {SelectedBlock, BlockId} = get_selected_block(),
     B = #cms_mfa{
-           id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           id={PID, BlockId},
+           mfa={common, text, []},
            sort=new},
-    event({?MODULE, block, edit, B});
+    case check_if_block_can_has_subblocks(SelectedBlock) of
+      true->
+        event({?MODULE, block, edit, B});
+      false -> wf:update(edited_block, #panel{class="collapse"})
+    end,
+    wf:session(selected_block, {BlockId, []})
+    ;
 event({?MODULE, block, add, Block}) -> % {{{2
     PID = common:q(page_select, "index"),
     B = #cms_mfa{
            id={PID, Block},
-           mfa={common, template, ["templates/internal/login.html"]},
+           mfa={common, text, []},
            sort=new},
     event({?MODULE, block, edit, B});
-event({?MODULE, block, edit, #cms_mfa{id={PID, Block}, mfa={M, F, A}}=B}) -> % {{{2
+event({?MODULE, block, edit, #cms_mfa{id={PID_block, Block}, mfa=MFA, sort=S}=B}) -> % {{{2
+    {M,F,A}=parse_mfa_field(MFA), 
+    PID = common:q(page_select, "index"),
+    PagedBlock=B#cms_mfa{id={PID, Block}},
     Pages = get_pages(),
     [#{id := _P} | _] = Pages,
-    [QSKey, QSVal, Role] = get_filters(B),
+    [QSKey, QSVal, Role, Tr] = get_filters(B),
+    Translation = case Tr of
+      undefined -> any;
+      [] -> any;
+      Tr -> Tr
+    end,
+    LanguageOptions = [ {I, I} || #{id := I} <- db:get_languages()],
     Header = [
-              "Add new block to page: ",
+              #span{text="Add block to page: "},
               #dropdown{
                  id=add_page_select,
                  options=[{N, N} || #{id := N} <- Pages],
-                 value=PID,
-                 delegate=?MODULE,
-                 postback={?MODULE, page, construct}
+                 value=PID
                 },
               " to block: ",
               #textbox{
                  id=add_block,
-                 text=Block
-                }
+                 text=Block,
+                 style="margin-bottom:1px; min-width: 200px;"
+                },
+              if (PID /= PID_block) and (PID_block=="*") -> 
+                #span{text=" inherited from * ", style="color: cornflowerblue;"};
+                true -> undefined
+              end
              ],
-    new_modal(Header,
-              {?MODULE, block, move, B},
-              {?MODULE, block, copy, B},
-              undefined, 
-              [
-               #span{text="Elements Collection"},
-               #dd{id=module,
-                   value=M,
-                   postback={?MODULE, block, change, module},
-                  delegate=?MODULE,
-                   options=collections()},
+    % new_modal(Title, SavePostback, CopyPostback, UploadTag, Form),
 
-               #span{text="Block Type"},
-               #dd{
-                  id=function,
-                  value=F,
-                  postback={?MODULE, block, change, function},
-                  delegate=?MODULE,
-                  options=(M):functions()
-                 },
-               #panel{
-                  id=block_data,
-                  body=form_elements(M, F, [PID | A])
-                 },
-               #panel{
-                  body=render_fields([{"Filters", 
-                                       [
-                                        {"Query String", 
-                                         [
-                                          {"Key", {qs_key, QSKey}},
-                                          {"Value", {qs_val, QSVal}}
-                                         ]},
-                                        {"Role", {role, Role}}
-                                       ]}])
-                 }
+    Form=[
+     Header,
+     #dd{id=module,
+         value=M,
+         postback={?MODULE, block, change, module},
+        delegate=?MODULE,
+         options=collections()},
+
+     #span{text="Block Type"},
+     #dd{
+        id=function,
+        value=F,
+        postback={?MODULE, block, change, function},
+        delegate=?MODULE,
+        options=(M):functions()
+       },
+
+     #panel{
+        id=block_data,
+        body=form_elements(M, F, [PID | A])
+       },
+     #span{text="Sort"},
+     #txtbx{id=sort, text=S},
+     #panel{
+        body=render_fields([{"Filters", 
+                             [
+                              {"Query String", 
+                               [
+                                {"Key", {qs_key, QSKey}},
+                                {"Value", {qs_val, QSVal}}
+                               ]},
+                              {"Role", {role, Role}},
+                              {"Translation", #dd{
+                                id=translation,
+                                value=Translation,
+                                options=LanguageOptions
+                              }}
+                             ]}])
+               }
+    ],
+    Bottom = #panel{
+      id=modal_bottom_buttons,
+      body=[
+            render_save_button({?MODULE, block, move, PagedBlock}),
+            render_copy_button({?MODULE, block, copy, B}),
+            #btn{
+                   type=warning,
+                   size=md,
+                   text="Copy Structure",
+                   postback={?MODULE, block, maybe_copy_all_structure, B},
+                   delegate=?MODULE
+                  },
+            #btn{
+                   type=info,
+                   size=md,
+                   text="Add Subblock",
+                   postback={?MODULE, block, add},
+                   delegate=?MODULE
+                  },
+            #btn{
+                   type=danger,
+                   size=md,
+                   class="pull-right",
+                   text="Remove", %common:icon("fa", "remove", []),
+                   actions=#event{
+                              type=click,
+                              actions=#confirm{
+                                         text="Are you sure to delete?", 
+                                         postback={?MODULE, block, remove_block, PagedBlock},
+                                         delegate=?MODULE}}
+                  }
+           ]
+    },
+
+    wf:update(edited_block,
+        #panel{
+              body=[
+                    #bs_col{
+                       body=Form},
+                    Bottom
+                   ]}
+    );
+
+event({?MODULE, language, new}) -> % {{{2
+    new_modal("Add language", 
+              {?MODULE, language, save},
+              undefined,
+              [
+               #span{text="Name (ID)"},
+               #txtbx{id=id,
+                      placeholder="language_abbr"},
+
+               #span{id=icon,text="Icon"},
+               common:assets_dropdown(image),
+
+               #span{text="Default"},
+               #checkbox{id=default_language}
               ]);
+event({?MODULE, language, save}) -> % {{{2    
+    AssetId=wf:q(asset_id),
+    IconName=string:join(lists:reverse(string:tokens(AssetId,".")),"."),
+    Default=case wf:q(default_language) of
+      "on"->true;
+      _->false
+    end,
+    add_language(wf:q(id),IconName,Default),
+    coldstrap:close_modal(),
+    wf:wire(#event{postback={?MODULE, languages, show}, delegate=?MODULE});
 
 event({?MODULE, block, move, Old}) -> % {{{2
     db:full_delete(Old),
+    case wf:qs(page) of
+      ["admin"] ->
+        common:script("","$('#tree').save_parent();");
+      _ -> undefined
+    end,
     event({?MODULE, block, save, Old});
-event({?MODULE, block, copy, Old}) -> % {{{2
-    event({?MODULE, block, save, Old#cms_mfa{sort=new}});
-event({?MODULE, block, save, OldMFA}) -> % {{{2
-    [#cms_mfa{id={PID, Block}}|_] = common:maybe_list(
-                                      db:save(
-                                        maybe_fix_sort(
-                                          apply_element_transform(
-                                            rec_from_qs(OldMFA)),
-                                          OldMFA))),
+event({?MODULE, block, copy, #cms_mfa{id={PID, _}}=Old}) -> % {{{2
+    OldBlockName=db:extract_mfa_block_name(Old),
+    NewBlockName=common:q(block, ""),
+    case (OldBlockName /= NewBlockName) or (PID /= wf:q(add_page_select)) of
+      true->
+        common:script("","$('#tree').save_parent();"),
+        event({?MODULE, block, save, Old#cms_mfa{sort=new}});
+      _ ->
+        wf:wire(#alert { text="You need change Block name!" })
+    end;
+event({?MODULE, block, maybe_copy_all_structure, B}) -> % {{{2
+  OldBlockName=db:extract_mfa_block_name(B),
+  admin:new_modal(
+        "Please enter the values", 
+        {?MODULE, block, copy_all_structure, B},
+        [#panel{body=[
+              #p{text="Enter a New Block name:"},
+               #txtbx{id=copy_block_name, text=OldBlockName},
+               #p{text="Enter a Postfix for the subelements name:"},
+               #txtbx{id=copy_postfix, text="_copy"}],
+            class="container2"
+          }
+        ]
+    );
+event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBlock}) -> % {{{2
+    OldBlockName=db:extract_mfa_block_name(OldBlock),
+    CopyingBlock=common:q(copy_block_name, undefined),
+    Postfix=wf:q(copy_postfix),
+    case ((CopyingBlock==OldBlockName) or (CopyingBlock==undefined)) and (PID==wf:q(add_page_select)) of
+      true->
+        wf:wire(#alert { text="You need change Block name!" });
+      _ ->
+        common:script("","$('#tree').save_parent();"),
+        {_,F,_}=parse_mfa_field(MFA),
+        copy_subtree(PID, OldBlockName, F==dropdown, CopyingBlock, Postfix),
+        event({?MODULE, block, save, OldBlock#cms_mfa{sort=new}}),
+        coldstrap:close_modal()
+    end;
+event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
+    NewSort=
+      try
+        list_to_integer(wf:q(sort))
+      catch error:badarg ->
+          S
+      end,
 
-    coldstrap:close_modal(),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE});
+    mnesia:transaction( %% remove dublicating sort
+        fun() ->
+          case mnesia:select(cms_mfa, 
+                                  [{#cms_mfa{id={PID, Block}, active=true, sort=$1, _='_'},
+                                    [
+                                      {'or', {'==', '$1', S}, {'==', '$1', NewSort}}
+                                    ],
+                                    []}
+                                  ]
+                                ) of
+            L when is_list(L), length(L) > 0 ->
+                [ db:full_delete(Mfa) || Mfa<-L];
+            _ -> undefined
+          end
+        end),
+    MFA=OldMFA#cms_mfa{sort=NewSort},
+    Saved=db:save(maybe_fix_sort(
+                    apply_element_transform(
+                      rec_from_qs(MFA)),
+                    MFA)),
+    NewMFABlock = common:q(block, undefined),
+    OldMFABlock = db:extract_mfa_block_name(OldMFA),
+    
+    % maybe update children
+    case NewSort of 
+      new -> undefined;
+      _ -> db:update_children(PID, NewMFABlock, OldMFABlock)
+    end,
+
+    % update pages where block exists
+    case PID of
+      "*" ->
+            Pages=db:get_indexed_pages(),
+            lists:foreach(fun(Page) ->
+                              db:save(Page)
+                          end, Pages);
+      PID ->
+            [Page]=db:get_page(PID),
+            db:save(Page)
+    end,
+    
+    case wf:qs(page) of
+      ["admin"] -> reload_subtree(PID, Block);
+      _ -> 
+        coldstrap:close_modal(),
+        update_block_on_page(Saved)
+    end;
+
 event({?MODULE, block, remove, B}) -> % {{{2
     admin:new_modal(
         "Are you sure to delete?", 
         {block, remove_block, B},
         []
     );
-
 event({?MODULE, block, remove_block, B}) -> % {{{2
-    {PID, Block} = B#cms_mfa.id,
+    {_PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
-    coldstrap:close_modal();
+    common:script("","$('#tree').save_parent();"),
+    wf:session(selected_block, {Block, Block}),
+    common:script("","$('#tree').remove_active();"),
+    wf:update(edited_block, #panel{class="collapse"})
+    % wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
+    % coldstrap:close_modal()
+    ;
 event({?MODULE, user, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1352,13 +1612,8 @@ event({?MODULE, user, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="Users"}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                             body=[#bs_col{
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create User",
                                               class=["btn",
@@ -1373,7 +1628,8 @@ event({?MODULE, user, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Users"});
 event({?MODULE, user, new}) -> % {{{2
     Page = wf:state(page),
     new_modal("Create User", 
@@ -1395,6 +1651,7 @@ event({?MODULE, user, save}) -> % {{{2
     coldstrap:close_modal(),
     wf:wire(#event{postback={?MODULE, user, show}, delegate=?MODULE});
 event({?MODULE, role, show}) -> % {{{2
+    wf:session(history, undefined),
     CRUD = #crud{
               pagination_class=["btn", "btn-default"],
               button_class=["btn", "btn-link"],
@@ -1413,13 +1670,8 @@ event({?MODULE, role, show}) -> % {{{2
              },
     wf:update(container, [
                           #bs_row{
-                             body=[
-                                   #bs_col{
-                                      cols={lg, 10},
-                                      body=#h1{text="Roles"}
-                                     },
-                                   #bs_col{
-                                      cols={lg, 2},
+                             body=[#bs_col{
+                                      cols=[{lg, 2},{md, 3}, {sm, 3}],
                                       body=#button{
                                               text="Create Role",
                                               class=["btn",
@@ -1434,7 +1686,8 @@ event({?MODULE, role, show}) -> % {{{2
                                      cols={lg, 12},
                                      body=CRUD
                                     }
-                            }]);
+                            }]),
+    wf:update(title, #panel{text="Roles"});
 event({?MODULE, role, new}) -> % {{{2
     new_modal("Create Role", 
               {?MODULE, role, save},
@@ -1472,10 +1725,40 @@ event({?MODULE, pages, merge}) -> % {{{2
               {popup, close},
               merge_backup,
               undefined);
+event({?MODULE, db, defragment}) -> % {{{2
+    db:remove_blocks_without_parent();
+event({?MODULE, db, clean}) -> % {{{2
+    db:remove_old_unused_blocks();
 event({?MODULE, auth, call_restore_password}) -> % {{{2
     account:call_restore_password();
-event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+event({?MODULE, page, close_and_construct, PID, [Block]}) -> % {{{2
+    coldstrap:close_modal(),
+    event({?MODULE, page, construct, PID, [Block]});
+event({?MODULE, block, make_active, Block, PID, MFA, SearchSublink, Lvl}) -> % {{{2
+    wf:session(selected_block, {Block, MFA}),
+    % ?LOG("make_active:~p; MFA:~p", [Block, MFA]),
+    case Block of
+      Text when is_list(Text) ->
+          wf:update(edited_block,
+            #panel{class="collapse"}
+          )
+          , SubTree=build_list(PID, Block, 2, false, 3),
+          wf:wire(#insert_after{target=updating_subtree_lvl1, elements=SubTree}),
+          common:script("","$('#tree').update_tree();")
+          ;
+      _ -> %#cms_mfa{id={_PID,_BID}} 
+          event({?MODULE, block, edit, Block}),
+          % BlockName = db:extract_mfa_block_name(Block), TODOn replaced to MFA!
+          SubTree=build_list(PID, MFA, Lvl, SearchSublink, Lvl+1),
+          wf:wire(#insert_after{target=updating_subtree, elements=SubTree}),
+          common:script("","$('#tree').update_tree();")
+    end;
+    
+event(close_modal) -> % {{{2
+    coldstrap:close_modal();
+event(Ev) -> % {{{2#
+    ?LOG("Unhandled ~p event ~p", [?MODULE, Ev]),
+    "".
 
 inplace_textbox_event({asset, Record, Field}, Value) -> % {{{2
     Val = db:update(Record, Field, Value),
@@ -1502,7 +1785,11 @@ finish_upload_event(template, Fname, Path, _Node) -> % {{{2
 
 finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     #cms_asset{type=Type} = file_to_asset(Fname, ""),
-    URLPath = wf:f("~s/~s", [Type, Fname]),
+    [Ext, _Min | _Id] = lists:reverse(string:tokens(Fname, ".")),
+    URLPath = case string:to_lower(Ext) of
+      "js" -> wf:f("js/~s", [ Fname]);
+      _ -> wf:f("~s/~s", [Type, Fname])
+    end,
     NewPath = wf:f("static/~s", [URLPath]),
     file:rename(Path, NewPath),
     maybe_set(name, Fname),
@@ -1510,10 +1797,10 @@ finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     wf:set(path, URLPath).
 
 api_event(Name, Tag, Args) -> % {{{2
-    ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]).
+    ?LOG("~p API event ~p(~p; ~p)", [?MODULE, Name, Tag, Args]),
+    "".
 
 sort_event({PID, Block}, Blocks) -> % {{{2
-    % ?LOG("Blocks: ~p", [Blocks]),
     lists:foreach(fun({N, {block, _PID, B}}) ->
                           db:update(B, B#cms_mfa{sort=N})
                   end,
@@ -1533,3 +1820,257 @@ cms_roles() -> % {{{2
 collections() -> % {{{2
     Modules = common:module_by_function({functions, 0}),
     lists:map(fun(M) -> {M, M:description()} end, Modules).
+
+update_block_on_page(#cms_mfa{id={_,Block},mfa=MFA,sort=S}) -> % {{{2
+    NewText=case MFA of 
+      {common, text, Text} -> Text;
+      _-> undefined
+    end,
+    ChangedBlock=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
+    wf:wire(#update{target=ChangedBlock, elements=NewText}).
+
+admin_logout_button()-> % {{{2
+  #btn{
+        body="<i class='fa fa-sign-out fa-fw'></i>",
+        class=["btn-logout"],
+        title="Logout",
+        postback={auth, logout},
+        delegate=account
+  }.
+
+update_session_history(Block) -> % {{{2
+%% @doc "maybe update session history"
+  [LastHistory,Tail]=
+    case wf:session(history) of 
+      undefined -> [[],undefined];
+      BL when length(BL)>7 ->
+        [lists:sublist(BL,2,7), lists:last(BL)];
+      SL -> [SL, lists:last(SL)]
+    end,
+  if Tail/=Block ->
+    wf:session(history, lists:append(LastHistory, [Block]));
+  true -> ok
+  end,
+  LastHistory.
+
+
+build_html_tree_from_mfa(PID) -> % {{{2
+%% @doc "Function for building main html list from tree of cms_mfa table and calls function to deep building"
+  BlockWithoutParents=lists:sort(db:get_blocks_without_parent(PID)),
+  MbFilterBlocks=case PID of
+    "*" -> BlockWithoutParents;
+    _ -> lists:delete("router", BlockWithoutParents)
+  end,
+  MaxLvl=3,
+  lists:map(
+    fun(BlockId) ->
+        #list{
+            body=#listitem{
+               body=[
+                      % common:icon("glyphicon", "indicator", ["glyphicon-plus-sign"]),
+                      #link{text=BlockId, actions=?POSTBACK({?MODULE, block, make_active, BlockId, PID, [], false, 2}, ?MODULE)},
+                      build_list(PID, BlockId, 2, false, MaxLvl)
+               ],
+               class=["branch lvl-1"]
+            },
+            class=["tree treed"]}
+    end, MbFilterBlocks
+  ).
+
+build_list(PID, Block, Lvl, SearchSublink, MaxLvl) -> % {{{2
+%% @doc "Recursive function for building html list from tree of cms_mfa table"
+  % MaxLvl=99,
+  Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
+  case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
+    {[], _} ->  undefined;
+    {_, false} -> 
+      undefined;
+    {L, true} ->
+      SortedList=lists:keysort(#cms_mfa.sort, L),
+      lists:map(
+        fun(#cms_mfa{mfa=MFA,sort=S}=B)->
+          {M,F,Args}=parse_mfa_field(MFA),
+          ChildBlocks=case check_if_block_can_has_subblocks(B) of
+            true  ->
+              case F of
+                panel ->
+                  [Ph,Pb,Pa,Pf|_]=Args,
+                  [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
+                modal ->
+                  [PB,Mt,Mb,Mf|_]=Args,
+                  [{I,B} || I <- [PB,Mt,Mb,Mf], I /= []];
+                article ->
+                  [Ah,Ab,Af|_]=Args,
+                  [{I,B} || I <- [Ah,Ab,Af], I /= []];
+                _ ->[H|_]=Args,
+                    [{H,B}]
+              end;
+            _ -> case F of 
+                  Asset when (Asset==img) or (Asset==asset) -> 
+                      [{wf:f("~s", [string:join(lists:reverse(lists:nth(1,Args)), ".")]), B}];
+                  template ->
+                      [{wf:f("~s",[Args]),B}];
+                  text ->
+                      [{wf:f("~s-~s-~p",[M,F,S]),B}];
+                  empty ->
+                      [{"empty_mfa",B}];
+                  _ ->
+                      [{wf:f("~s-~p",[F,S]),B}]
+                 end
+          end,
+          ViewFunction=#span{text=wf:f(" (~s:~s)",[M,F]),
+                             class="sub-label"},
+          WithSublink=lists:member(F,Functions_with_sub_blocks),
+          Items=
+            case ChildBlocks of 
+              [{ChildBlock,PBlock}] ->
+                build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F);
+              ChildBlocks -> lists:map(
+                fun({ChildBlock,PBlock})->
+                  build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F)
+                  
+                end, ChildBlocks
+              )
+            end,
+          % #list{body=Items}
+          Items
+        end, SortedList
+      )
+  end.
+
+build_html_tree_ul(PBlock, PID, ChildBlock, WithSublink, Lvl, ViewFunction, F) -> % {{{2
+  MaxLvl = 3,
+  #list{body=
+     #listitem{
+         body=[
+           #link{body=[
+                      ViewFunction
+                      ],
+                text=case ChildBlock of 
+                  [] -> wf:f("~s",[F]);
+                  _ -> ChildBlock
+                end,
+                class=["not-tree"],
+                actions=?POSTBACK({?MODULE, block, make_active, PBlock, PID, ChildBlock, WithSublink, Lvl}, ?MODULE)
+           },
+           build_list(PID, ChildBlock, Lvl+1, WithSublink, MaxLvl)
+       ],
+       class=["branch lvl-"++wf:f("~p",[Lvl])]
+    }
+  }.
+
+copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
+%% @doc "Recursive function for the coping a block structure"
+  Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
+  NewPID = common:q(add_page_select, PID),
+  case db:get_mfa(PID, Block, true, SearchSublink) of 
+    [] -> undefined;
+    L  ->
+      SortedList=lists:keysort(#cms_mfa.sort, L),
+      lists:map(
+        fun(#cms_mfa{id={_,BID}}=B)->
+          ChildBlocks=extract_mfa_names(B),
+          
+          lists:map(
+            fun({ChildBlock, #cms_mfa{mfa=MFA}=PBlock})->
+              {M,F,Args}=parse_mfa_field(MFA),
+              NewBID=case NewBlockName of
+                undefined-> BID++Postfix;
+                _ -> NewBlockName
+              end,
+              NewMfa=case check_if_block_can_has_subblocks(PBlock) of
+                true  ->
+                  case F of
+                    panel ->
+                      [A1,A2,A3,A4|A5_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix,A3++Postfix,A4++Postfix], A5_N),
+                      {M,F,NewAgs};
+                    modal ->
+                      [A1,A2,A3|A4_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix,A3++Postfix], A4_N),
+                      {M,F,NewAgs};
+                    article ->
+                      [A1,A2|A3_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix],A3_N),
+                      {M,F,NewAgs};
+                    _ ->
+                      [A1|A2_N]=Args,
+                      NewAgs=lists:append([A1++Postfix], A2_N),
+                      {M,F,NewAgs}
+                    end;
+                _ -> 
+                  {M,F,Args}
+              end,
+              WithSublink=lists:member(F,Functions_with_sub_blocks),
+              UpdMfa=PBlock#cms_mfa{mfa=NewMfa},
+              CopyBlock = db:update_record_field(UpdMfa, id, {NewPID, NewBID}),
+              db:save(CopyBlock),
+              copy_subtree(PID, ChildBlock, WithSublink, undefined, Postfix)
+            end, ChildBlocks
+          )
+        end, SortedList
+      )
+  end.
+
+check_if_block_can_has_subblocks(#cms_mfa{mfa=MFA}) -> % {{{2
+  {M,_,Args}=parse_mfa_field(MFA),
+  Exclude_modules=[analytics,common,router],
+  (length(Args) > 0) and (not lists:member(wf:to_atom(M), Exclude_modules));
+check_if_block_can_has_subblocks(_Tree_head)->
+  true.
+
+parse_mfa_field(MFA) -> % {{{2
+  case MFA of
+    {A1,A2,A3} -> {A1,A2,A3};
+    _ -> {common,empty,[]}
+  end.
+
+extract_mfa_names(#cms_mfa{mfa=MFA}=B) -> % {{{2
+%% @doc "Return list [{mfa_name_in_block, cms_mfa_record}]
+  {_M,F,Args}=parse_mfa_field(MFA),
+  case check_if_block_can_has_subblocks(B) of
+    true  ->
+      case F of
+        panel ->
+          [Ph,Pb,Pa,Pf|_]=Args,
+          [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
+        modal ->
+          [PB,Mt,Mb,Mf|_]=Args,
+          [{I,B} || I <- [PB,Mt,Mb,Mf], I /= []];
+        article ->
+          [Ah,Ab,Af|_]=Args,
+          [{I,B} || I <- [Ah,Ab,Af], I /= []];
+        _ ->[H|_]=Args,
+            [{H,B}]
+      end;
+    _ -> 
+          [{undefined,B}]
+  end.
+
+get_selected_block() -> % {{{2
+  SelectedBlockSess = wf:session(selected_block),
+  case SelectedBlockSess of
+    undefined -> {"body", "body"}; % default block for adding subblocks
+    {A, []} when is_list(A)-> {A, A};
+    {A1, A2} -> {A1, A2}
+  end.
+
+reload_subtree(PID, Block) -> % {{{2
+  PID_move = common:q(add_page_select, "index"),
+  % wf:wire(#event{postback={?MODULE, block, make_active, Saved, PID, MFA, true, 2}, delegate=?MODULE}),
+
+  {SelectedBlock, _} = get_selected_block(),
+  SelectedBlockName = case SelectedBlock of
+    Text when is_list(Text) ->
+      Text;
+    #cms_mfa{id={_PID, BID}} ->
+        BID
+  end,
+  AddToBlock = common:q(add_block, "body"),
+  case (SelectedBlockName == AddToBlock) and (PID_move == PID) of
+    false ->
+      common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
+      wf:wire(#event{postback={?MODULE, page, construct, PID_move, [Block]}, delegate=?MODULE});
+    true ->
+      common:script("","$('#tree').remove_tree();")
+  end.

@@ -1,7 +1,7 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
 -module (account).
--compile([export_all, {parse_transform, lager_transform}]).
+-compile(export_all).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include("records.hrl").
 -include("db.hrl").
@@ -269,16 +269,13 @@ maybe_redirect_to_login(Page) -> % {{{2
 maybe_redirect_to_login(#cms_page{accepted_role=undefined} = Page, URL) -> % {{{2
     maybe_redirect_to_login(Page#cms_page{accepted_role=nobody}, URL);
 maybe_redirect_to_login(#cms_page{accepted_role=nobody} = Page, _URL) -> % {{{2
-    ?LOG("Not redirect to login: ~p", [Page]),
     Page;
 maybe_redirect_to_login(#cms_page{accepted_role=Role} = Page, URL) -> % {{{2
-    ?LOG("role: ~p,wf:role(Role):~p, url:~p", [Role,wf:role(Role),URL]),
     case wf:role(Role) of 
         true ->
             ?LOG("Role: ~p", [Role]),
             Page;
         false ->
-            ?LOG("Redirect to login: ~p", [Page]),
             wf:redirect_to_login(URL)
     end.
 
@@ -351,7 +348,9 @@ default_data() -> % {{{2
                                    {bootstrap, col, ["col-admin", "4", "4", ""]}),
 
                 admin:add_to_block("register", "col-admin",
-                                   {bootstrap, panel, ["admin-panel-header", "admin-panel-body", "", "", ["login-panel", "panel-default"]]}),
+                                   {bootstrap, panel,
+                                   ["admin-panel-header", "admin-panel-body", [],[],[],[],[],[],
+                                   ["login-panel", "panel-default"]]}),
                 admin:add_to_block("register", "admin-panel-header",
                                    {text, ["<h3 class='panel-title'>Sign Up</h3>"]}),
 
@@ -382,7 +381,10 @@ default_data() -> % {{{2
                 admin:add_to_block("restore", "row",
                                    {bootstrap, col, ["col", "4", "4", []]}),
                 admin:add_to_block("restore", "col",
-                                   {bootstrap, panel, ["panel-header", "panel-body", "", "", ["panel-default"]]}),
+                                   {bootstrap, panel,
+                                   ["panel-header","panel-body",[],[],[],[],[],[],
+                                    [[],"panel-default"]]}),
+
                 admin:add_to_block("restore", "panel-header",
                                    {common, text,["Change Password"]}),
 

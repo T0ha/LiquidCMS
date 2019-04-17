@@ -28,7 +28,8 @@ functions() -> % {{{2
      {main, "Main"},
      {section, "Section"},
      {time, "Time"},
-     {iframe, "Iframe"}
+     {iframe, "Iframe"},
+     {input, "Input"}
      ].
 
 format_block(block, [Block, Classes, DataAttr]) -> % {{{2
@@ -51,7 +52,6 @@ format_block(F, [Block, Data, Classes, DataAttr]) -> % {{{2
 format_block(F, [Block, Classes, DataAttr]) -> % {{{2
   {wf:f("html5(~s): (id:~p class=~p attr:~p)", [F, Block, Classes, DataAttr]), Block};
 format_block(F, A) -> % {{{2
-    % ?LOG("format_block: F:~p, A:~p",[F,A]),
     {wf:f("html5: ~s(~p)", [F, A]), undefined}.
 
 
@@ -67,6 +67,29 @@ form_data(list, A) -> % {{{2
          }
      ],
      [], Block, Classes, DataAttr};
+form_data(input,  A) -> % {{{2
+    [_, Block, Readonly, Maxlen, Text, Classes, DataAttr] = admin:maybe_empty(A, 7),
+    {[
+       #checkbox{
+          text="Readonly",
+          label_position=before,
+          id=readonly_input,
+          checked=Readonly
+         },
+        {"Max length (optional)",
+         #txtbx{
+            id=maxlength_input,
+            text=Maxlen,
+            placeholder=""
+           }},
+        {"Text (optional)",
+         #txtbx{
+            id=text_input,
+            text=Text,
+            placeholder=""
+           }}
+     ],
+     [], Block, Classes, DataAttr};
 form_data(link_url, A) -> % {{{2
     [_, Block, URL, Classes, DataAttr] = admin:maybe_empty(A, 5),
     {[
@@ -80,7 +103,6 @@ form_data(link_url, A) -> % {{{2
      [], Block, Classes, DataAttr};
 form_data(iframe, A) -> % {{{2
     [_, Block, URL, Width, Height, AllowFls, Classes, DataAttr] = admin:maybe_empty(A, 8),
-    ?LOG("form_data iframe ~p",[AllowFls]),
     {[
       {"URL",
        #txtbx{
@@ -143,18 +165,24 @@ form_data(header, A) -> % {{{2
 form_data(article, A) -> % {{{2
     [_, HeaderBlock, Block, FooterBlock, Classes, DataAttr] = admin:maybe_empty(A, 6),
     {[
-      {"Block for header",
-      #txtbx{
-         id=article_header_block,
-         text=HeaderBlock,
-         placeholder="Block name for article header (leave blank for none)"
-        }},
-      {"Block for footer",
-      #txtbx{
-         id=article_footer_block,
-         text=FooterBlock,
-         placeholder="Block name for article footer (leave blank for none)"
-        }}
+      #panel{
+        body=[
+          #span{text="Block for header"},
+          #txtbx{
+             id=article_header_block,
+             text=HeaderBlock,
+             placeholder="Block name for article header (leave blank for none)"
+            }
+      ]},
+      #panel{
+        body=[
+          #span{text="Block for footer"},
+          #txtbx{
+             id=article_footer_block,
+             text=FooterBlock,
+             placeholder="Block name for article footer (leave blank for none)"
+            }
+      ]}
      ],
      [],
      Block,
@@ -163,15 +191,23 @@ form_data(article, A) -> % {{{2
     }.
 
 save_block(#cms_mfa{mfa={html5, list, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
-    Num = wf:to_atom(common:q(numbered, "false")),
+    Num = wf:to_atom(common:q(numbered, false)),
     Rec#cms_mfa{mfa={html5, list, [Block, Num, Classes, DataAttr]}};
+
+save_block(#cms_mfa{mfa={html5, input, [Block, Maxlen, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+    Readonly = wf:to_atom(common:q(readonly_input, false)),
+    Rec#cms_mfa{mfa={html5, input, [Block, Readonly, Maxlen, Text, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={html5, link_url, [Block, URL, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, iframe, [Block, URL, Width, Height, Classes, DataAttr]}}=Rec) -> % {{{2
     AllowFls = wf:to_atom(common:q(allowfullscreen, false)),
     Rec#cms_mfa{mfa={html5, iframe, [Block, URL, Width, Height, AllowFls, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={html5, email_link, [Block, URL, Classes, DataAttr]}};
+
 save_block(#cms_mfa{mfa={html5, header, [Block, Level, Classes, DataAttr]}}=Rec) -> % {{{2
   L = try
       case list_to_integer(Level) of
@@ -231,8 +267,13 @@ link_url(Page, Block, URL) -> % {{{2
 link_url(Page, Block, URL, Classes) -> % {{{2
     link_url(Page, Block, URL, Classes, []).
 link_url(Page, Block, URL, Classes, DataAttr) -> % {{{2
+    LangId=index:language(Page),
+    UpdUrl=case re:run(URL,"\\w+\\.\\w+") of %check if html link contanis url with domain_name
+        nomatch->index:set_url_with_lang(URL, LangId);
+        _->URL
+    end,
     #link{
-       url=URL, 
+       url=UpdUrl, 
        html_id=common:block_to_html_id(Block),
        class=Classes,
        body=common:parallel_block(Page, Block),
@@ -420,3 +461,13 @@ iframe(_Page, Block, URL, Width, Height, AllowFls, Classes, DataAttr) -> % {{{2
     height=Height,
     data_fields = DataAttr
 }.
+
+input(_Page, Block, Readonly, Maxlen, Text, Classes, DataAttr) -> % {{{2
+  #txtbx {
+    html_id=common:block_to_html_id(Block),
+    class=Classes,
+    text=Text,
+    readonly=Readonly,
+    maxlength=Maxlen,
+    data_fields = DataAttr
+  }.

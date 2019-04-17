@@ -25,7 +25,8 @@ functions() -> % {{{2
      {table, "Table"},
      {th, "Table header"},
      {tr, "Table row"},
-     {td, "Table cell"}
+     {td, "Table cell"},
+     {languages_menu, "Language selector"}
      ].
 
 format_block(col, [Block, Width, Offset, Classes]) -> % {{{2
@@ -79,24 +80,33 @@ form_data(panel, A) -> % {{{2
     [_, HeaderBlock, Block,  AddonsBlock, FooterBlock, HeaderCls, BodyCls, FooterCls, AddonCls, Classes0, DataAttr] = admin:maybe_empty(A, 11),
     [Classes, Context] = admin:maybe_empty(Classes0, 2),
     {[
-      {"Block for panel header",
-      #txtbx{
-         id=panel_header_block,
-         text=HeaderBlock,
-         placeholder="Block name for panel header (leave blank for none)"
-        }},
-      {"Block for panel addons",
-      #txtbx{
-         id=panel_addons_block,
-         text=AddonsBlock,
-         placeholder="Block name for panel addons (leave blank for none)"
-        }},
-      {"Block for panel footer",
-      #txtbx{
-         id=panel_footer_block,
-         text=FooterBlock,
-         placeholder="Block name for panel footer (leave blank for none)"
-        }}
+      #panel{
+        body=[
+          #span{text="Block for panel header"},
+          #txtbx{
+             id=panel_header_block,
+             text=HeaderBlock,
+             placeholder="Block name for panel header (leave blank for none)"
+            }
+      ]},
+      #panel{
+        body=[
+          #span{text="Block for panel addons"},
+          #txtbx{
+             id=panel_addons_block,
+             text=AddonsBlock,
+             placeholder="Block name for panel addons (leave blank for none)"
+            }
+      ]},
+      #panel{
+        body=[
+          #span{text="Block for panel footer"},
+          #txtbx{
+             id=panel_footer_block,
+             text=FooterBlock,
+             placeholder="Block name for panel footer (leave blank for none)"
+            }
+      ]}
      ],
      [
       {"Context",
@@ -245,6 +255,27 @@ form_data(container, A) -> % {{{2
      Block,
      Classes
     };
+form_data(languages_menu, A) -> % {{{2
+    [_, Block, ShowText, ShowFlag, Classes, DataAttr] = admin:maybe_empty(A, 6),
+
+    {[#checkbox{
+         text="Show text",
+         label_position=before,
+         id=showtext,
+         checked=ShowText==on
+        },
+      #checkbox{
+         text="Show flag",
+         label_position=before,
+         id=showflag,
+         checked=ShowFlag==on
+        }
+      ],
+     [],
+     Block,
+     Classes,
+     DataAttr
+    };
 form_data(_F, [_, Block, Classes]) -> % {{{2
     {[], [], Block, Classes};
 form_data(_F, []) -> % {{{2
@@ -299,10 +330,21 @@ save_block(#cms_mfa{id={PID, Block}, mfa={bootstrap, tab, [TabBlock, Classes, _D
                 ]);
 save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, col, [Block, [Classes, W, O ], _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={bootstrap, col, [Block, W, O, Classes]}};
-%save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, full_block, [Block ]}}=Rec) -> % {{{2
-%    ColClass = common:q(col_class, ""),
-%    Rec#cms_mfa{mfa={bootstrap, full_block, [Block, RowClass, ColClass]}};
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+
+save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, languages_menu, [Block, Classes, DataAttr]}}=Rec) -> % {{{2
+    ShowText = wf:to_atom(common:q(showtext, false)),
+    ShowFlag = wf:to_atom(common:q(showflag, false)),
+    Rec#cms_mfa{mfa={bootstrap, languages_menu, [Block, ShowText, ShowFlag, Classes, DataAttr]}};
+
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [BlockName, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
+    BlockCutLi=case re:run(BlockName, "/li$") of
+      nomatch -> BlockName;
+      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+    end,
+    Block=case re:run(BlockCutLi, "^\\+") of
+      nomatch -> BlockCutLi;
+      {match,[{_, _}]} -> string:substr(BlockCutLi, 2)
+    end,
     NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
     case URL of
@@ -312,7 +354,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
                                mfa={bootstrap, dropdown, [Block]},
                                sort=1}),
             db:maybe_update(#cms_mfa{id={PID, common:sub_block(Block, "link")},
-                               mfa={common, text, [Text ++ "<b class='caret'></b>"]},
+                               mfa={common, text, [Text]},
                                sort=1}),
             [
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, [Classes], DataAttr]}}
@@ -328,7 +370,15 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [Block, URL, Text, Cl
              Rec#cms_mfa{mfa={bootstrap, nav_item, [NavItemBlock, Classes, DataAttr]}}
             ]
     end;
-save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
+save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [BlockName, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
+    BlockCutPostfix=case re:run(BlockName, "/navbar-ul$") of
+      nomatch -> BlockName;
+      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+    end,
+    Block=case re:run(BlockCutPostfix, "^\\+") of
+      nomatch -> BlockCutPostfix;
+      {match,[{_, _}]} -> string:substr(BlockCutPostfix, 2)
+    end,
     NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
     NewClasses = [Classes | admin:prefix_classes(navbar, [Inverse, Position])],
@@ -338,6 +388,7 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [Block, [Classes, Posit
                              mfa={bootstrap, nav_items, [Block, ["navbar-nav" | PPadding]]},
                              sort=1}),
     Rec#cms_mfa{mfa={bootstrap, navbar, [NavItemsBlock, NewClasses]}};
+
 save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, container, [Block, Classes, _DataAttr]}}=Rec) -> % {{{2
     Fluid = case common:q(fluid, "") of
                 "" -> "container";
@@ -521,9 +572,58 @@ tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
     #panel{
        html_id=common:block_to_html_id(Block),
        %role="tabpanel",
-       class=["tab-pane" | Classes],
+       class=["tab-panel" | Classes],
        body=common:parallel_block(Page, Block)
       }.
+languages_menu(Page, Block, ShowText, ShowFlag, Classes, DataAttr) -> % {{{2
+    Language = index:language(Page),
+    [#cms_language{icon=LanguageIcon}]=db:get_language(Language),
+    AssetId=lists:reverse(string:tokens(LanguageIcon,".")),
+    Current=#span{
+      text=case ShowText of 
+        on -> Language;
+        _ -> ""
+      end,
+      body=case ShowFlag of 
+        on ->[common:img(Page, AssetId, "flags-icon icon")];
+        _ -> []
+      end
+    },
+    #panel{
+      html_id=common:block_to_html_id(Block),
+      body=[
+          #btn{
+            id=dropdownMenuButton,
+            body=[Current],
+            class="btn dropdown-toggle",
+            data_fields=[{toggle, "dropdown"}]
+          },
+          languages_items(Page, ShowText, ShowFlag)
+      ],
+      class=["dropdown" | Classes],
+      data_fields = DataAttr
+    }.
+languages_items(Page, ShowText, ShowFlag) -> % {{{2
+    URI=wf:uri(),
+    Languages=
+      [ #link{
+          url=index:set_url_with_lang(URI, Id),
+          class="dropdown-item",
+          body=[#span{
+                  text=case ShowText of 
+                    on -> Id;
+                    _ -> ""
+                  end,
+                  body=case ShowFlag of 
+                    on ->[common:img(Page, lists:reverse(string:tokens(Icon,".")), "flags-icon icon")];
+                    _ -> []
+                  end
+                }]} || #{id := Id, icon := Icon} <- db:get_languages(), Id/="any"
+      ],
+    #panel{
+      body=Languages,
+      class="dropdown-menu"
+    }.
 
 modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes) -> % {{{2
     modal(Page, Block, TitleBlock, BodyBlock, FooterBlock, Classes, []).
@@ -553,7 +653,8 @@ event(submenu) -> % {{{2
                                     ]})
     end;
 event(Ev) -> % {{{2
-    ?LOG("~p event ~p", [?MODULE, Ev]).
+    ?LOG("~p event ~p", [?MODULE, Ev]),
+    "".
 
 %% Dropdown formatters {{{1
 position_classes(navbar) -> % {{{2

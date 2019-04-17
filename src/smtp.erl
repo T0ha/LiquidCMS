@@ -20,11 +20,15 @@ send_forgot(Email, Passwd) ->  % {{{1
     send_html("no-reply@liquid-nitrogen.org", Email, "Password changed foraccount on liquid-nitrogen.org", Body3).
 
 send_html(From, To, Subject, Message) ->  % {{{1
+    send_html(From, To, Subject, Message, From).
+
+send_html(From, To, Subject, Message, Reply) ->  % {{{1
     Sendmail = open_port({spawn, "/usr/sbin/sendmail -t"}, []),
     MessageWithHeader = "From: " ++ From ++ "\n" ++
 	"To: " ++ To ++ "\n" ++
 	"MIME-Version: 1.0\n" ++
 	"Content-Type: text/html; charset=utf8\n" ++
+    "Reply-To: " ++ Reply ++ "\n" ++
 	"Subject: " ++ Subject ++ "\n\n" ++
 	Message ++ "\n\n", 
     Sendmail ! {self(), {command, MessageWithHeader}},
