@@ -1202,6 +1202,7 @@ event({?MODULE, page, construct}) -> % {{{2
     [#{id := P} | _] = Pages,
     PID = common:q(page_select, P), 
     SelectedBlock = wf:session(selected_block),
+    common:script("","$('#tree').html('<div>&nbsp;loading...</div>'); "),
     BlockId=case SelectedBlock of
       undefined -> "body";
       {_B, []} -> "body";
@@ -1519,6 +1520,7 @@ event({?MODULE, block, copy_all_structure, #cms_mfa{id={PID, _},mfa=MFA}=OldBloc
         coldstrap:close_modal()
     end;
 event({?MODULE, block, save, #cms_mfa{id={PID, Block}, sort=S}=OldMFA}) -> % {{{2
+    common:script("","$('#tree').html('<div>&nbsp;loading...</div>');"),
     NewSort=
       case S of
         new -> new;
@@ -1584,12 +1586,15 @@ event({?MODULE, block, remove, B}) -> % {{{2
         []
     );
 event({?MODULE, block, remove_block, B}) -> % {{{2
-    {PID, Block} = B#cms_mfa.id,
+    {_PID, Block} = B#cms_mfa.id,
     db:maybe_delete(B),
     common:script("","$('#tree').save_parent();"),
     wf:session(selected_block, {Block, Block}),
-    wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
-    coldstrap:close_modal();
+    common:script("","$('#tree').remove_active();"),
+    wf:update(edited_block, #panel{class="collapse"})
+    % wf:wire(#event{postback={?MODULE, page, construct, PID, [Block]}, delegate=?MODULE}),
+    % coldstrap:close_modal()
+    ;
 event({?MODULE, user, show}) -> % {{{2
     wf:session(history, undefined),
     CRUD = #crud{
@@ -1870,7 +1875,7 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
   Functions_with_sub_blocks=[dropdown,email_field,password_field,retype_password_field],
   case {db:get_mfa(PID, Block, true, SearchSublink), (Lvl<MaxLvl)} of 
     {[], _} -> undefined;
-    {_, false} -> undefined;
+    {_, false} -> ?LOG("~nMaxLvl~s", [MaxLvl]), undefined;
     {L, true} ->
       SortedList=lists:keysort(#cms_mfa.sort, L),
       lists:map(
@@ -1882,6 +1887,9 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
                 panel ->
                   [Ph,Pb,Pa,Pf|_]=Args,
                   [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
+                modal ->
+                  [PB,Mt,Mb,Mf|_]=Args,
+                  [{I,B} || I <- [PB,Mt,Mb,Mf], I /= []];
                 article ->
                   [Ah,Ab,Af|_]=Args,
                   [{I,B} || I <- [Ah,Ab,Af], I /= []];
@@ -1951,7 +1959,10 @@ copy_subtree(PID, Block, SearchSublink, NewBlockName, Postfix) -> % {{{2
                     panel ->
                       [A1,A2,A3,A4|A5_N]=Args,
                       NewAgs=lists:append([A1++Postfix,A2++Postfix,A3++Postfix,A4++Postfix], A5_N),
-                      
+                      {M,F,NewAgs};
+                    modal ->
+                      [A1,A2,A3|A4_N]=Args,
+                      NewAgs=lists:append([A1++Postfix,A2++Postfix,A3++Postfix], A4_N),
                       {M,F,NewAgs};
                     article ->
                       [A1,A2|A3_N]=Args,
@@ -1998,6 +2009,9 @@ extract_mfa_names(#cms_mfa{mfa=MFA}=B) -> % {{{2
         panel ->
           [Ph,Pb,Pa,Pf|_]=Args,
           [{I,B} || I <- [Ph,Pb,Pa,Pf], I /= []];
+        modal ->
+          [PB,Mt,Mb,Mf|_]=Args,
+          [{I,B} || I <- [PB,Mt,Mb,Mf], I /= []];
         article ->
           [Ah,Ab,Af|_]=Args,
           [{I,B} || I <- [Ah,Ab,Af], I /= []];
