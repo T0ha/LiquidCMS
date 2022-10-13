@@ -9,3 +9,5 @@ deps/*
 .rebar/*
 *.lcms
 scratch/*
+
+_build/default
