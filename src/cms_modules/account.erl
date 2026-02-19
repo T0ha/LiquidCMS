@@ -350,7 +350,7 @@ default_data() -> % {{{2
                 admin:add_to_block("register", "col-admin",
                                    {bootstrap, panel,
                                    ["admin-panel-header", "admin-panel-body", [],[],[],[],[],[],
-                                   ["login-panel", "panel-default"]]}),
+                                   ["login-panel", "panel-default"], []]}),
                 admin:add_to_block("register", "admin-panel-header",
                                    {text, ["<h3 class='panel-title'>Sign Up</h3>"]}),
 
@@ -383,7 +383,7 @@ default_data() -> % {{{2
                 admin:add_to_block("restore", "col",
                                    {bootstrap, panel,
                                    ["panel-header","panel-body",[],[],[],[],[],[],
-                                    [[],"panel-default"]]}),
+                                    [[],"panel-default"], []]}),
 
                 admin:add_to_block("restore", "panel-header",
                                    {common, text,["Change Password"]}),
@@ -515,7 +515,7 @@ q(Id, Default) -> % {{{2
             Default;
         undefined ->
             Default;
-        A -> string:strip(A)
+        A -> string:trim(A)
     end.
 
 call_restore_password() -> % {{{2

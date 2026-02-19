@@ -50,11 +50,11 @@ format_block(full_block, [Block, RowClass, ColClass]) -> % {{{2
          [Block, RowClass, ColClass]),
     Block};
 format_block(navbar, [Block, Classes]) -> % {{{2
-    [B| _] = string:tokens(common:format_private_block(Block), "/"),
+    [B| _] = string:lexemes(common:format_private_block(Block), "/"),
 
     {wf:f("NavBar: ~s(class=~p)", [B, Classes]), B};
 format_block(nav_item, [Block, Classes, DataAttr]) -> % {{{2
-    [B, _] = string:tokens(common:format_private_block(Block), "/"),
+    [B, _] = string:lexemes(common:format_private_block(Block), "/"),
     {wf:f("NavBarButton: ~s(class=~p, attr:~p)", [B, Classes, DataAttr]), B};
 format_block(container, [Block, AllClasses]) -> % {{{2
     [Fluid, Classes] = admin:maybe_empty(AllClasses, 2),
@@ -339,11 +339,11 @@ save_block(#cms_mfa{id={_PID, _}, mfa={bootstrap, languages_menu, [Block, Classe
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [BlockName, URL, Text, Classes, DataAttr]}}=Rec) -> % {{{2
     BlockCutLi=case re:run(BlockName, "/li$") of
       nomatch -> BlockName;
-      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+      {match,[{Start, _}]} -> string:slice(BlockName, 0, Start)
     end,
     Block=case re:run(BlockCutLi, "^\\+") of
       nomatch -> BlockCutLi;
-      {match,[{_, _}]} -> string:substr(BlockCutLi, 2)
+      {match,[{_, _}]} -> string:slice(BlockCutLi, 1)
     end,
     NavItemBlock = common:private_block(common:sub_block(Block, "li")),
 
@@ -373,11 +373,11 @@ save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, nav_item, [BlockName, URL, Text
 save_block(#cms_mfa{id={PID, _}, mfa={bootstrap, navbar, [BlockName, [Classes, Position, Padding], _DataAttr]}}=Rec) -> % {{{2
     BlockCutPostfix=case re:run(BlockName, "/navbar-ul$") of
       nomatch -> BlockName;
-      {match,[{Start, _}]} -> string:substr(BlockName, 1, Start)
+      {match,[{Start, _}]} -> string:slice(BlockName, 0, Start)
     end,
     Block=case re:run(BlockCutPostfix, "^\\+") of
       nomatch -> BlockCutPostfix;
-      {match,[{_, _}]} -> string:substr(BlockCutPostfix, 2)
+      {match,[{_, _}]} -> string:slice(BlockCutPostfix, 1)
     end,
     NavItemsBlock = common:private_block(common:sub_block(Block, "navbar-ul")),
     Inverse = common:q(inverse, "default"),
@@ -552,7 +552,7 @@ tabs(Page, Block, Classes, DataAttr) -> % {{{2
 tab_header(Page, Block, Classes) -> % {{{2
     tab_header(Page, Block, Classes, []).
 tab_header(Page, Block, Classes, _DataAttr) -> % {{{2
-    [BaseBlock|_] = string:tokens(Block, "/"),
+    [BaseBlock|_] = string:lexemes(Block, "/"),
     BodyBlock = common:sub_block(BaseBlock, "body"),
     #listitem{
        html_id=common:block_to_html_id(Block),
@@ -578,7 +578,7 @@ tab_body(Page, Block, Classes, _DataAttr) -> % {{{2
 languages_menu(Page, Block, ShowText, ShowFlag, Classes, DataAttr) -> % {{{2
     Language = index:language(Page),
     [#cms_language{icon=LanguageIcon}]=db:get_language(Language),
-    AssetId=lists:reverse(string:tokens(LanguageIcon,".")),
+    AssetId=lists:reverse(string:lexemes(LanguageIcon,".")),
     Current=#span{
       text=case ShowText of 
         on -> Language;
@@ -615,7 +615,7 @@ languages_items(Page, ShowText, ShowFlag) -> % {{{2
                     _ -> ""
                   end,
                   body=case ShowFlag of 
-                    on ->[common:img(Page, lists:reverse(string:tokens(Icon,".")), "flags-icon icon")];
+                    on ->[common:img(Page, lists:reverse(string:lexemes(Icon,".")), "flags-icon icon")];
                     _ -> []
                   end
                 }]} || #{id := Id, icon := Icon} <- db:get_languages(), Id/="any"
@@ -697,7 +697,7 @@ context_classes(F) -> % {{{2
 assets_dropdown(AssetType) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
     Assets = sets:to_list(sets:from_list(AssetsDup)),
-    Options = [ #option{value=string:join(Id, "."),
+    Options = [ #option{value=lists:flatten(lists:join(".", Id)),
                         text=Name} || #{id := Id,
                                         name := Name} <- Assets],
      #dd{
@@ -709,11 +709,11 @@ assets_dropdown(AssetType) -> % {{{2
 get_navitem_data(_PID, "") -> % {{{ 2
     {"", "", ""};
 get_navitem_data(PID, NavBlock) -> % {{{ 2
-    [Block, "li"] = string:tokens(common:format_private_block(NavBlock), "/"),
+    [Block, "li"] = string:lexemes(common:format_private_block(NavBlock), "/"),
     {Text, URL} = case db:get_mfa(PID, NavBlock) of
-                      [#cms_mfa{mfa={_, dropdown, [Block]}}] -> 
+                      [#cms_mfa{mfa={_, dropdown, [Block]}}] ->
                           [#cms_mfa{mfa={_, _, [T]}}] = db:get_mfa(PID, common:sub_block(Block, "link")),
-                          {string:substr(T, 1, length(T) - 21), ""};
+                          {string:slice(T, 0, length(T) - 21), ""};
                       [#cms_mfa{mfa={_, link_url, [Block, U]}}] -> 
                           [#cms_mfa{mfa={_, _, [T]}}] = db:get_mfa(PID, Block),
                           {T, U}

@@ -25,7 +25,6 @@ init([]) ->
     application:ensure_all_started(crypto),
     application:ensure_all_started(nprocreg),
     application:ensure_all_started(simple_bridge),
-    application:ensure_all_started(ct),
     application:ensure_all_started(gen_smtpc),
     application:ensure_all_started(inets),
     application:ensure_all_started(ssl),

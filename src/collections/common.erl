@@ -163,13 +163,13 @@ save_block(#cms_mfa{mfa={common, text, [_Block, _Classes, _DataAttr]}}=Rec) -> %
     HTML = q(text_mfa, ""),
     Rec#cms_mfa{mfa={common, text, [HTML]}};
 save_block(#cms_mfa{mfa={common, img, [_Block, StringId, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Id = string:tokens(StringId, "."),
+    Id = string:lexemes(StringId, "."),
     Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
 save_block(#cms_mfa{mfa={common, asset, [_Block, "image", StringId, Classes, _DataAttr]}}=Rec) -> % {{{2
-    Id = string:tokens(StringId, "."),
+    Id = string:lexemes(StringId, "."),
     Rec#cms_mfa{mfa={common, img, [Id, Classes]}};
 save_block(#cms_mfa{mfa={common, asset, [_Block, _Type, StringId, _Classes, _DataAttr]}}=Rec) -> % {{{2
-    Id = string:tokens(StringId, "."),
+    Id = string:lexemes(StringId, "."),
     Rec#cms_mfa{mfa={common, asset, [Id]}};
 save_block(#cms_mfa{mfa={common, template, [_Block, File, _Classes, _DataAttr]}}=Rec) -> % {{{2
     Rec#cms_mfa{mfa={common, template, [File]}}.
@@ -243,7 +243,7 @@ icon(_Page, Font, Name, Classes) -> % {{{2
 
 icon(Font, Name, Classes) -> % {{{2
     Cls = [Font, wf:f("~s-~s", [Font, Name]) | Classes],
-    Class = string:join(Cls, " "),
+    Class = lists:flatten(lists:join(" ", Cls)),
     wf:f("<i class='~s'></i>", [Class]).
 
 script(_Page, Script) -> % {{{2
@@ -295,13 +295,14 @@ q(Id, Default) -> % {{{2
             Default;
         undefined ->
             Default;
-        A -> unicode:characters_to_list(string:strip(A))
+        A -> unicode:characters_to_list(string:trim(A))
     end.
 
 
 module_by_function(FunTuple) -> % {{{2  
     Exclude_modules = [web_404],
-    {ok, Files} = file:list_dir("ebin"),
+    EbinDir = filename:dirname(code:which(?MODULE)),
+    {ok, Files} = file:list_dir(EbinDir),
     AllMods = [wf:to_atom(filename:rootname(F)) || F <- Files, filename:extension(F) /= ".app"],
     Mods = lists:filter(fun(I)-> not lists:member(I, Exclude_modules) end, AllMods),
     [M || M <- Mods,
@@ -363,8 +364,8 @@ maybe_wrap_to_edit(Text, #cms_mfa{id={"admin", _}}, true) -> % {{{2
     Text;
 maybe_wrap_to_edit(Text, #cms_mfa{id={_PID, Block}, sort=S}=MFA, true) -> % {{{2
     %% @doc "Return panel for edit a textblock if user have permission",
-    case string:str(Block, "/validate") of %% dirty hack prevent error
-      0 ->
+    case string:find(Block, "/validate") of %% dirty hack prevent error
+      nomatch ->
         #panel{   
            id=common:block_to_html_id(wf:f("~s-~p", [Block, S])),
            body=Text,
@@ -389,11 +390,11 @@ assets_dropdown(AssetType) -> % {{{2
 assets_dropdown(AssetType, AID) -> % {{{2
     AssetsDup = db:get_assets(AssetType),
     Assets = sets:to_list(sets:from_list(AssetsDup)),
-    Options = [ #option{value=string:join(Id, "."),
+    Options = [ #option{value=lists:flatten(lists:join(".", Id)),
                         text=Name} || #{id := Id,
                                         name := Name} <- Assets],
      #dd{
         id=asset_id,
-        value=string:join(AID, "."),
+        value=lists:flatten(lists:join(".", AID)),
         options=Options
        }.

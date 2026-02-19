@@ -1,7 +1,7 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
 -module (admin).
--compile([export_all, {parse_transform, lager_transform}]).
+-compile([export_all]).
 -include_lib("nitrogen_core/include/wf.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 -include("records.hrl").
@@ -60,7 +60,7 @@ default_data() -> % {{{2
  }.
 
 install() -> % {{{2
-    lager:info("Installing ~p module", [?MODULE]),
+    ?LOG("Installing ~p module", [?MODULE]),
     get_files_from_folder("static"),
     get_files_from_folder("templates"),
     get_files_from_folder("templates/internal"),
@@ -223,36 +223,36 @@ link_body_funs(PID, LinkBlock, Icon, Text) -> % {{{2
     ].
 
 file_to_asset(File, Path) -> % {{{2
-    [Ext, Min | Id] = lists:reverse(string:tokens(File, ".")),
-    case {string:to_lower(Ext), string:to_lower(Min)} of
+    [Ext, Min | Id] = lists:reverse(string:lexemes(File, ".")),
+    case {string:lowercase(Ext), string:lowercase(Min)} of
         {"js", "min"} ->
             #cms_asset{
                id=[Ext | Id],
-               name=string:join(lists:reverse(Id), "."),
-               description=string:join(lists:reverse(Id), "."),
+               name=lists:flatten(lists:join(".", lists:reverse(Id))),
+               description=lists:flatten(lists:join(".", lists:reverse(Id))),
                file=filename:join([Path, File]),
                minified=true,
                type=script};
         {"js", _} ->
             #cms_asset{
                id=[Ext, Min | Id],
-               name=string:join(lists:reverse([Min|Id]), "."),
-               description=string:join(lists:reverse([Min|Id]), "."),
+               name=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
+               description=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
                file=filename:join([Path, File]),
                type=script};
         {"css", "min"} ->
             #cms_asset{
                id=[Ext | Id],
-               name=string:join(lists:reverse(Id), "."),
-               description=string:join(lists:reverse(Id), "."),
+               name=lists:flatten(lists:join(".", lists:reverse(Id))),
+               description=lists:flatten(lists:join(".", lists:reverse(Id))),
                file=filename:join([Path, File]),
                minified=true,
                type=css};
         {"css", _} ->
             #cms_asset{
                id=[Ext, Min | Id],
-               name=string:join(lists:reverse([Min|Id]), "."),
-               description=string:join(lists:reverse([Min|Id]), "."),
+               name=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
+               description=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
                file=filename:join([Path, File]),
                type=css};
         {Any, _} when Any == "jpg";
@@ -262,16 +262,16 @@ file_to_asset(File, Path) -> % {{{2
                       Any == "svg" ->
             #cms_asset{
                id=[Ext, Min | Id],
-               name=string:join(lists:reverse([Min|Id]), "."),
-               description=string:join(lists:reverse([Min|Id]), "."),
+               name=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
+               description=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
                file=filename:join([Path, File]),
                type=image};
 
         {_Any, _} ->  % This is any static files except images, js and css
             #cms_asset{
                id=[Ext, Min | Id],
-               name=string:join(lists:reverse([Min|Id]), "."),
-               description=string:join(lists:reverse([Min|Id]), "."),
+               name=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
+               description=lists:flatten(lists:join(".", lists:reverse([Min|Id]))),
                file=filename:join([Path, File]),
                type=binary}
     end.
@@ -592,8 +592,8 @@ get_with_prefix(M, Prefix, Label) -> % {{{2
 extract_data_attrs([])  -> % {{{2
     [];
 extract_data_attrs(DataAttrs)  -> % {{{2
-    Pairs = string:tokens(DataAttrs, ", "),
-    [{data_attr_key(K), V} || Pair <- Pairs, [K, V] <- [string:tokens(Pair, "=")]].
+    Pairs = string:lexemes(DataAttrs, ", "),
+    [{data_attr_key(K), V} || Pair <- Pairs, [K, V] <- [string:lexemes(Pair, "=")]].
 
 data_attr_key([$d, $a, $t, $a, $- | K]) -> % {{{2
     data_attr_key(K);
@@ -660,7 +660,7 @@ prefix_classes(Prefix, Classes) -> % {{{2
 remove_prefix([]) -> % {{{2
     "";
 remove_prefix(Class) -> % {{{2
-    lists:last(string:tokens(Class, "-")).
+    lists:last(string:lexemes(Class, "-")).
 
 maybe_empty([], N) -> % {{{2
     lists:duplicate(N, "");
@@ -709,7 +709,7 @@ get_social_files("static/images"=SubFolder) -> % {{{2
     Static = [{"images", StaticImages}],
     Assets = lists:foldl(fun({Path, Files}, A) ->
                                  [file_to_asset(File, Path) || File <- Files,
-                                  string:str(File, "_icon.png") > 0 ] ++ A
+                                  string:find(File, "_icon.png") /= nomatch ] ++ A
                          end,
                          [],
                          Static),
@@ -1072,8 +1072,8 @@ event({?MODULE, languages, show}) -> % {{{2
     wf:session(history, undefined),
     AssetsDup = db:get_assets(image),
     GetName = fun(Id)->
-                string:join(lists:reverse(Id),".")
-              end, 
+                lists:flatten(lists:join(".", lists:reverse(Id)))
+              end,
     Options =  [
       {GetName(maps:get(id, K)), GetName(maps:get(id, K))}
         || K <- AssetsDup
@@ -1474,7 +1474,7 @@ event({?MODULE, language, new}) -> % {{{2
               ]);
 event({?MODULE, language, save}) -> % {{{2    
     AssetId=wf:q(asset_id),
-    IconName=string:join(lists:reverse(string:tokens(AssetId,".")),"."),
+    IconName=lists:flatten(lists:join(".", lists:reverse(string:lexemes(AssetId,".")))),
     Default=case wf:q(default_language) of
       "on"->true;
       _->false
@@ -1701,7 +1701,7 @@ event({?MODULE, role, new}) -> % {{{2
               ]);
 event({?MODULE, role, save}) -> % {{{2
     Name = wf:q(name),
-    Role = wf:to_atom(string:to_lower(re:replace(Name, "\s", "_", [{return, list}]))),
+    Role = wf:to_atom(string:lowercase(re:replace(Name, "\s", "_", [{return, list}]))),
     Priority = wf:to_integer(wf:q(priority)),
     db:save(#cms_role{
                role = Role,
@@ -1773,8 +1773,8 @@ finish_upload_event(template, Fname, Path, _Node) -> % {{{2
 
 finish_upload_event(asset, Fname, Path, _Node) -> % {{{2
     #cms_asset{type=Type} = file_to_asset(Fname, ""),
-    [Ext, _Min | _Id] = lists:reverse(string:tokens(Fname, ".")),
-    URLPath = case string:to_lower(Ext) of
+    [Ext, _Min | _Id] = lists:reverse(string:lexemes(Fname, ".")),
+    URLPath = case string:lowercase(Ext) of
       "js" -> wf:f("js/~s", [ Fname]);
       _ -> wf:f("~s/~s", [Type, Fname])
     end,
@@ -1889,8 +1889,8 @@ build_list(PID, Block, Lvl, SearchSublink) -> % {{{2
                     [{H,B}]
               end;
             _ -> case F of 
-                  Asset when (Asset==img) or (Asset==asset) -> 
-                      [{wf:f("~s", [string:join(lists:reverse(lists:nth(1,Args)), ".")]), B}];
+                  Asset when (Asset==img) or (Asset==asset) ->
+                      [{wf:f("~s", [lists:flatten(lists:join(".", lists:reverse(lists:nth(1,Args))))]), B}];
                   template ->
                       [{wf:f("~s",[Args]),B}];
                   text ->
