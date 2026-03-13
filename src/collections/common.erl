@@ -332,6 +332,7 @@ apply_filters([undefined, undefined, undefined, undefined]) -> % {{{2
 apply_filters([K, V, R, T]) -> % {{{2
     FilterKV = case K of
       "" -> true;
+      "lang" -> index:language([]) == V; 
       K -> wf:to_list(wf:q(wf:to_atom(K))) == wf:to_list(V)
     end,
     #cms_user{role=Role} = account:user(),
@@ -342,8 +343,7 @@ apply_filters([K, V, R, T]) -> % {{{2
     FilterLang = case T of 
       "" -> true;
       "any" -> true;
-      Lang -> 
-           wf:to_atom(wf:qs(lang))==wf:to_atom(Lang)
+      Lang -> index:language([]) == Lang
     end,
     FilterKV and FilterRole and FilterLang;
 
