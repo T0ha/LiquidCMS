@@ -11,3 +11,5 @@ deps/*
 scratch/*
 
 _build/default
+/_build/test
+/rebar3.crashdump
