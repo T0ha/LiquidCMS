@@ -134,7 +134,7 @@ render(Page) -> % {{{2
             wf:redirect_to_login("/account");
         error:{change_module, Module} ->
             URI = wf:uri(),
-            [_, QS] = string:tokens(URI, "?"),
+            [_, QS] = string:lexemes(URI, "?"),
             wf:redirect(wf:f("/~s?~s", [Module, QS]))
     end.
 
@@ -152,7 +152,7 @@ page_from_kv(#cms_page{id=Default}=Page, Block, Key) -> % {{{2
     page(Page, V).
 
 get_qs(URI) -> % {{{2
-    maybe_qs(string:tokens(URI, "?")).
+    maybe_qs(string:lexemes(URI, "?")).
 
 maybe_qs([_, QS]) -> % {{{2
     "?" ++ QS;

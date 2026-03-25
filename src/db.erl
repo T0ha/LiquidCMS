@@ -1275,7 +1275,7 @@ get_blocks_without_parent(PID) -> % {{{1
           fun(#cms_mfa{id={PID0,Bid0}}) ->
             BID=case re:run(Bid0, "(\\S+)/(link|validate)$") of
                     {match,[{_,_},{StartPos,Len},{_,_}]} ->
-                      string:substr(Bid0, StartPos+1, Len);
+                      string:slice(Bid0, StartPos, Len);
                     nomatch -> Bid0
                   end,
             case get_parent_block(PID0,BID,return_if_none) of

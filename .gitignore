@@ -10,4 +10,8 @@ deps/*
 *.lcms
 scratch/*
 
-_build/default
+_build/
+rebar
+rebar3
+/rebar3.crashdump
+/recompile.log
