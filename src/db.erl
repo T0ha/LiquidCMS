@@ -670,9 +670,15 @@ get_parent_block(PID, BID, ActionOrBlock) -> % {{{1
                         case AB of 
                           [] -> AF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={html5,article,['_','_',BID,'_','_']}, active=true, _='_'}),
                             case AF of 
-                              [] -> PB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_',BID,'_','_','_','_','_','_','_','_']}, active=true, _='_'}),
-                                  case PB of 
-                                    [] -> PH=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,[BID,'_','_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                              [] -> MT=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,modal,['_',BID,'_','_','_','_']}, active=true, _='_'}),
+                              case MT of
+                                [] -> MB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,modal,['_','_',BID,'_','_','_']}, active=true, _='_'}),
+                                case MB of
+                                  [] -> MF=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,modal,['_','_','_',BID,'_','_']}, active=true, _='_'}),
+                                  case MF of
+                                    [] -> PB=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_',BID,'_','_','_','_','_','_','_','_']}, active=true, _='_'}),
+                                    case PB of 
+                                      [] -> PH=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,[BID,'_','_','_','_','_','_','_','_','_']}, active=true, _='_'}),
                                       case PH of 
                                         [] -> PA=mnesia:match_object(#cms_mfa{id={PID,'_'},mfa={bootstrap,panel,['_','_',BID,'_','_','_','_','_','_','_']}, active=true, _='_'}),
                                           case PA of 
@@ -687,12 +693,18 @@ get_parent_block(PID, BID, ActionOrBlock) -> % {{{1
                                             end;
                                             _ -> PA
                                           end;
-                                        _ -> PH
+                                          _ -> PH
+                                        end;
+                                        _ -> PB
                                       end;
-                                    _ -> PB
+                                        _ -> MF
+                                    end;
+                                    _ -> MB
                                   end;
-                              _ -> AF
-                            end;
+                                  _ -> MT
+                                end;
+                                _ -> AF
+                              end;
                           _ -> AB
                         end;
                       _ -> P5
@@ -1335,3 +1347,24 @@ extract_mfa_block_name(#cms_mfa{mfa=MFA}) -> % {{{1
       end;
     _ -> undefined
   end.
+
+remove_duplicates() -> % {{{1
+%% @doc "full_delete oldest blocks with the same Id and Sort"
+  F = fun() ->
+    FoldFun = 
+      fun(#cms_mfa{id=ID, sort=Sort, mfa=Mfa, updated_at=Upd}, _Acc) ->
+        case mnesia:match_object(#cms_mfa{id=ID, sort=Sort, _='_'}) of
+            L when is_list(L), length(L) > 1 ->
+                [
+                if (Cur_mfa#cms_mfa.mfa == Mfa) and (Cur_mfa#cms_mfa.updated_at<Upd) ->
+                  mnesia:delete_object(Cur_mfa);
+                true -> ok
+                end                  
+                || Cur_mfa <- L]; 
+            _ -> ok
+        end,
+        ok
+      end,
+    mnesia:foldl(FoldFun, ok, cms_mfa)
+  end,
+  mnesia:transaction(F).
